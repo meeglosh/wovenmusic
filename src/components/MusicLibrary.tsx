@@ -10,12 +10,27 @@ interface MusicLibraryProps {
 }
 
 const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
+  if (tracks.length === 0) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
+            <div className="text-2xl text-primary/60">♪</div>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No tracks yet</h3>
+          <p className="text-muted-foreground mb-4">Start building your music library by uploading some tracks.</p>
+          <Button>Upload Track</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl font-bold">Your Library</h2>
         <div className="text-sm text-muted-foreground">
-          {tracks.length} tracks
+          {tracks.length} track{tracks.length !== 1 ? 's' : ''}
         </div>
       </div>
 
@@ -45,11 +60,9 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                 >
                   <Play className="w-4 h-4 fill-current" />
                 </Button>
-                {!track && (
-                  <span className="text-muted-foreground text-sm">
-                    {index + 1}
-                  </span>
-                )}
+                <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
+                  {index + 1}
+                </span>
               </div>
 
               <div className="flex items-center space-x-3">
@@ -59,6 +72,7 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                       <div
                         key={i}
                         className="w-0.5 bg-primary/60 wave-bar rounded-full"
+                        style={{ height: `${Math.random() * 16 + 4}px` }}
                       />
                     ))}
                   </div>

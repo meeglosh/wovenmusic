@@ -47,19 +47,23 @@ const PlaylistView = ({ playlist, tracks, onPlayTrack, onBack }: PlaylistViewPro
           <h1 className="text-5xl font-bold mb-4">{playlist.name}</h1>
           
           <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-6">
-            <span>{playlistTracks.length} tracks</span>
+            <span>{playlistTracks.length} track{playlistTracks.length !== 1 ? 's' : ''}</span>
             <span>•</span>
             <span>Created {playlist.createdAt.toLocaleDateString()}</span>
             {playlist.sharedWith.length > 0 && (
               <>
                 <span>•</span>
-                <span>Shared with {playlist.sharedWith.length} members</span>
+                <span>Shared with {playlist.sharedWith.length} member{playlist.sharedWith.length !== 1 ? 's' : ''}</span>
               </>
             )}
           </div>
 
           <div className="flex items-center space-x-3">
-            <Button size="lg" className="rounded-full">
+            <Button 
+              size="lg" 
+              className="rounded-full"
+              disabled={playlistTracks.length === 0}
+            >
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
             </Button>
@@ -74,61 +78,73 @@ const PlaylistView = ({ playlist, tracks, onPlayTrack, onBack }: PlaylistViewPro
         </div>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="divide-y divide-border">
-          {playlistTracks.map((track, index) => (
-            <div
-              key={track.id}
-              className="grid grid-cols-[auto,1fr,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group"
-            >
-              <div className="w-12 flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onPlayTrack(track)}
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                </Button>
-                <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
-                  {index + 1}
-                </span>
-              </div>
+      {playlistTracks.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
+            <div className="text-2xl text-primary/60">♪</div>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">This playlist is empty</h3>
+          <p className="text-muted-foreground mb-4">Add some tracks to get started.</p>
+          <Button variant="outline">Add Tracks</Button>
+        </div>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="divide-y divide-border">
+            {playlistTracks.map((track, index) => (
+              <div
+                key={track.id}
+                className="grid grid-cols-[auto,1fr,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group"
+              >
+                <div className="w-12 flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onPlayTrack(track)}
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                  </Button>
+                  <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
+                    {index + 1}
+                  </span>
+                </div>
 
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
-                  <div className="flex space-x-px">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-0.5 bg-primary/60 wave-bar rounded-full"
-                      />
-                    ))}
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
+                    <div className="flex space-x-px">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-0.5 bg-primary/60 wave-bar rounded-full"
+                          style={{ height: `${Math.random() * 16 + 4}px` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium">{track.title}</p>
+                    <p className="text-sm text-muted-foreground">{track.artist}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="font-medium">{track.title}</p>
-                  <p className="text-sm text-muted-foreground">{track.artist}</p>
+
+                <div className="flex items-center text-muted-foreground">
+                  {track.duration}
+                </div>
+
+                <div className="w-12 flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex items-center text-muted-foreground">
-                {track.duration}
-              </div>
-
-              <div className="w-12 flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
