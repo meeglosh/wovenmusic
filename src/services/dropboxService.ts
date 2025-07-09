@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
@@ -15,14 +14,14 @@ export class DropboxService {
   private readonly redirectUri = `${window.location.protocol}//${window.location.host}/dropbox-callback`;
 
   async authenticate(): Promise<void> {
-    console.log('Starting Dropbox authentication...');
+    console.log('=== STARTING DROPBOX AUTHENTICATION ===');
     console.log('Current URL:', window.location.href);
     console.log('Redirect URI:', this.redirectUri);
     
     // Get Dropbox app key from Supabase secrets
     const { data, error } = await supabase.functions.invoke('get-dropbox-config');
     
-    console.log('Supabase response:', { data, error });
+    console.log('Supabase config response:', { data, error });
     
     if (error) {
       console.error('Error getting Dropbox config:', error);
@@ -36,24 +35,53 @@ export class DropboxService {
       throw new Error('Dropbox app key not configured');
     }
 
-    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(this.redirectUri)}`;
+    // Add state parameter for security
+    const state = Math.random().toString(36).substring(2, 15);
+    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(this.redirectUri)}&state=${state}`;
+    
+    console.log('=== DROPBOX AUTH URL ===');
     console.log('Full auth URL:', authUrl);
     console.log('Encoded redirect URI:', encodeURIComponent(this.redirectUri));
+    console.log('State parameter:', state);
     
-    // Open in new window to avoid iframe CSP issues
-    console.log('Opening Dropbox auth in new window...');
-    const authWindow = window.open(authUrl, 'dropbox-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+    // Store state for verification
+    localStorage.setItem('dropbox_auth_state', state);
     
-    // Listen for the auth callback
+    // Open popup with specific dimensions and features
+    console.log('=== OPENING DROPBOX AUTH POPUP ===');
+    const authWindow = window.open(
+      authUrl, 
+      'dropbox-auth', 
+      'width=600,height=700,scrollbars=yes,resizable=yes,left=' + 
+      (window.screen.width / 2 - 300) + ',top=' + (window.screen.height / 2 - 350)
+    );
+    
+    if (!authWindow) {
+      console.error('=== FAILED TO OPEN POPUP ===');
+      throw new Error('Failed to open authentication popup. Please allow popups for this site.');
+    }
+    
+    console.log('=== POPUP OPENED SUCCESSFULLY ===');
+    
+    // Monitor popup
     const checkClosed = setInterval(() => {
       if (authWindow?.closed) {
         clearInterval(checkClosed);
-        console.log('=== AUTH WINDOW CLOSED ===');
-        // Check if we got a token after the window closed
+        console.log('=== AUTH POPUP CLOSED ===');
+        
+        // Clean up state
+        localStorage.removeItem('dropbox_auth_state');
+        
+        // Check for token after popup closes
         setTimeout(() => {
-          console.log('=== CHECKING FOR TOKEN AFTER WINDOW CLOSED ===');
+          console.log('=== CHECKING FOR TOKEN AFTER POPUP CLOSED ===');
           const token = this.getStoredToken();
-          console.log('Found token after window closed:', token ? 'YES' : 'NO');
+          console.log('Found token after popup closed:', token ? 'YES' : 'NO');
+          if (token) {
+            console.log('=== TOKEN FOUND, AUTH SUCCESSFUL ===');
+          } else {
+            console.log('=== NO TOKEN FOUND, AUTH MAY HAVE FAILED ===');
+          }
         }, 1000);
       }
     }, 1000);
@@ -61,29 +89,65 @@ export class DropboxService {
 
   async handleAuthCallback(code: string): Promise<void> {
     console.log('=== HANDLING AUTH CALLBACK ===');
-    console.log('Code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
+    console.log('Authorization code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
     
-    const { data, error } = await supabase.functions.invoke('exchange-dropbox-token', {
-      body: { code, redirect_uri: this.redirectUri }
-    });
+    // Verify state parameter
+    const storedState = localStorage.getItem('dropbox_auth_state');
+    console.log('Stored auth state:', storedState);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('exchange-dropbox-token', {
+        body: { code, redirect_uri: this.redirectUri }
+      });
 
-    console.log('=== TOKEN EXCHANGE RESPONSE ===', { data, error });
+      console.log('=== TOKEN EXCHANGE RESPONSE ===', { 
+        hasData: !!data, 
+        hasError: !!error,
+        dataKeys: data ? Object.keys(data) : [],
+        errorDetails: error
+      });
 
-    if (data?.access_token) {
-      console.log('=== STORING ACCESS TOKEN ===');
-      this.accessToken = data.access_token;
-      localStorage.setItem('dropbox_access_token', data.access_token);
-      console.log('Token stored in localStorage:', localStorage.getItem('dropbox_access_token') ? 'YES' : 'NO');
-    } else {
-      console.error('=== NO ACCESS TOKEN IN RESPONSE ===');
-      throw new Error('No access token received from Dropbox');
+      if (error) {
+        console.error('=== TOKEN EXCHANGE ERROR ===', error);
+        throw new Error(`Token exchange failed: ${error.message || 'Unknown error'}`);
+      }
+
+      if (data?.access_token) {
+        console.log('=== ACCESS TOKEN RECEIVED ===');
+        console.log('Token length:', data.access_token.length);
+        console.log('Token preview:', `${data.access_token.substring(0, 10)}...`);
+        
+        this.accessToken = data.access_token;
+        localStorage.setItem('dropbox_access_token', data.access_token);
+        
+        // Verify storage
+        const storedToken = localStorage.getItem('dropbox_access_token');
+        console.log('=== TOKEN STORAGE VERIFICATION ===');
+        console.log('Token stored successfully:', storedToken ? 'YES' : 'NO');
+        console.log('Stored token matches:', storedToken === data.access_token ? 'YES' : 'NO');
+        
+        // Clean up auth state
+        localStorage.removeItem('dropbox_auth_state');
+        
+      } else {
+        console.error('=== NO ACCESS TOKEN IN RESPONSE ===');
+        console.log('Full response data:', data);
+        throw new Error('No access token received from Dropbox');
+      }
+    } catch (error) {
+      console.error('=== TOKEN EXCHANGE EXCEPTION ===', error);
+      throw error;
     }
   }
 
   getStoredToken(): string | null {
     if (!this.accessToken) {
       this.accessToken = localStorage.getItem('dropbox_access_token');
-      console.log('Getting stored token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
+      console.log('=== GETTING STORED TOKEN ===');
+      console.log('Token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
+      if (this.accessToken) {
+        console.log('Token preview:', `${this.accessToken.substring(0, 10)}...`);
+      }
     }
     return this.accessToken;
   }
@@ -142,7 +206,10 @@ export class DropboxService {
   isAuthenticated(): boolean {
     const token = this.getStoredToken();
     const isAuth = !!token;
-    console.log('=== IS AUTHENTICATED CHECK ===', { hasToken: isAuth, tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE' });
+    console.log('=== IS AUTHENTICATED CHECK ===', { 
+      hasToken: isAuth, 
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE' 
+    });
     return isAuth;
   }
 
@@ -150,6 +217,8 @@ export class DropboxService {
     console.log('=== LOGGING OUT ===');
     this.accessToken = null;
     localStorage.removeItem('dropbox_access_token');
+    localStorage.removeItem('dropbox_auth_state');
+    localStorage.removeItem('dropbox_auth_success');
   }
 }
 

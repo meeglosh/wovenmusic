@@ -10,10 +10,21 @@ const DropboxCallback = () => {
 
   useEffect(() => {
     const handleCallback = async () => {
-      console.log('=== DROPBOX CALLBACK PAGE LOADED ===');
+      // Log immediately when component mounts
+      console.log('=== DROPBOX CALLBACK COMPONENT MOUNTED ===');
+      console.log('Window location:', window.location);
       console.log('Current URL:', window.location.href);
       console.log('Search params:', window.location.search);
       console.log('Hash:', window.location.hash);
+      console.log('Pathname:', window.location.pathname);
+      
+      // Check if we're actually on the callback page
+      if (!window.location.pathname.includes('dropbox-callback')) {
+        console.log('=== NOT ON CALLBACK PAGE ===');
+        return;
+      }
+      
+      console.log('=== DROPBOX CALLBACK PAGE LOADED ===');
       
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
@@ -23,7 +34,8 @@ const DropboxCallback = () => {
       console.log('=== URL PARAMS ===', { 
         code: code ? `${code.substring(0, 10)}...` : 'missing', 
         error,
-        state
+        state,
+        allParams: Object.fromEntries(urlParams.entries())
       });
 
       if (error) {
@@ -33,7 +45,12 @@ const DropboxCallback = () => {
           description: `Dropbox error: ${error}`,
           variant: "destructive",
         });
-        window.close();
+        
+        // Notify parent and close
+        if (window.opener) {
+          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error }, '*');
+        }
+        setTimeout(() => window.close(), 1000);
         return;
       }
 
@@ -48,13 +65,13 @@ const DropboxCallback = () => {
             description: "You can now sync your music files.",
           });
           
-          // Set a flag to indicate successful authentication
+          // Set success flag
           localStorage.setItem('dropbox_auth_success', 'true');
           console.log('=== SET AUTH SUCCESS FLAG ===');
           
-          // Try to communicate with parent window
+          // Notify parent window
           if (window.opener) {
-            console.log('=== POSTING MESSAGE TO PARENT ===');
+            console.log('=== POSTING SUCCESS MESSAGE TO PARENT ===');
             window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
           }
           
@@ -67,16 +84,31 @@ const DropboxCallback = () => {
             description: "Failed to complete Dropbox authentication.",
             variant: "destructive",
           });
-          window.close();
+          
+          // Notify parent of failure
+          if (window.opener) {
+            window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: error.message }, '*');
+          }
+          setTimeout(() => window.close(), 1000);
         }
       } else {
         console.error('=== NO AUTHORIZATION CODE RECEIVED ===');
-        console.log('URL search params:', window.location.search);
-        window.close();
+        console.log('Full URL:', window.location.href);
+        console.log('Search params:', window.location.search);
+        console.log('Hash:', window.location.hash);
+        
+        // Notify parent and close
+        if (window.opener) {
+          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: 'No authorization code received' }, '*');
+        }
+        setTimeout(() => window.close(), 1000);
       }
     };
 
-    handleCallback();
+    // Add a small delay to ensure the page is fully loaded
+    const timer = setTimeout(handleCallback, 100);
+    
+    return () => clearTimeout(timer);
   }, [navigate, toast]);
 
   return (
@@ -86,7 +118,8 @@ const DropboxCallback = () => {
           <span className="text-white font-bold text-sm">W</span>
         </div>
         <p className="text-muted-foreground">Connecting to Dropbox...</p>
-        <p className="text-xs text-muted-foreground mt-2">Check console for details</p>
+        <p className="text-xs text-muted-foreground mt-2">Processing authorization...</p>
+        <p className="text-xs text-muted-foreground mt-1">Check console for details</p>
       </div>
     </div>
   );
