@@ -60,6 +60,15 @@ const DropboxCallback = () => {
       if (code) {
         try {
           console.log('=== STARTING TOKEN EXCHANGE ===');
+          console.log('Authorization code:', `${code.substring(0, 20)}...`);
+          console.log('State parameter:', state);
+          
+          // Post success message first since we have the auth code
+          console.log('=== POSTING INITIAL SUCCESS MESSAGE TO PARENT ===');
+          if (window.opener) {
+            window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
+          }
+          
           await dropboxService.handleAuthCallback(code);
           console.log('=== TOKEN EXCHANGE SUCCESSFUL ===');
           
@@ -72,16 +81,16 @@ const DropboxCallback = () => {
           localStorage.setItem('dropbox_auth_success', 'true');
           console.log('=== SET AUTH SUCCESS FLAG ===');
           
-          // Notify parent window
-          if (window.opener) {
-            console.log('=== POSTING SUCCESS MESSAGE TO PARENT ===');
-            window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
-          }
-          
           console.log('=== CLOSING POPUP WINDOW ===');
           setTimeout(() => window.close(), 1000);
         } catch (error) {
           console.error('=== TOKEN EXCHANGE FAILED ===', error);
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+          
           const errorMessage = `Token exchange failed: ${error.message}`;
           console.log('=== POSTING TOKEN EXCHANGE ERROR TO PARENT ===', errorMessage);
           

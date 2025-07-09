@@ -129,12 +129,17 @@ export class DropboxService {
   async handleAuthCallback(code: string): Promise<void> {
     console.log('=== HANDLING AUTH CALLBACK ===');
     console.log('Authorization code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
+    console.log('Full authorization code:', code);
     
     // Verify state parameter
     const storedState = localStorage.getItem('dropbox_auth_state');
     console.log('Stored auth state:', storedState);
     
     try {
+      console.log('=== CALLING SUPABASE EDGE FUNCTION ===');
+      console.log('Function name: exchange-dropbox-token');
+      console.log('Redirect URI for token exchange:', this.redirectUri);
+      
       const { data, error } = await supabase.functions.invoke('exchange-dropbox-token', {
         body: { code, redirect_uri: this.redirectUri }
       });
@@ -143,12 +148,16 @@ export class DropboxService {
         hasData: !!data, 
         hasError: !!error,
         dataKeys: data ? Object.keys(data) : [],
-        errorDetails: error
+        errorDetails: error,
+        fullData: data,
+        fullError: error
       });
 
       if (error) {
         console.error('=== TOKEN EXCHANGE ERROR ===', error);
-        throw new Error(`Token exchange failed: ${error.message || 'Unknown error'}`);
+        console.error('Error type:', typeof error);
+        console.error('Error properties:', Object.keys(error));
+        throw new Error(`Token exchange failed: ${error.message || JSON.stringify(error)}`);
       }
 
       if (data?.access_token) {
@@ -175,6 +184,10 @@ export class DropboxService {
       }
     } catch (error) {
       console.error('=== TOKEN EXCHANGE EXCEPTION ===', error);
+      console.error('Exception type:', typeof error);
+      console.error('Exception name:', error.name);
+      console.error('Exception message:', error.message);
+      console.error('Exception stack:', error.stack);
       throw error;
     }
   }
