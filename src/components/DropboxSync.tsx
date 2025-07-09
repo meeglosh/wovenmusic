@@ -59,23 +59,34 @@ const DropboxSync = () => {
     // Check for authentication status changes periodically
     const interval = setInterval(checkAuthStatus, 1000);
     
+    // Listen for messages from popup window
+    const handleMessage = (event: MessageEvent) => {
+      console.log('Received message:', event.data);
+      if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
+        console.log('Received auth success message from popup');
+        checkAuthStatus();
+      }
+    };
+    
     // Also listen for focus events (when popup closes)
     const handleFocus = () => {
       console.log('Window focused, checking auth status...');
       setTimeout(checkAuthStatus, 500); // Small delay to ensure token is saved
     };
     
+    window.addEventListener('message', handleMessage);
     window.addEventListener('focus', handleFocus);
     
     return () => {
       clearInterval(interval);
+      window.removeEventListener('message', handleMessage);
       window.removeEventListener('focus', handleFocus);
     };
   }, [toast]);
 
   const handleConnect = async () => {
     try {
-      console.log('Initiating Dropbox connection...');
+      console.log('=== INITIATING DROPBOX CONNECTION ===');
       await dropboxService.authenticate();
     } catch (error) {
       console.error('Authentication error:', error);

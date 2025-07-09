@@ -10,20 +10,27 @@ const DropboxCallback = () => {
 
   useEffect(() => {
     const handleCallback = async () => {
-      console.log('Dropbox callback page loaded');
+      console.log('=== DROPBOX CALLBACK PAGE LOADED ===');
       console.log('Current URL:', window.location.href);
+      console.log('Search params:', window.location.search);
+      console.log('Hash:', window.location.hash);
       
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
+      const state = urlParams.get('state');
 
-      console.log('URL params:', { code: code ? 'present' : 'missing', error });
+      console.log('=== URL PARAMS ===', { 
+        code: code ? `${code.substring(0, 10)}...` : 'missing', 
+        error,
+        state
+      });
 
       if (error) {
-        console.error('Dropbox auth error:', error);
+        console.error('=== DROPBOX AUTH ERROR ===', error);
         toast({
           title: "Authentication Failed",
-          description: "Failed to connect to Dropbox. Please try again.",
+          description: `Dropbox error: ${error}`,
           variant: "destructive",
         });
         window.close();
@@ -32,9 +39,9 @@ const DropboxCallback = () => {
 
       if (code) {
         try {
-          console.log('Exchanging code for token...');
+          console.log('=== STARTING TOKEN EXCHANGE ===');
           await dropboxService.handleAuthCallback(code);
-          console.log('Token exchange successful');
+          console.log('=== TOKEN EXCHANGE SUCCESSFUL ===');
           
           toast({
             title: "Connected to Dropbox",
@@ -43,11 +50,18 @@ const DropboxCallback = () => {
           
           // Set a flag to indicate successful authentication
           localStorage.setItem('dropbox_auth_success', 'true');
+          console.log('=== SET AUTH SUCCESS FLAG ===');
           
-          console.log('Closing popup window...');
-          window.close();
+          // Try to communicate with parent window
+          if (window.opener) {
+            console.log('=== POSTING MESSAGE TO PARENT ===');
+            window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
+          }
+          
+          console.log('=== CLOSING POPUP WINDOW ===');
+          setTimeout(() => window.close(), 1000);
         } catch (error) {
-          console.error('Token exchange failed:', error);
+          console.error('=== TOKEN EXCHANGE FAILED ===', error);
           toast({
             title: "Connection Failed",
             description: "Failed to complete Dropbox authentication.",
@@ -56,7 +70,8 @@ const DropboxCallback = () => {
           window.close();
         }
       } else {
-        console.error('No authorization code received');
+        console.error('=== NO AUTHORIZATION CODE RECEIVED ===');
+        console.log('URL search params:', window.location.search);
         window.close();
       }
     };
@@ -71,6 +86,7 @@ const DropboxCallback = () => {
           <span className="text-white font-bold text-sm">W</span>
         </div>
         <p className="text-muted-foreground">Connecting to Dropbox...</p>
+        <p className="text-xs text-muted-foreground mt-2">Check console for details</p>
       </div>
     </div>
   );
