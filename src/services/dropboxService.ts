@@ -15,10 +15,13 @@ export class DropboxService {
 
   async authenticate(): Promise<void> {
     console.log('Starting Dropbox authentication...');
+    console.log('Current URL:', window.location.href);
     console.log('Redirect URI:', this.redirectUri);
     
     // Get Dropbox app key from Supabase secrets
     const { data, error } = await supabase.functions.invoke('get-dropbox-config');
+    
+    console.log('Supabase response:', { data, error });
     
     if (error) {
       console.error('Error getting Dropbox config:', error);
@@ -26,14 +29,18 @@ export class DropboxService {
     }
     
     const dropbox_app_key = data?.dropbox_app_key;
-    console.log('Got Dropbox app key:', dropbox_app_key ? 'Yes' : 'No');
+    console.log('Dropbox app key:', dropbox_app_key);
     
     if (!dropbox_app_key) {
       throw new Error('Dropbox app key not configured');
     }
 
     const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(this.redirectUri)}`;
-    console.log('Auth URL:', authUrl);
+    console.log('Full auth URL:', authUrl);
+    console.log('Encoded redirect URI:', encodeURIComponent(this.redirectUri));
+    
+    // Instead of immediate redirect, let's pause for debugging
+    console.log('About to redirect to Dropbox...');
     
     window.location.href = authUrl;
   }
