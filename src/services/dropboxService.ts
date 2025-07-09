@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
@@ -44,12 +45,12 @@ export class DropboxService {
     console.log('Encoded redirect URI:', encodeURIComponent(this.redirectUri));
     console.log('State parameter:', state);
     
-    // Store state for verification
+    // Store state for security verification
     localStorage.setItem('dropbox_auth_state', state);
     
-    // Detect if we're in a privacy browser and adjust popup settings
+    // Detect if we're in a privacy browser
     const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
-                            window.navigator.brave !== undefined ||
+                            (window.navigator as any).brave !== undefined ||
                             localStorage.getItem('brave_detected') === 'true';
     
     // Try opening the popup with more permissive settings for privacy browsers

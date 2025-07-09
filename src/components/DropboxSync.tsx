@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -50,7 +51,7 @@ const DropboxSync = () => {
 
   // Detect if user might be using Brave or similar privacy browser
   const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
-                          window.navigator.brave !== undefined ||
+                          (window.navigator as any).brave !== undefined ||
                           localStorage.getItem('brave_detected') === 'true';
 
   useEffect(() => {
