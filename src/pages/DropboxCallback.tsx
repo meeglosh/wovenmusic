@@ -40,15 +40,18 @@ const DropboxCallback = () => {
 
       if (error) {
         console.error('=== DROPBOX AUTH ERROR ===', error);
+        const errorMessage = `Dropbox error: ${error}`;
+        console.log('=== POSTING ERROR TO PARENT ===', errorMessage);
+        
         toast({
           title: "Authentication Failed",
-          description: `Dropbox error: ${error}`,
+          description: errorMessage,
           variant: "destructive",
         });
         
         // Notify parent and close
         if (window.opener) {
-          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error }, '*');
+          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
         }
         setTimeout(() => window.close(), 1000);
         return;
@@ -79,6 +82,9 @@ const DropboxCallback = () => {
           setTimeout(() => window.close(), 1000);
         } catch (error) {
           console.error('=== TOKEN EXCHANGE FAILED ===', error);
+          const errorMessage = `Token exchange failed: ${error.message}`;
+          console.log('=== POSTING TOKEN EXCHANGE ERROR TO PARENT ===', errorMessage);
+          
           toast({
             title: "Connection Failed",
             description: "Failed to complete Dropbox authentication.",
@@ -87,7 +93,7 @@ const DropboxCallback = () => {
           
           // Notify parent of failure
           if (window.opener) {
-            window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: error.message }, '*');
+            window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
           }
           setTimeout(() => window.close(), 1000);
         }
@@ -97,9 +103,12 @@ const DropboxCallback = () => {
         console.log('Search params:', window.location.search);
         console.log('Hash:', window.location.hash);
         
+        const errorMessage = 'No authorization code received - check redirect URI configuration';
+        console.log('=== POSTING NO CODE ERROR TO PARENT ===', errorMessage);
+        
         // Notify parent and close
         if (window.opener) {
-          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: 'No authorization code received' }, '*');
+          window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
         }
         setTimeout(() => window.close(), 1000);
       }
