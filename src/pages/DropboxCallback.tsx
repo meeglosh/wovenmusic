@@ -75,23 +75,26 @@ const DropboxCallback = () => {
           crossLog('Authorization code:', `${code.substring(0, 20)}...`);
           crossLog('State parameter:', state);
           
-          // Post success message first since we have the auth code
-          crossLog('=== POSTING INITIAL SUCCESS MESSAGE TO PARENT ===');
-          if (window.opener) {
-            window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
-          }
-          
           await dropboxService.handleAuthCallback(code);
           crossLog('=== TOKEN EXCHANGE SUCCESSFUL ===');
+          
+          // Get the token that was just stored
+          const accessToken = dropboxService.getStoredToken();
+          crossLog('=== RETRIEVED STORED TOKEN ===', accessToken ? 'SUCCESS' : 'FAILED');
           
           toast({
             title: "Connected to Dropbox",
             description: "You can now sync your music files.",
           });
           
-          // Set success flag
-          localStorage.setItem('dropbox_auth_success', 'true');
-          crossLog('=== SET AUTH SUCCESS FLAG ===');
+          // Send success message WITH the token to parent window
+          crossLog('=== POSTING SUCCESS WITH TOKEN TO PARENT ===');
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'DROPBOX_AUTH_SUCCESS', 
+              token: accessToken 
+            }, '*');
+          }
           
           crossLog('=== CLOSING POPUP WINDOW ===');
           setTimeout(() => window.close(), 1000);

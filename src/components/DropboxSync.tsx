@@ -96,7 +96,16 @@ const DropboxSync = () => {
       console.log('Received message from popup:', event.data);
       if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
         console.log('Received auth success message, checking status...');
-        setTimeout(checkAuthStatus, 1000);
+        
+        // If the message includes a token, store it directly
+        if (event.data.token) {
+          console.log('=== RECEIVED TOKEN FROM POPUP ===');
+          console.log('Token preview:', `${event.data.token.substring(0, 10)}...`);
+          localStorage.setItem('dropbox_access_token', event.data.token);
+          console.log('=== TOKEN STORED IN PARENT WINDOW ===');
+        }
+        
+        setTimeout(checkAuthStatus, 500);
         setIsConnecting(false);
       } else if (event.data?.type === 'DROPBOX_AUTH_ERROR') {
         console.log('Received auth error message:', event.data.error);
