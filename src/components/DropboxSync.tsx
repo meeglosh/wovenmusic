@@ -44,7 +44,7 @@ const DropboxSync = () => {
   const [connectionError, setConnectionError] = useState<string>("");
   const [showBraveHelp, setShowBraveHelp] = useState(false);
   const [manualToken, setManualToken] = useState("");
-  const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
+  const [viewMode, setViewMode = useState<"folder-select" | "file-view">("folder-select");
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
@@ -206,27 +206,55 @@ const DropboxSync = () => {
   };
 
   const loadFolders = async (path: string = "") => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      console.log('Not connected, skipping folder load');
+      return;
+    }
+    
+    console.log('=== LOADING FOLDERS ===');
+    console.log('Path:', path);
+    console.log('Is authenticated:', dropboxService.isAuthenticated());
+    console.log('Token exists:', !!dropboxService.getStoredToken());
     
     setIsLoading(true);
     try {
-      console.log('Loading folders from path:', path);
+      console.log('Calling dropboxService.listFiles with path:', path);
       const allItems = await dropboxService.listFiles(path);
+      console.log('Raw API response:', allItems);
+      
       const folderItems = allItems.filter(item => item[".tag"] === "folder");
       const musicFiles = allItems.filter(item => 
         item[".tag"] === "file" && 
         (item.name.endsWith('.mp3') || item.name.endsWith('.wav') || item.name.endsWith('.m4a'))
       );
       
-      console.log('Found folders:', folderItems.length, 'music files:', musicFiles.length);
+      console.log('Filtered results:');
+      console.log('- Folders:', folderItems.length, folderItems);
+      console.log('- Music files:', musicFiles.length, musicFiles);
+      
       setFolders(folderItems);
       setFiles(musicFiles);
       setCurrentPath(path);
     } catch (error) {
-      console.error('Error loading folders:', error);
+      console.error('=== ERROR LOADING FOLDERS ===', error);
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      // Show more specific error messages
+      let errorMessage = "Failed to load folders from Dropbox.";
+      if (error.message?.includes('invalid_access_token')) {
+        errorMessage = "Access token expired. Please reconnect to Dropbox.";
+        handleDisconnect();
+      } else if (error.message?.includes('insufficient_scope') || error.message?.includes('not permitted')) {
+        errorMessage = "Insufficient permissions. Please update your Dropbox app permissions and reconnect.";
+      } else if (error.message) {
+        errorMessage = `Dropbox API error: ${error.message}`;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to load folders from Dropbox.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -305,7 +333,10 @@ const DropboxSync = () => {
   useEffect(() => {
     if (isConnected && viewMode === "folder-select") {
       console.log('Connected and in folder-select mode, loading root folders...');
-      loadFolders("");
+      // Add a small delay to ensure token is fully available
+      setTimeout(() => {
+        loadFolders("");
+      }, 1000);
     }
   }, [isConnected, viewMode]);
 
