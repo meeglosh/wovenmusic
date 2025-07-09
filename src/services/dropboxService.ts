@@ -39,10 +39,18 @@ export class DropboxService {
     console.log('Full auth URL:', authUrl);
     console.log('Encoded redirect URI:', encodeURIComponent(this.redirectUri));
     
-    // Instead of immediate redirect, let's pause for debugging
-    console.log('About to redirect to Dropbox...');
+    // Open in new window to avoid iframe CSP issues
+    console.log('Opening Dropbox auth in new window...');
+    const authWindow = window.open(authUrl, 'dropbox-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
     
-    window.location.href = authUrl;
+    // Listen for the auth callback
+    const checkClosed = setInterval(() => {
+      if (authWindow?.closed) {
+        clearInterval(checkClosed);
+        // Check if we got a token after the window closed
+        window.location.reload();
+      }
+    }, 1000);
   }
 
   async handleAuthCallback(code: string): Promise<void> {

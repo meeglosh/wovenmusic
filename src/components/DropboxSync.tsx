@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,32 +25,22 @@ const DropboxSync = () => {
   useEffect(() => {
     setIsConnected(dropboxService.isAuthenticated());
     
-    // Handle OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    if (code) {
-      handleAuthCallback(code);
-    }
-  }, []);
+    // Check for authentication status changes periodically
+    const checkAuth = () => {
+      const wasConnected = isConnected;
+      const nowConnected = dropboxService.isAuthenticated();
+      if (!wasConnected && nowConnected) {
+        setIsConnected(true);
+        toast({
+          title: "Connected to Dropbox",
+          description: "You can now sync your music files.",
+        });
+      }
+    };
 
-  const handleAuthCallback = async (code: string) => {
-    try {
-      await dropboxService.handleAuthCallback(code);
-      setIsConnected(true);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      toast({
-        title: "Connected to Dropbox",
-        description: "You can now sync your music files.",
-      });
-    } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect to Dropbox. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+    const interval = setInterval(checkAuth, 1000);
+    return () => clearInterval(interval);
+  }, [isConnected, toast]);
 
   const handleConnect = async () => {
     try {
