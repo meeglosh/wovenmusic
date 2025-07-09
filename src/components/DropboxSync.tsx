@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,41 +38,48 @@ const DropboxSync = () => {
   useEffect(() => {
     const checkAuthStatus = () => {
       const authStatus = dropboxService.isAuthenticated();
-      console.log('Checking Dropbox auth status:', authStatus);
-      setIsConnected(authStatus);
+      console.log('Auth status check result:', authStatus);
+      
+      if (authStatus !== isConnected) {
+        console.log('Auth status changed from', isConnected, 'to', authStatus);
+        setIsConnected(authStatus);
+        
+        if (authStatus) {
+          toast({
+            title: "Connected to Dropbox",
+            description: "You can now sync your music files.",
+          });
+        }
+      }
       
       // Check for successful auth flag
       const authSuccess = localStorage.getItem('dropbox_auth_success');
       if (authSuccess === 'true') {
-        console.log('Found auth success flag, updating state...');
+        console.log('Found auth success flag, cleaning up...');
         localStorage.removeItem('dropbox_auth_success');
         setIsConnected(true);
-        toast({
-          title: "Connected to Dropbox",
-          description: "You can now sync your music files.",
-        });
       }
     };
 
     // Initial check
     checkAuthStatus();
     
-    // Check for authentication status changes periodically
-    const interval = setInterval(checkAuthStatus, 1000);
+    // Check for authentication status changes every 3 seconds instead of every second
+    const interval = setInterval(checkAuthStatus, 3000);
     
     // Listen for messages from popup window
     const handleMessage = (event: MessageEvent) => {
-      console.log('Received message:', event.data);
+      console.log('Received message from popup:', event.data);
       if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
-        console.log('Received auth success message from popup');
-        checkAuthStatus();
+        console.log('Received auth success message, checking status...');
+        setTimeout(checkAuthStatus, 1000);
       }
     };
     
     // Also listen for focus events (when popup closes)
     const handleFocus = () => {
-      console.log('Window focused, checking auth status...');
-      setTimeout(checkAuthStatus, 500); // Small delay to ensure token is saved
+      console.log('Window focused, checking auth status in 2 seconds...');
+      setTimeout(checkAuthStatus, 2000);
     };
     
     window.addEventListener('message', handleMessage);
@@ -82,7 +90,7 @@ const DropboxSync = () => {
       window.removeEventListener('message', handleMessage);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [toast]);
+  }, [toast, isConnected]);
 
   const handleConnect = async () => {
     try {

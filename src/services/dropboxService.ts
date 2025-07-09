@@ -48,26 +48,42 @@ export class DropboxService {
     const checkClosed = setInterval(() => {
       if (authWindow?.closed) {
         clearInterval(checkClosed);
+        console.log('=== AUTH WINDOW CLOSED ===');
         // Check if we got a token after the window closed
-        window.location.reload();
+        setTimeout(() => {
+          console.log('=== CHECKING FOR TOKEN AFTER WINDOW CLOSED ===');
+          const token = this.getStoredToken();
+          console.log('Found token after window closed:', token ? 'YES' : 'NO');
+        }, 1000);
       }
     }, 1000);
   }
 
   async handleAuthCallback(code: string): Promise<void> {
-    const { data } = await supabase.functions.invoke('exchange-dropbox-token', {
+    console.log('=== HANDLING AUTH CALLBACK ===');
+    console.log('Code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
+    
+    const { data, error } = await supabase.functions.invoke('exchange-dropbox-token', {
       body: { code, redirect_uri: this.redirectUri }
     });
 
+    console.log('=== TOKEN EXCHANGE RESPONSE ===', { data, error });
+
     if (data?.access_token) {
+      console.log('=== STORING ACCESS TOKEN ===');
       this.accessToken = data.access_token;
       localStorage.setItem('dropbox_access_token', data.access_token);
+      console.log('Token stored in localStorage:', localStorage.getItem('dropbox_access_token') ? 'YES' : 'NO');
+    } else {
+      console.error('=== NO ACCESS TOKEN IN RESPONSE ===');
+      throw new Error('No access token received from Dropbox');
     }
   }
 
   getStoredToken(): string | null {
     if (!this.accessToken) {
       this.accessToken = localStorage.getItem('dropbox_access_token');
+      console.log('Getting stored token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
     }
     return this.accessToken;
   }
@@ -124,10 +140,14 @@ export class DropboxService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getStoredToken();
+    const token = this.getStoredToken();
+    const isAuth = !!token;
+    console.log('=== IS AUTHENTICATED CHECK ===', { hasToken: isAuth, tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE' });
+    return isAuth;
   }
 
   logout(): void {
+    console.log('=== LOGGING OUT ===');
     this.accessToken = null;
     localStorage.removeItem('dropbox_access_token');
   }
