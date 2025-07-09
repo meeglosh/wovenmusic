@@ -47,42 +47,85 @@ export class DropboxService {
     // Store state for verification
     localStorage.setItem('dropbox_auth_state', state);
     
-    // Open popup with specific dimensions and features
+    // Detect if we're in a privacy browser and adjust popup settings
+    const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
+                            window.navigator.brave !== undefined ||
+                            localStorage.getItem('brave_detected') === 'true';
+    
+    // Try opening the popup with more permissive settings for privacy browsers
+    const popupFeatures = isPrivacyBrowser 
+      ? 'width=600,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no'
+      : 'width=600,height=700,scrollbars=yes,resizable=yes,left=' + 
+        (window.screen.width / 2 - 300) + ',top=' + (window.screen.height / 2 - 350);
+    
     console.log('=== OPENING DROPBOX AUTH POPUP ===');
-    const authWindow = window.open(
-      authUrl, 
-      'dropbox-auth', 
-      'width=600,height=700,scrollbars=yes,resizable=yes,left=' + 
-      (window.screen.width / 2 - 300) + ',top=' + (window.screen.height / 2 - 350)
-    );
+    console.log('Privacy browser detected:', isPrivacyBrowser);
+    console.log('Popup features:', popupFeatures);
+    
+    const authWindow = window.open(authUrl, 'dropbox-auth', popupFeatures);
     
     if (!authWindow) {
       console.error('=== FAILED TO OPEN POPUP ===');
-      throw new Error('Failed to open authentication popup. Please allow popups for this site.');
+      throw new Error('Failed to open authentication popup. Please allow popups for this site and try disabling browser shields/privacy protection.');
     }
     
     console.log('=== POPUP OPENED SUCCESSFULLY ===');
     
-    // Monitor popup
-    const checkClosed = setInterval(() => {
-      if (authWindow?.closed) {
-        clearInterval(checkClosed);
-        console.log('=== AUTH POPUP CLOSED ===');
-        
-        // Clean up state
-        localStorage.removeItem('dropbox_auth_state');
-        
-        // Check for token after popup closes
-        setTimeout(() => {
-          console.log('=== CHECKING FOR TOKEN AFTER POPUP CLOSED ===');
-          const token = this.getStoredToken();
-          console.log('Found token after popup closed:', token ? 'YES' : 'NO');
-          if (token) {
-            console.log('=== TOKEN FOUND, AUTH SUCCESSFUL ===');
-          } else {
-            console.log('=== NO TOKEN FOUND, AUTH MAY HAVE FAILED ===');
-          }
-        }, 1000);
+    // Enhanced popup monitoring with better error detection
+    let checkClosed: any = setInterval(() => {
+      try {
+        if (authWindow?.closed) {
+          clearInterval(checkClosed);
+          console.log('=== AUTH POPUP CLOSED ===');
+          
+          // Clean up state
+          localStorage.removeItem('dropbox_auth_state');
+          
+          // Check for token after popup closes
+          setTimeout(() => {
+            console.log('=== CHECKING FOR TOKEN AFTER POPUP CLOSED ===');
+            const token = this.getStoredToken();
+            console.log('Found token after popup closed:', token ? 'YES' : 'NO');
+            if (token) {
+              console.log('=== TOKEN FOUND, AUTH SUCCESSFUL ===');
+              // Post success message to parent window
+              window.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
+            } else {
+              console.log('=== NO TOKEN FOUND, AUTH MAY HAVE FAILED ===');
+              console.log('This could be due to browser privacy settings blocking the callback');
+              // Post error message suggesting privacy browser issues
+              window.postMessage({ 
+                type: 'DROPBOX_AUTH_ERROR', 
+                error: 'Authentication may have been blocked by browser privacy settings'
+              }, '*');
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        // Handle cross-origin errors when checking popup status
+        console.log('Cross-origin error checking popup status (this is normal):', error);
+      }
+    }, 1000);
+
+    // Set a timeout to detect if auth is taking too long (could indicate blocking)
+    const timeoutId = setTimeout(() => {
+      if (!authWindow?.closed) {
+        console.log('=== AUTH TAKING LONGER THAN EXPECTED ===');
+        console.log('This may indicate browser privacy settings are blocking the process');
+      }
+    }, 15000);
+
+    // Clean up timeout when popup closes
+    const originalInterval = checkClosed;
+    checkClosed = setInterval(() => {
+      try {
+        if (authWindow?.closed) {
+          clearTimeout(timeoutId);
+          clearInterval(checkClosed);
+          originalInterval();
+        }
+      } catch (error) {
+        // Handle cross-origin errors
       }
     }, 1000);
   }
@@ -143,8 +186,7 @@ export class DropboxService {
   getStoredToken(): string | null {
     if (!this.accessToken) {
       this.accessToken = localStorage.getItem('dropbox_access_token');
-      console.log('=== GETTING STORED TOKEN ===');
-      console.log('Token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
+      console.log('Getting stored token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
       if (this.accessToken) {
         console.log('Token preview:', `${this.accessToken.substring(0, 10)}...`);
       }

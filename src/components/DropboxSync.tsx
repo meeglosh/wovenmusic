@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import {
@@ -14,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface DropboxFile {
   name: string;
@@ -31,9 +40,18 @@ const DropboxSync = () => {
   const [currentPath, setCurrentPath] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string>("");
+  const [showBraveHelp, setShowBraveHelp] = useState(false);
+  const [manualToken, setManualToken] = useState("");
   const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
+
+  // Detect if user might be using Brave or similar privacy browser
+  const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
+                          window.navigator.brave !== undefined ||
+                          localStorage.getItem('brave_detected') === 'true';
 
   useEffect(() => {
     const checkAuthStatus = () => {
@@ -43,6 +61,7 @@ const DropboxSync = () => {
       if (authStatus !== isConnected) {
         console.log('Auth status changed from', isConnected, 'to', authStatus);
         setIsConnected(authStatus);
+        setConnectionError("");
         
         if (authStatus) {
           toast({
@@ -58,14 +77,15 @@ const DropboxSync = () => {
         console.log('Found auth success flag, cleaning up...');
         localStorage.removeItem('dropbox_auth_success');
         setIsConnected(true);
+        setConnectionError("");
       }
     };
 
     // Initial check
     checkAuthStatus();
     
-    // Check for authentication status changes every 3 seconds instead of every second
-    const interval = setInterval(checkAuthStatus, 3000);
+    // Check for authentication status changes
+    const interval = setInterval(checkAuthStatus, 2000);
     
     // Listen for messages from popup window
     const handleMessage = (event: MessageEvent) => {
@@ -73,13 +93,28 @@ const DropboxSync = () => {
       if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
         console.log('Received auth success message, checking status...');
         setTimeout(checkAuthStatus, 1000);
+        setIsConnecting(false);
+      } else if (event.data?.type === 'DROPBOX_AUTH_ERROR') {
+        console.log('Received auth error message:', event.data.error);
+        setConnectionError(event.data.error || 'Authentication failed');
+        setIsConnecting(false);
+        setShowBraveHelp(true);
       }
     };
     
     // Also listen for focus events (when popup closes)
     const handleFocus = () => {
-      console.log('Window focused, checking auth status in 2 seconds...');
-      setTimeout(checkAuthStatus, 2000);
+      console.log('Window focused, checking auth status...');
+      setTimeout(() => {
+        checkAuthStatus();
+        if (isConnecting) {
+          setIsConnecting(false);
+          if (!dropboxService.isAuthenticated()) {
+            setConnectionError("Authentication may have been blocked by your browser");
+            setShowBraveHelp(true);
+          }
+        }
+      }, 2000);
     };
     
     window.addEventListener('message', handleMessage);
@@ -90,17 +125,62 @@ const DropboxSync = () => {
       window.removeEventListener('message', handleMessage);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [toast, isConnected]);
+  }, [toast, isConnected, isConnecting]);
 
   const handleConnect = async () => {
     try {
       console.log('=== INITIATING DROPBOX CONNECTION ===');
+      setIsConnecting(true);
+      setConnectionError("");
       await dropboxService.authenticate();
+      
+      // Set a timeout to show help if connection doesn't succeed
+      setTimeout(() => {
+        if (isConnecting && !dropboxService.isAuthenticated()) {
+          setConnectionError("Connection taking longer than expected");
+          setShowBraveHelp(true);
+          setIsConnecting(false);
+        }
+      }, 10000);
     } catch (error) {
       console.error('Authentication error:', error);
+      setConnectionError(error.message || "Failed to initiate Dropbox authentication");
+      setIsConnecting(false);
+      setShowBraveHelp(true);
       toast({
         title: "Authentication Error",
         description: "Failed to initiate Dropbox authentication.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleManualTokenSubmit = () => {
+    if (!manualToken.trim()) {
+      toast({
+        title: "Invalid Token",
+        description: "Please enter a valid access token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Validate and store the token
+      localStorage.setItem('dropbox_access_token', manualToken.trim());
+      setIsConnected(true);
+      setManualToken("");
+      setShowBraveHelp(false);
+      setConnectionError("");
+      
+      toast({
+        title: "Connected to Dropbox",
+        description: "Successfully connected using manual token.",
+      });
+    } catch (error) {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect with the provided token.",
         variant: "destructive",
       });
     }
@@ -195,6 +275,8 @@ const DropboxSync = () => {
     setSelectedFolder("");
     setCurrentPath("");
     setViewMode("folder-select");
+    setConnectionError("");
+    setShowBraveHelp(false);
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -218,10 +300,92 @@ const DropboxSync = () => {
         <p className="text-muted-foreground mb-4">
           Sync your music library with a specific Dropbox folder to automatically import tracks.
         </p>
-        <Button onClick={handleConnect}>
-          <Cloud className="w-4 h-4 mr-2" />
-          Connect Dropbox
-        </Button>
+        
+        {connectionError && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="flex items-center gap-2 text-destructive text-sm">
+              <AlertCircle className="w-4 h-4" />
+              <span>{connectionError}</span>
+            </div>
+          </div>
+        )}
+
+        {isPrivacyBrowser && !showBraveHelp && (
+          <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-center gap-2 text-orange-700 text-sm">
+              <Shield className="w-4 h-4" />
+              <span>Privacy browser detected - you may need to disable shields/trackers for this site</span>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <Button onClick={handleConnect} disabled={isConnecting} className="w-full">
+            <Cloud className="w-4 h-4 mr-2" />
+            {isConnecting ? 'Connecting...' : 'Connect Dropbox'}
+          </Button>
+
+          {showBraveHelp && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
+              <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Browser Security Settings Detected
+              </h4>
+              <p className="text-blue-800 text-sm mb-3">
+                Your browser's privacy settings may be blocking the connection. Try these options:
+              </p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="font-medium text-blue-900">1.</span>
+                  <span className="text-blue-800">Disable shields/privacy protection for this site and try again</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-medium text-blue-900">2.</span>
+                  <div>
+                    <span className="text-blue-800">Or connect manually:</span>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-2">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Manual Setup
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Manual Dropbox Connection</DialogTitle>
+                          <DialogDescription>
+                            Follow these steps to connect manually:
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="text-sm space-y-2">
+                            <p><strong>Step 1:</strong> Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Dropbox App Console</a></p>
+                            <p><strong>Step 2:</strong> Create a new app or use existing one</p>
+                            <p><strong>Step 3:</strong> Generate an access token</p>
+                            <p><strong>Step 4:</strong> Paste the token below:</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="manual-token">Access Token</Label>
+                            <Input
+                              id="manual-token"
+                              type="password"
+                              placeholder="Paste your Dropbox access token here"
+                              value={manualToken}
+                              onChange={(e) => setManualToken(e.target.value)}
+                            />
+                          </div>
+                          <Button onClick={handleManualTokenSubmit} className="w-full">
+                            Connect with Token
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
     );
   }
