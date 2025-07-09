@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -46,11 +45,17 @@ const DropboxSync = () => {
   const [showBraveHelp, setShowBraveHelp] = useState(false);
   const [manualToken, setManualToken] = useState("");
   const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
+  const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
   // Only show privacy browser warning if there's actually an error
   const shouldShowPrivacyWarning = connectionError.includes('blocked') || connectionError.includes('privacy');
+
+  useEffect(() => {
+    // Set the current redirect URI when component mounts
+    setCurrentRedirectUri(`${window.location.origin}/dropbox-callback`);
+  }, []);
 
   useEffect(() => {
     const checkAuthStatus = () => {
@@ -314,7 +319,7 @@ const DropboxSync = () => {
             </div>
             {connectionError.includes('redirect_uri') && (
               <div className="mt-2 text-xs text-muted-foreground">
-                <p>Current redirect URI: <code className="bg-muted px-1 py-0.5 rounded text-xs">{window.location.origin}/dropbox-callback</code></p>
+                <p>Current redirect URI: <code className="bg-muted px-1 py-0.5 rounded text-xs">{currentRedirectUri}</code></p>
                 <p>Make sure this exact URI is configured in your Dropbox app settings.</p>
               </div>
             )}
@@ -348,7 +353,7 @@ const DropboxSync = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">
                   <span className="font-medium text-blue-900">1.</span>
-                  <span className="text-blue-800">Check that your Dropbox app redirect URI matches: <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">{window.location.origin}/dropbox-callback</code></span>
+                  <span className="text-blue-800">Check that your Dropbox app redirect URI matches: <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">{currentRedirectUri}</code></span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="font-medium text-blue-900">2.</span>
