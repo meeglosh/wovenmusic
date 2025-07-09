@@ -4,6 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { dropboxService } from '@/services/dropboxService';
 import { useToast } from '@/hooks/use-toast';
 
+// Helper function to log to both current window and parent window
+const crossLog = (message: string, data?: any) => {
+  console.log(message, data);
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.console.log(`[POPUP] ${message}`, data);
+    }
+  } catch (e) {
+    // Ignore cross-origin errors
+  }
+};
+
 const DropboxCallback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -11,27 +23,27 @@ const DropboxCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       // Log immediately when component mounts
-      console.log('=== DROPBOX CALLBACK COMPONENT MOUNTED ===');
-      console.log('Window location:', window.location);
-      console.log('Current URL:', window.location.href);
-      console.log('Search params:', window.location.search);
-      console.log('Hash:', window.location.hash);
-      console.log('Pathname:', window.location.pathname);
+      crossLog('=== DROPBOX CALLBACK COMPONENT MOUNTED ===');
+      crossLog('Window location:', window.location);
+      crossLog('Current URL:', window.location.href);
+      crossLog('Search params:', window.location.search);
+      crossLog('Hash:', window.location.hash);
+      crossLog('Pathname:', window.location.pathname);
       
       // Check if we're actually on the callback page
       if (!window.location.pathname.includes('dropbox-callback')) {
-        console.log('=== NOT ON CALLBACK PAGE ===');
+        crossLog('=== NOT ON CALLBACK PAGE ===');
         return;
       }
       
-      console.log('=== DROPBOX CALLBACK PAGE LOADED ===');
+      crossLog('=== DROPBOX CALLBACK PAGE LOADED ===');
       
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
       const state = urlParams.get('state');
 
-      console.log('=== URL PARAMS ===', { 
+      crossLog('=== URL PARAMS ===', { 
         code: code ? `${code.substring(0, 10)}...` : 'missing', 
         error,
         state,
@@ -39,9 +51,9 @@ const DropboxCallback = () => {
       });
 
       if (error) {
-        console.error('=== DROPBOX AUTH ERROR ===', error);
+        crossLog('=== DROPBOX AUTH ERROR ===', error);
         const errorMessage = `Dropbox error: ${error}`;
-        console.log('=== POSTING ERROR TO PARENT ===', errorMessage);
+        crossLog('=== POSTING ERROR TO PARENT ===', errorMessage);
         
         toast({
           title: "Authentication Failed",
@@ -59,18 +71,18 @@ const DropboxCallback = () => {
 
       if (code) {
         try {
-          console.log('=== STARTING TOKEN EXCHANGE ===');
-          console.log('Authorization code:', `${code.substring(0, 20)}...`);
-          console.log('State parameter:', state);
+          crossLog('=== STARTING TOKEN EXCHANGE ===');
+          crossLog('Authorization code:', `${code.substring(0, 20)}...`);
+          crossLog('State parameter:', state);
           
           // Post success message first since we have the auth code
-          console.log('=== POSTING INITIAL SUCCESS MESSAGE TO PARENT ===');
+          crossLog('=== POSTING INITIAL SUCCESS MESSAGE TO PARENT ===');
           if (window.opener) {
             window.opener.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
           }
           
           await dropboxService.handleAuthCallback(code);
-          console.log('=== TOKEN EXCHANGE SUCCESSFUL ===');
+          crossLog('=== TOKEN EXCHANGE SUCCESSFUL ===');
           
           toast({
             title: "Connected to Dropbox",
@@ -79,20 +91,20 @@ const DropboxCallback = () => {
           
           // Set success flag
           localStorage.setItem('dropbox_auth_success', 'true');
-          console.log('=== SET AUTH SUCCESS FLAG ===');
+          crossLog('=== SET AUTH SUCCESS FLAG ===');
           
-          console.log('=== CLOSING POPUP WINDOW ===');
+          crossLog('=== CLOSING POPUP WINDOW ===');
           setTimeout(() => window.close(), 1000);
         } catch (error) {
-          console.error('=== TOKEN EXCHANGE FAILED ===', error);
-          console.error('Error details:', {
+          crossLog('=== TOKEN EXCHANGE FAILED ===', error);
+          crossLog('Error details:', {
             message: error.message,
             stack: error.stack,
             name: error.name
           });
           
           const errorMessage = `Token exchange failed: ${error.message}`;
-          console.log('=== POSTING TOKEN EXCHANGE ERROR TO PARENT ===', errorMessage);
+          crossLog('=== POSTING TOKEN EXCHANGE ERROR TO PARENT ===', errorMessage);
           
           toast({
             title: "Connection Failed",
@@ -107,13 +119,13 @@ const DropboxCallback = () => {
           setTimeout(() => window.close(), 1000);
         }
       } else {
-        console.error('=== NO AUTHORIZATION CODE RECEIVED ===');
-        console.log('Full URL:', window.location.href);
-        console.log('Search params:', window.location.search);
-        console.log('Hash:', window.location.hash);
+        crossLog('=== NO AUTHORIZATION CODE RECEIVED ===');
+        crossLog('Full URL:', window.location.href);
+        crossLog('Search params:', window.location.search);
+        crossLog('Hash:', window.location.hash);
         
         const errorMessage = 'No authorization code received - check redirect URI configuration';
-        console.log('=== POSTING NO CODE ERROR TO PARENT ===', errorMessage);
+        crossLog('=== POSTING NO CODE ERROR TO PARENT ===', errorMessage);
         
         // Notify parent and close
         if (window.opener) {

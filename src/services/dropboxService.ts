@@ -9,6 +9,20 @@ interface DropboxFile {
   ".tag": "file" | "folder";
 }
 
+// Helper function for cross-window logging
+const crossLog = (message: string, data?: any) => {
+  console.log(message, data);
+  if (typeof window !== 'undefined') {
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.console.log(`[POPUP] ${message}`, data);
+      }
+    } catch (e) {
+      // Ignore cross-origin errors
+    }
+  }
+};
+
 export class DropboxService {
   private accessToken: string | null = null;
   private get redirectUri(): string {
@@ -127,24 +141,24 @@ export class DropboxService {
   }
 
   async handleAuthCallback(code: string): Promise<void> {
-    console.log('=== HANDLING AUTH CALLBACK ===');
-    console.log('Authorization code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
-    console.log('Full authorization code:', code);
+    crossLog('=== HANDLING AUTH CALLBACK ===');
+    crossLog('Authorization code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
+    crossLog('Full authorization code:', code);
     
     // Verify state parameter
     const storedState = localStorage.getItem('dropbox_auth_state');
-    console.log('Stored auth state:', storedState);
+    crossLog('Stored auth state:', storedState);
     
     try {
-      console.log('=== CALLING SUPABASE EDGE FUNCTION ===');
-      console.log('Function name: exchange-dropbox-token');
-      console.log('Redirect URI for token exchange:', this.redirectUri);
+      crossLog('=== CALLING SUPABASE EDGE FUNCTION ===');
+      crossLog('Function name: exchange-dropbox-token');
+      crossLog('Redirect URI for token exchange:', this.redirectUri);
       
       const { data, error } = await supabase.functions.invoke('exchange-dropbox-token', {
         body: { code, redirect_uri: this.redirectUri }
       });
 
-      console.log('=== TOKEN EXCHANGE RESPONSE ===', { 
+      crossLog('=== TOKEN EXCHANGE RESPONSE ===', { 
         hasData: !!data, 
         hasError: !!error,
         dataKeys: data ? Object.keys(data) : [],
@@ -154,40 +168,40 @@ export class DropboxService {
       });
 
       if (error) {
-        console.error('=== TOKEN EXCHANGE ERROR ===', error);
-        console.error('Error type:', typeof error);
-        console.error('Error properties:', Object.keys(error));
+        crossLog('=== TOKEN EXCHANGE ERROR ===', error);
+        crossLog('Error type:', typeof error);
+        crossLog('Error properties:', Object.keys(error));
         throw new Error(`Token exchange failed: ${error.message || JSON.stringify(error)}`);
       }
 
       if (data?.access_token) {
-        console.log('=== ACCESS TOKEN RECEIVED ===');
-        console.log('Token length:', data.access_token.length);
-        console.log('Token preview:', `${data.access_token.substring(0, 10)}...`);
+        crossLog('=== ACCESS TOKEN RECEIVED ===');
+        crossLog('Token length:', data.access_token.length);
+        crossLog('Token preview:', `${data.access_token.substring(0, 10)}...`);
         
         this.accessToken = data.access_token;
         localStorage.setItem('dropbox_access_token', data.access_token);
         
         // Verify storage
         const storedToken = localStorage.getItem('dropbox_access_token');
-        console.log('=== TOKEN STORAGE VERIFICATION ===');
-        console.log('Token stored successfully:', storedToken ? 'YES' : 'NO');
-        console.log('Stored token matches:', storedToken === data.access_token ? 'YES' : 'NO');
+        crossLog('=== TOKEN STORAGE VERIFICATION ===');
+        crossLog('Token stored successfully:', storedToken ? 'YES' : 'NO');
+        crossLog('Stored token matches:', storedToken === data.access_token ? 'YES' : 'NO');
         
         // Clean up auth state
         localStorage.removeItem('dropbox_auth_state');
         
       } else {
-        console.error('=== NO ACCESS TOKEN IN RESPONSE ===');
-        console.log('Full response data:', data);
+        crossLog('=== NO ACCESS TOKEN IN RESPONSE ===');
+        crossLog('Full response data:', data);
         throw new Error('No access token received from Dropbox');
       }
     } catch (error) {
-      console.error('=== TOKEN EXCHANGE EXCEPTION ===', error);
-      console.error('Exception type:', typeof error);
-      console.error('Exception name:', error.name);
-      console.error('Exception message:', error.message);
-      console.error('Exception stack:', error.stack);
+      crossLog('=== TOKEN EXCHANGE EXCEPTION ===', error);
+      crossLog('Exception type:', typeof error);
+      crossLog('Exception name:', error.name);
+      crossLog('Exception message:', error.message);
+      crossLog('Exception stack:', error.stack);
       throw error;
     }
   }
