@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,10 +48,8 @@ const DropboxSync = () => {
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
-  // Detect if user might be using Brave or similar privacy browser
-  const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
-                          (window.navigator as any).brave !== undefined ||
-                          localStorage.getItem('brave_detected') === 'true';
+  // Only show privacy browser warning if there's actually an error
+  const shouldShowPrivacyWarning = connectionError.includes('blocked') || connectionError.includes('privacy');
 
   useEffect(() => {
     const checkAuthStatus = () => {
@@ -111,7 +108,7 @@ const DropboxSync = () => {
         if (isConnecting) {
           setIsConnecting(false);
           if (!dropboxService.isAuthenticated()) {
-            setConnectionError("Authentication may have been blocked by your browser");
+            setConnectionError("Authentication failed - check console for details");
             setShowBraveHelp(true);
           }
         }
@@ -133,6 +130,7 @@ const DropboxSync = () => {
       console.log('=== INITIATING DROPBOX CONNECTION ===');
       setIsConnecting(true);
       setConnectionError("");
+      setShowBraveHelp(false);
       await dropboxService.authenticate();
       
       // Set a timeout to show help if connection doesn't succeed
@@ -147,7 +145,12 @@ const DropboxSync = () => {
       console.error('Authentication error:', error);
       setConnectionError(error.message || "Failed to initiate Dropbox authentication");
       setIsConnecting(false);
-      setShowBraveHelp(true);
+      
+      // Only show privacy help if it seems like a browser blocking issue
+      if (error.message?.includes('popup') || error.message?.includes('blocked')) {
+        setShowBraveHelp(true);
+      }
+      
       toast({
         title: "Authentication Error",
         description: "Failed to initiate Dropbox authentication.",
@@ -308,14 +311,20 @@ const DropboxSync = () => {
               <AlertCircle className="w-4 h-4" />
               <span>{connectionError}</span>
             </div>
+            {connectionError.includes('redirect_uri') && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                <p>Current redirect URI: <code className="bg-muted px-1 py-0.5 rounded text-xs">{window.location.protocol}//{window.location.host}/dropbox-callback</code></p>
+                <p>Make sure this exact URI is configured in your Dropbox app settings.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {isPrivacyBrowser && !showBraveHelp && (
+        {shouldShowPrivacyWarning && (
           <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <div className="flex items-center gap-2 text-orange-700 text-sm">
               <Shield className="w-4 h-4" />
-              <span>Privacy browser detected - you may need to disable shields/trackers for this site</span>
+              <span>Browser privacy settings may be blocking the connection</span>
             </div>
           </div>
         )}
@@ -330,18 +339,22 @@ const DropboxSync = () => {
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
               <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
                 <Shield className="w-4 h-4" />
-                Browser Security Settings Detected
+                Troubleshooting Connection Issues
               </h4>
               <p className="text-blue-800 text-sm mb-3">
-                Your browser's privacy settings may be blocking the connection. Try these options:
+                If you're having trouble connecting, try these options:
               </p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">
                   <span className="font-medium text-blue-900">1.</span>
-                  <span className="text-blue-800">Disable shields/privacy protection for this site and try again</span>
+                  <span className="text-blue-800">Check that your Dropbox app redirect URI matches: <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">{window.location.protocol}//{window.location.host}/dropbox-callback</code></span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="font-medium text-blue-900">2.</span>
+                  <span className="text-blue-800">Disable browser shields/privacy protection for this site and try again</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-medium text-blue-900">3.</span>
                   <div>
                     <span className="text-blue-800">Or connect manually:</span>
                     <Dialog>

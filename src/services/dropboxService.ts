@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
@@ -48,26 +47,20 @@ export class DropboxService {
     // Store state for security verification
     localStorage.setItem('dropbox_auth_state', state);
     
-    // Detect if we're in a privacy browser
-    const isPrivacyBrowser = navigator.userAgent.includes('Brave') || 
-                            (window.navigator as any).brave !== undefined ||
-                            localStorage.getItem('brave_detected') === 'true';
+    // Clear any previous browser detection flags
+    localStorage.removeItem('brave_detected');
     
-    // Try opening the popup with more permissive settings for privacy browsers
-    const popupFeatures = isPrivacyBrowser 
-      ? 'width=600,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no'
-      : 'width=600,height=700,scrollbars=yes,resizable=yes,left=' + 
-        (window.screen.width / 2 - 300) + ',top=' + (window.screen.height / 2 - 350);
+    // Simple popup settings that work across browsers
+    const popupFeatures = 'width=600,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no';
     
     console.log('=== OPENING DROPBOX AUTH POPUP ===');
-    console.log('Privacy browser detected:', isPrivacyBrowser);
     console.log('Popup features:', popupFeatures);
     
     const authWindow = window.open(authUrl, 'dropbox-auth', popupFeatures);
     
     if (!authWindow) {
       console.error('=== FAILED TO OPEN POPUP ===');
-      throw new Error('Failed to open authentication popup. Please allow popups for this site and try disabling browser shields/privacy protection.');
+      throw new Error('Failed to open authentication popup. Please allow popups for this site.');
     }
     
     console.log('=== POPUP OPENED SUCCESSFULLY ===');
@@ -93,11 +86,11 @@ export class DropboxService {
               window.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
             } else {
               console.log('=== NO TOKEN FOUND, AUTH MAY HAVE FAILED ===');
-              console.log('This could be due to browser privacy settings blocking the callback');
-              // Post error message suggesting privacy browser issues
+              console.log('This could be due to redirect URI mismatch or other issues');
+              // Post error message
               window.postMessage({ 
                 type: 'DROPBOX_AUTH_ERROR', 
-                error: 'Authentication may have been blocked by browser privacy settings'
+                error: 'Authentication failed - check Dropbox app redirect URI configuration'
               }, '*');
             }
           }, 1000);
@@ -108,11 +101,11 @@ export class DropboxService {
       }
     }, 1000);
 
-    // Set a timeout to detect if auth is taking too long (could indicate blocking)
+    // Set a timeout to detect if auth is taking too long
     const timeoutId = setTimeout(() => {
       if (!authWindow?.closed) {
         console.log('=== AUTH TAKING LONGER THAN EXPECTED ===');
-        console.log('This may indicate browser privacy settings are blocking the process');
+        console.log('This may indicate redirect URI issues or other problems');
       }
     }, 15000);
 
