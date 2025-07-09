@@ -7,6 +7,7 @@ interface DropboxFile {
   size: number;
   server_modified: string;
   content_hash?: string;
+  ".tag": "file" | "folder";
 }
 
 export class DropboxService {
@@ -75,6 +76,8 @@ export class DropboxService {
     const token = this.getStoredToken();
     if (!token) throw new Error('Not authenticated with Dropbox');
 
+    console.log('Listing files in folder:', folder);
+
     const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
       method: 'POST',
       headers: {
@@ -89,14 +92,16 @@ export class DropboxService {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Dropbox API error:', response.status, errorText);
       throw new Error('Failed to list Dropbox files');
     }
 
     const data = await response.json();
-    return data.entries.filter((entry: any) => 
-      entry['.tag'] === 'file' && 
-      (entry.name.endsWith('.mp3') || entry.name.endsWith('.wav') || entry.name.endsWith('.m4a'))
-    );
+    console.log('Dropbox API response:', data);
+    
+    // Return all entries (both files and folders)
+    return data.entries || [];
   }
 
   async downloadFile(path: string): Promise<Blob> {

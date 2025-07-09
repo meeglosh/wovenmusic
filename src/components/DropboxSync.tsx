@@ -1,24 +1,37 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DropboxFile {
   name: string;
   path_lower: string;
   size: number;
   server_modified: string;
+  ".tag": "file" | "folder";
 }
 
 const DropboxSync = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [files, setFiles] = useState<DropboxFile[]>([]);
+  const [folders, setFolders] = useState<DropboxFile[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string>("");
+  const [currentPath, setCurrentPath] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -54,22 +67,48 @@ const DropboxSync = () => {
     }
   };
 
-  const loadFiles = async () => {
+  const loadFolders = async (path: string = "") => {
     if (!isConnected) return;
     
     setIsLoading(true);
     try {
-      const dropboxFiles = await dropboxService.listFiles('/Music');
-      setFiles(dropboxFiles);
+      const allItems = await dropboxService.listFiles(path);
+      const folderItems = allItems.filter(item => item[".tag"] === "folder");
+      const musicFiles = allItems.filter(item => 
+        item[".tag"] === "file" && 
+        (item.name.endsWith('.mp3') || item.name.endsWith('.wav') || item.name.endsWith('.m4a'))
+      );
+      
+      setFolders(folderItems);
+      setFiles(musicFiles);
+      setCurrentPath(path);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load files from Dropbox.",
+        description: "Failed to load folders from Dropbox.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFolderSelect = (folderPath: string) => {
+    setSelectedFolder(folderPath);
+    setViewMode("file-view");
+    loadFolders(folderPath);
+  };
+
+  const handleBackToFolderSelect = () => {
+    setViewMode("folder-select");
+    setSelectedFolder("");
+    setCurrentPath("");
+    setFiles([]);
+    setFolders([]);
+  };
+
+  const navigateToFolder = (folderPath: string) => {
+    loadFolders(folderPath);
   };
 
   const syncFiles = async () => {
@@ -109,6 +148,10 @@ const DropboxSync = () => {
     dropboxService.logout();
     setIsConnected(false);
     setFiles([]);
+    setFolders([]);
+    setSelectedFolder("");
+    setCurrentPath("");
+    setViewMode("folder-select");
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -116,10 +159,10 @@ const DropboxSync = () => {
   };
 
   useEffect(() => {
-    if (isConnected) {
-      loadFiles();
+    if (isConnected && viewMode === "folder-select") {
+      loadFolders("");
     }
-  }, [isConnected]);
+  }, [isConnected, viewMode]);
 
   if (!isConnected) {
     return (
@@ -146,9 +189,20 @@ const DropboxSync = () => {
           <Cloud className="w-5 h-5 text-blue-600" />
           <h3 className="text-lg font-semibold">Dropbox Sync</h3>
           <Badge variant="secondary">Connected</Badge>
+          {selectedFolder && (
+            <Badge variant="outline" className="max-w-xs truncate">
+              {selectedFolder}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={loadFiles} disabled={isLoading}>
+          {viewMode === "file-view" && (
+            <Button variant="outline" size="sm" onClick={handleBackToFolderSelect}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Change Folder
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => loadFolders(currentPath)} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -161,43 +215,103 @@ const DropboxSync = () => {
       {isLoading ? (
         <div className="text-center py-8">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading files from Dropbox...</p>
+          <p className="text-muted-foreground">Loading from Dropbox...</p>
         </div>
-      ) : files.length === 0 ? (
-        <div className="text-center py-8">
-          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-muted-foreground">No music files found in /Music folder</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Make sure you have audio files (.mp3, .wav, .m4a) in your Dropbox /Music folder
-          </p>
+      ) : viewMode === "folder-select" ? (
+        <div>
+          <div className="mb-4">
+            <h4 className="text-sm font-medium mb-2">Choose a folder to sync:</h4>
+            {currentPath && (
+              <div className="flex items-center text-sm text-muted-foreground mb-2">
+                <span>Current path: /{currentPath.replace(/^\//, '')}</span>
+              </div>
+            )}
+          </div>
+          
+          {folders.length === 0 ? (
+            <div className="text-center py-8">
+              <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-muted-foreground">No folders found in this location</p>
+              {currentPath && (
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
+                  Go to Root
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {currentPath && (
+                <div 
+                  className="flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                    loadFolders(parentPath);
+                  }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Folder className="w-4 h-4" />
+                    <span className="text-sm">.. (Go back)</span>
+                  </div>
+                </div>
+              )}
+              {folders.map((folder) => (
+                <div key={folder.path_lower} className="flex items-center justify-between p-3 rounded border">
+                  <div className="flex items-center space-x-2">
+                    <Folder className="w-4 h-4" />
+                    <span className="font-medium text-sm">{folder.name}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
+                      Select
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">
-              Found {files.length} music file{files.length !== 1 ? 's' : ''} in /Music
-            </p>
-            <Button onClick={syncFiles} disabled={isSyncing || addTrackMutation.isPending}>
-              <Download className="w-4 h-4 mr-2" />
-              {isSyncing ? 'Syncing...' : 'Sync to Library'}
-            </Button>
-          </div>
-          
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {files.map((file) => (
-              <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
-                <div>
-                  <p className="font-medium text-sm">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.size / 1024 / 1024).toFixed(1)} MB
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {new Date(file.server_modified).toLocaleDateString()}
-                </Badge>
+          {files.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-muted-foreground">No music files found in this folder</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Make sure you have audio files (.mp3, .wav, .m4a) in the selected folder
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
+                </p>
+                <Button onClick={syncFiles} disabled={isSyncing || addTrackMutation.isPending}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {isSyncing ? 'Syncing...' : 'Sync to Library'}
+                </Button>
               </div>
-            ))}
-          </div>
+              
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {files.map((file) => (
+                  <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
+                    <div>
+                      <p className="font-medium text-sm">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024 / 1024).toFixed(1)} MB
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {new Date(file.server_modified).toLocaleDateString()}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Card>
