@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
@@ -12,7 +11,9 @@ interface DropboxFile {
 
 export class DropboxService {
   private accessToken: string | null = null;
-  private readonly redirectUri = `${window.location.origin}/dropbox-callback`;
+  private get redirectUri(): string {
+    return `${window.location.origin}/dropbox-callback`;
+  }
 
   async authenticate(): Promise<void> {
     console.log('=== STARTING DROPBOX AUTHENTICATION ===');
