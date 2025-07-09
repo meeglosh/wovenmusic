@@ -10,9 +10,14 @@ const DropboxCallback = () => {
 
   useEffect(() => {
     const handleCallback = async () => {
+      console.log('Dropbox callback page loaded');
+      console.log('Current URL:', window.location.href);
+      
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
+
+      console.log('URL params:', { code: code ? 'present' : 'missing', error });
 
       if (error) {
         console.error('Dropbox auth error:', error);
@@ -27,13 +32,19 @@ const DropboxCallback = () => {
 
       if (code) {
         try {
+          console.log('Exchanging code for token...');
           await dropboxService.handleAuthCallback(code);
+          console.log('Token exchange successful');
+          
           toast({
             title: "Connected to Dropbox",
             description: "You can now sync your music files.",
           });
-          console.log('Dropbox authentication successful');
-          // Close the popup window
+          
+          // Set a flag to indicate successful authentication
+          localStorage.setItem('dropbox_auth_success', 'true');
+          
+          console.log('Closing popup window...');
           window.close();
         } catch (error) {
           console.error('Token exchange failed:', error);

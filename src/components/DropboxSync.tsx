@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,13 +35,16 @@ const DropboxSync = () => {
   const addTrackMutation = useAddTrack();
 
   useEffect(() => {
-    setIsConnected(dropboxService.isAuthenticated());
-    
-    // Check for authentication status changes periodically
-    const checkAuth = () => {
-      const wasConnected = isConnected;
-      const nowConnected = dropboxService.isAuthenticated();
-      if (!wasConnected && nowConnected) {
+    const checkAuthStatus = () => {
+      const authStatus = dropboxService.isAuthenticated();
+      console.log('Checking Dropbox auth status:', authStatus);
+      setIsConnected(authStatus);
+      
+      // Check for successful auth flag
+      const authSuccess = localStorage.getItem('dropbox_auth_success');
+      if (authSuccess === 'true') {
+        console.log('Found auth success flag, updating state...');
+        localStorage.removeItem('dropbox_auth_success');
         setIsConnected(true);
         toast({
           title: "Connected to Dropbox",
@@ -51,14 +53,32 @@ const DropboxSync = () => {
       }
     };
 
-    const interval = setInterval(checkAuth, 1000);
-    return () => clearInterval(interval);
-  }, [isConnected, toast]);
+    // Initial check
+    checkAuthStatus();
+    
+    // Check for authentication status changes periodically
+    const interval = setInterval(checkAuthStatus, 1000);
+    
+    // Also listen for focus events (when popup closes)
+    const handleFocus = () => {
+      console.log('Window focused, checking auth status...');
+      setTimeout(checkAuthStatus, 500); // Small delay to ensure token is saved
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [toast]);
 
   const handleConnect = async () => {
     try {
+      console.log('Initiating Dropbox connection...');
       await dropboxService.authenticate();
     } catch (error) {
+      console.error('Authentication error:', error);
       toast({
         title: "Authentication Error",
         description: "Failed to initiate Dropbox authentication.",
@@ -72,6 +92,7 @@ const DropboxSync = () => {
     
     setIsLoading(true);
     try {
+      console.log('Loading folders from path:', path);
       const allItems = await dropboxService.listFiles(path);
       const folderItems = allItems.filter(item => item[".tag"] === "folder");
       const musicFiles = allItems.filter(item => 
@@ -79,10 +100,12 @@ const DropboxSync = () => {
         (item.name.endsWith('.mp3') || item.name.endsWith('.wav') || item.name.endsWith('.m4a'))
       );
       
+      console.log('Found folders:', folderItems.length, 'music files:', musicFiles.length);
       setFolders(folderItems);
       setFiles(musicFiles);
       setCurrentPath(path);
     } catch (error) {
+      console.error('Error loading folders:', error);
       toast({
         title: "Error",
         description: "Failed to load folders from Dropbox.",
@@ -145,6 +168,7 @@ const DropboxSync = () => {
   };
 
   const handleDisconnect = () => {
+    console.log('Disconnecting from Dropbox...');
     dropboxService.logout();
     setIsConnected(false);
     setFiles([]);
@@ -160,6 +184,7 @@ const DropboxSync = () => {
 
   useEffect(() => {
     if (isConnected && viewMode === "folder-select") {
+      console.log('Connected and in folder-select mode, loading root folders...');
       loadFolders("");
     }
   }, [isConnected, viewMode]);
