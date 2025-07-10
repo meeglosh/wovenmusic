@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2 } from "lucide-react";
-import { Track, getExtensionWithStatus } from "@/types/music";
+import { Track, getFileName } from "@/types/music";
 
 interface PlayerProps {
   track: Track;
@@ -70,25 +70,7 @@ const Player = ({
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="font-medium">{track.title}</p>
-              {(() => {
-                const { extension, compatible } = getExtensionWithStatus(track);
-                return extension ? (
-                  <span 
-                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${
-                      compatible 
-                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                        : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}
-                    title={compatible ? 'Compatible format' : 'May not play in all browsers'}
-                  >
-                    .{extension}
-                  </span>
-                ) : null;
-              })()}
-            </div>
-            <p className="text-sm text-muted-foreground">{track.artist}</p>
+            <p className="font-medium">{getFileName(track)}</p>
           </div>
         </div>
 

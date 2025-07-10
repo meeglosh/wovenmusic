@@ -10,18 +10,13 @@ export interface Track {
   dropbox_path?: string;
 }
 
-// Utility function to extract file extension from a track
-export const getFileExtension = (track: Track): string => {
+// Utility function to get the full filename from a track
+export const getFileName = (track: Track): string => {
+  // Try to get the filename from dropbox_path first, then fileUrl
   const filePath = track.dropbox_path || track.fileUrl || '';
-  const extension = filePath.split('.').pop()?.toLowerCase() || '';
-  return extension;
-};
-
-// Utility function to get extension with color coding for browser compatibility
-export const getExtensionWithStatus = (track: Track): { extension: string; compatible: boolean } => {
-  const ext = getFileExtension(track);
-  const compatible = ['wav', 'mp3', 'mp4', 'm4a', 'ogg', 'aac'].includes(ext);
-  return { extension: ext, compatible };
+  // Extract just the filename from the full path
+  const fileName = filePath.split('/').pop() || track.title;
+  return fileName;
 };
 
 export interface Playlist {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X } from "lucide-react";
-import { Track, getExtensionWithStatus } from "@/types/music";
+import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
@@ -215,31 +215,13 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                     </div>
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        className="text-left font-medium hover:text-primary transition-colors cursor-pointer"
-                        onClick={() => navigate(`/track/${track.id}`)}
-                        title="Open track view with comments"
-                      >
-                        {track.title}
-                      </button>
-                      {(() => {
-                        const { extension, compatible } = getExtensionWithStatus(track);
-                        return extension ? (
-                          <span 
-                            className={`text-xs px-1.5 py-0.5 rounded font-mono ${
-                              compatible 
-                                ? 'bg-green-100 text-green-700 border border-green-200' 
-                                : 'bg-red-100 text-red-700 border border-red-200'
-                            }`}
-                            title={compatible ? 'Compatible format' : 'May not play in all browsers'}
-                          >
-                            .{extension}
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{track.artist}</p>
+                    <button 
+                      className="text-left font-medium hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => navigate(`/track/${track.id}`)}
+                      title="Open track view with comments"
+                    >
+                      {getFileName(track)}
+                    </button>
                   </div>
                 </div>
 

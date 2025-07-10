@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2 } from "lucide-react";
-import { Track, Playlist, getExtensionWithStatus } from "@/types/music";
+import { Track, Playlist, getFileName } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
@@ -107,25 +107,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: Sortabl
           </div>
         </div>
         <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium">{track.title}</p>
-            {(() => {
-              const { extension, compatible } = getExtensionWithStatus(track);
-              return extension ? (
-                <span 
-                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${
-                    compatible 
-                      ? 'bg-green-100 text-green-700 border border-green-200' 
-                      : 'bg-red-100 text-red-700 border border-red-200'
-                  }`}
-                  title={compatible ? 'Compatible format' : 'May not play in all browsers'}
-                >
-                  .{extension}
-                </span>
-              ) : null;
-            })()}
-          </div>
-          <p className="text-sm text-muted-foreground">{track.artist}</p>
+          <p className="font-medium">{getFileName(track)}</p>
         </div>
       </div>
 
