@@ -66,27 +66,57 @@ export const useAudioPlayer = () => {
         console.log('=== ATTEMPTING TO LOAD TRACK ===');
         console.log('Track file URL:', currentTrack.fileUrl);
         
-        // The stored URL is likely expired, get a fresh temporary link
-        console.log('Getting fresh temporary download link for audio playback');
         let audioUrl = currentTrack.fileUrl;
         
-        // If this is a Dropbox URL, get a fresh temporary link
-        if (currentTrack.fileUrl.includes('dropboxusercontent.com')) {
+        // Check if this is a stored Dropbox path (starts with /) or an expired temporary URL
+        if (currentTrack.fileUrl.startsWith('/')) {
+          // This is a proper Dropbox path, get a fresh temporary link
+          console.log('Getting fresh temporary link for Dropbox path:', currentTrack.fileUrl);
           try {
-            // Extract the file path from the title and artist to find the original file
-            const searchQuery = `${currentTrack.title}.mp3`;
-            console.log('Searching for fresh link for:', searchQuery);
-            const freshUrl = await dropboxService.getTemporaryLink(searchQuery);
-            if (freshUrl) {
-              audioUrl = freshUrl;
-              console.log('Got fresh temporary URL:', audioUrl);
-            } else {
-              console.log('Could not get fresh URL, using stored URL');
-            }
+            audioUrl = await dropboxService.getTemporaryLink(currentTrack.fileUrl);
+            console.log('Got fresh temporary URL:', audioUrl);
           } catch (error) {
-            console.error('Failed to get fresh URL:', error);
-            console.log('Falling back to stored URL');
+            console.error('Failed to get fresh temporary link:', error);
+            throw new Error('Cannot play track: Failed to get download link');
           }
+        } else if (currentTrack.fileUrl.includes('dropboxusercontent.com')) {
+          // This is an expired temporary URL, we need to find the original file
+          console.log('Expired temporary URL detected, need to find original file');
+          
+          // Try to construct the original path based on title and artist
+          // Since user said files came from "Woven - Sketches 24", try that folder
+          const folderPath = '/woven - sketches 24';
+          const possiblePaths = [
+            `${folderPath}/${currentTrack.title} - ${currentTrack.artist}.aif`,
+            `${folderPath}/${currentTrack.title} - ${currentTrack.artist}.mp3`,
+            `${folderPath}/${currentTrack.title} - ${currentTrack.artist}.wav`,
+            `${folderPath}/${currentTrack.title}.aif`,
+            `${folderPath}/${currentTrack.title}.mp3`,
+            `${folderPath}/${currentTrack.title}.wav`
+          ];
+          
+          console.log('Trying possible paths:', possiblePaths);
+          
+          let foundPath = null;
+          for (const path of possiblePaths) {
+            try {
+              console.log('Trying path:', path);
+              audioUrl = await dropboxService.getTemporaryLink(path);
+              foundPath = path;
+              console.log('Found working path:', path);
+              console.log('Got fresh temporary URL:', audioUrl);
+              break;
+            } catch (error) {
+              console.log('Path not found:', path);
+              continue;
+            }
+          }
+          
+          if (!foundPath) {
+            throw new Error('Cannot find original file in Dropbox');
+          }
+        } else {
+          console.log('Using stored URL directly (assuming it\'s valid)');
         }
 
         console.log('Final audio URL:', audioUrl);
