@@ -1,9 +1,11 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Music, Plus, Library, List } from "lucide-react";
 import { Playlist } from "@/types/music";
 import { cn } from "@/lib/utils";
+import CreatePlaylistModal from "./CreatePlaylistModal";
 
 interface SidebarProps {
   playlists: Playlist[];
@@ -13,6 +15,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: SidebarProps) => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
   return (
     <aside className="w-64 bg-card/30 border-r border-border flex flex-col">
       <div className="p-4">
@@ -31,7 +34,12 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
       <div className="px-4 pb-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-muted-foreground">Playlists</h3>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={() => setShowCreateModal(true)}
+          >
             <Plus className="w-4 h-4" />
           </Button>
         </div>
@@ -74,6 +82,11 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
           </div>
         </ScrollArea>
       </div>
+      
+      <CreatePlaylistModal 
+        open={showCreateModal} 
+        onOpenChange={setShowCreateModal} 
+      />
     </aside>
   );
 };
