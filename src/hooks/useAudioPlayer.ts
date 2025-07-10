@@ -66,9 +66,28 @@ export const useAudioPlayer = () => {
         console.log('=== ATTEMPTING TO LOAD TRACK ===');
         console.log('Track file URL:', currentTrack.fileUrl);
         
-        // Use the stored file URL directly - exactly what the user wants!
-        console.log('Using stored file URL from original sync location:', currentTrack.fileUrl);
-        const audioUrl = currentTrack.fileUrl;
+        // The stored URL is likely expired, get a fresh temporary link
+        console.log('Getting fresh temporary download link for audio playback');
+        let audioUrl = currentTrack.fileUrl;
+        
+        // If this is a Dropbox URL, get a fresh temporary link
+        if (currentTrack.fileUrl.includes('dropboxusercontent.com')) {
+          try {
+            // Extract the file path from the title and artist to find the original file
+            const searchQuery = `${currentTrack.title}.mp3`;
+            console.log('Searching for fresh link for:', searchQuery);
+            const freshUrl = await dropboxService.getTemporaryLink(searchQuery);
+            if (freshUrl) {
+              audioUrl = freshUrl;
+              console.log('Got fresh temporary URL:', audioUrl);
+            } else {
+              console.log('Could not get fresh URL, using stored URL');
+            }
+          } catch (error) {
+            console.error('Failed to get fresh URL:', error);
+            console.log('Falling back to stored URL');
+          }
+        }
 
         console.log('Final audio URL:', audioUrl);
         
