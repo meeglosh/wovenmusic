@@ -120,65 +120,6 @@ export const useAudioPlayer = () => {
           }
         }
 
-        console.log('Final audio URL:', audioUrl);
-        
-        // Check if browser can play this audio format before setting source
-        const fileExtension = audioUrl.split('.').pop()?.toLowerCase() || '';
-        let mimeType = '';
-        
-        switch (fileExtension) {
-          case 'wav':
-            mimeType = 'audio/wav';
-            break;
-          case 'mp3':
-            mimeType = 'audio/mpeg';
-            break;
-          case 'aif':
-          case 'aiff':
-            mimeType = 'audio/aiff';
-            break;
-          case 'm4a':
-            mimeType = 'audio/mp4';
-            break;
-          case 'ogg':
-            mimeType = 'audio/ogg';
-            break;
-          default:
-            mimeType = 'audio/mpeg';
-        }
-        
-        const canPlay = audio.canPlayType(mimeType);
-        if (canPlay === '') {
-          console.warn(`Browser cannot play ${mimeType} format for file: ${currentTrack.title}`);
-          // Try to find an alternative format
-          if (currentTrack.dropbox_path && (fileExtension === 'aif' || fileExtension === 'aiff')) {
-            console.log('Trying to find alternative format for .aif file...');
-            const basePath = currentTrack.dropbox_path.replace(/\.(aif|aiff)$/, '');
-            const alternativeFormats = ['.wav', '.mp3', '.m4a'];
-            
-            let foundAlternative = false;
-            for (const altFormat of alternativeFormats) {
-              try {
-                const altPath = basePath + altFormat;
-                console.log('Trying alternative format:', altPath);
-                audioUrl = await dropboxService.getTemporaryLink(altPath);
-                console.log('Found alternative format:', altFormat);
-                foundAlternative = true;
-                break;
-              } catch (error) {
-                console.log(`Alternative format ${altFormat} not found`);
-                continue;
-              }
-            }
-            
-            if (!foundAlternative) {
-              throw new Error(`Your browser cannot play ${fileExtension?.toUpperCase()} files and no alternative format was found.`);
-            }
-          } else {
-            throw new Error(`Your browser cannot play ${fileExtension?.toUpperCase()} files. Please convert to WAV or MP3 format.`);
-          }
-        }
-        
         console.log('Final audio URL after format check:', audioUrl);
         
         // Set the audio source and load it
@@ -195,7 +136,19 @@ export const useAudioPlayer = () => {
           };
           
           const handleError = (e) => {
-            console.error('Audio load error:', e);
+            console.error('Audio load error details:', {
+              type: e.type,
+              target: e.target,
+              error: e.target?.error,
+              networkState: e.target?.networkState,
+              readyState: e.target?.readyState,
+              src: e.target?.src,
+              currentSrc: e.target?.currentSrc
+            });
+            if (e.target?.error) {
+              console.error('Audio error code:', e.target.error.code);
+              console.error('Audio error message:', e.target.error.message);
+            }
             audio.removeEventListener('canplaythrough', handleCanPlay);
             audio.removeEventListener('error', handleError);
             reject(e);
