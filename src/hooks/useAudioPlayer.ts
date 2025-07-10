@@ -62,126 +62,14 @@ export const useAudioPlayer = () => {
         console.log('Track file URL:', currentTrack.fileUrl);
         console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
         
-        let audioUrl = currentTrack.fileUrl;
-        
-        // Handle Dropbox URLs by using Dropbox API to get temporary download links
-        if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
-          console.log('Converting Dropbox shared URL to temporary download link');
-          
-          // Check if user is authenticated with Dropbox
-          if (!dropboxService.isAuthenticated()) {
-            console.error('User not authenticated with Dropbox');
-            throw new Error('Please connect to Dropbox first to play music files');
-          }
-          
-          try {
-            // Extract the file path from the shared URL
-            // For now, let's get the file name from the track and find it in Dropbox
-            const fileName = currentTrack.title + '.mp3'; // Assuming mp3 format
-            console.log('Searching for file:', fileName);
-            
-            // List files to find the one that matches
-            const files = await dropboxService.listFiles('/Music'); // Assuming files are in /Music folder
-            let matchingFile = files.find(file => 
-              file['.tag'] === 'file' && // Only look for actual files
-              (file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
-               file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())) &&
-              // Check for audio file extensions
-              /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name)
-            );
-            
-            // If no direct file match, look for a folder that matches and search inside it
-            if (!matchingFile) {
-              const matchingFolder = files.find(file => 
-                file['.tag'] === 'folder' && 
-                (file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
-                 file.name.toLowerCase().includes(currentTrack.artist.toLowerCase()))
-              );
-              
-              if (matchingFolder) {
-                console.log('Found matching folder, searching inside:', matchingFolder.path_lower);
-                const folderFiles = await dropboxService.listFiles(matchingFolder.path_lower);
-                
-                // Try to find a file that matches both title and artist (e.g., "Woven - All is still_v2.6.aif")
-                matchingFile = folderFiles.find(file => 
-                  file['.tag'] === 'file' && 
-                  /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
-                  file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) &&
-                  file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
-                );
-                
-                // If no exact match, try title only
-                if (!matchingFile) {
-                  matchingFile = folderFiles.find(file => 
-                    file['.tag'] === 'file' && 
-                    /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
-                    file.name.toLowerCase().includes(currentTrack.title.toLowerCase())
-                  );
-                  console.log('Found title match:', matchingFile?.path_lower);
-                }
-                
-                // If still no match, try searching in subfolders
-                if (!matchingFile) {
-                  const subfolders = folderFiles.filter(file => file['.tag'] === 'folder');
-                  for (const subfolder of subfolders) {
-                    console.log('Searching in subfolder:', subfolder.path_lower);
-                    const subfolderFiles = await dropboxService.listFiles(subfolder.path_lower);
-                    
-                    // Try both title and artist match in subfolder
-                    matchingFile = subfolderFiles.find(file => 
-                      file['.tag'] === 'file' && 
-                      /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
-                      file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) &&
-                      file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
-                    );
-                    
-                    if (matchingFile) {
-                      console.log('Found perfect match in subfolder:', matchingFile?.path_lower);
-                      break;
-                    }
-                    
-                    // Try title only in subfolder
-                    matchingFile = subfolderFiles.find(file => 
-                      file['.tag'] === 'file' && 
-                      /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
-                      file.name.toLowerCase().includes(currentTrack.title.toLowerCase())
-                    );
-                    
-                    if (matchingFile) {
-                      console.log('Found title match in subfolder:', matchingFile?.path_lower);
-                      break;
-                    }
-                  }
-                }
-                
-                // Last resort: get the first audio file from main folder
-                if (!matchingFile) {
-                  matchingFile = folderFiles.find(file => 
-                    file['.tag'] === 'file' && 
-                    /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name)
-                  );
-                  console.log('No specific match found, using first audio file in folder:', matchingFile?.path_lower);
-                } else {
-                  console.log('Found specific matching audio file:', matchingFile?.path_lower);
-                }
-              }
-            }
-            
-            if (matchingFile) {
-              console.log('Found matching audio file:', matchingFile.path_lower);
-              const tempLink = await dropboxService.getTemporaryLink(matchingFile.path_lower);
-              console.log('Got temporary download link:', tempLink);
-              audioUrl = tempLink;
-            } else {
-              console.log('No matching audio file found, trying fallback approach');
-              throw new Error('No matching audio file found in Dropbox');
-            }
-            
-          } catch (error) {
-            console.error('Failed to get Dropbox temporary link:', error);
-            throw new Error('Failed to load audio from Dropbox. Please check your Dropbox connection.');
-          }
+        if (!currentTrack.fileUrl) {
+          console.log('No file URL for track:', currentTrack.title);
+          throw new Error('Track has no file URL');
         }
+
+        // Use the stored file URL directly - exactly what the user wants!
+        console.log('Using stored file URL from original sync location:', currentTrack.fileUrl);
+        const audioUrl = currentTrack.fileUrl;
 
         console.log('Final audio URL:', audioUrl);
         audio.src = audioUrl;
