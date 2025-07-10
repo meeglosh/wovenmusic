@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,7 +45,7 @@ const DropboxSync = () => {
   const [connectionError, setConnectionError] = useState<string>("");
   const [showBraveHelp, setShowBraveHelp] = useState(false);
   const [manualToken, setManualToken] = useState("");
-  const [viewMode, setViewMode = useState<"folder-select" | "file-view">("folder-select");
+  const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
