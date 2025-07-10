@@ -117,6 +117,17 @@ export const useAudioPlayer = () => {
                     /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
                     file.name.toLowerCase().includes(currentTrack.title.toLowerCase())
                   );
+                  console.log('Found title match:', matchingFile?.path_lower);
+                }
+                
+                // If still no match, try artist only  
+                if (!matchingFile) {
+                  matchingFile = folderFiles.find(file => 
+                    file['.tag'] === 'file' && 
+                    /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
+                    file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
+                  );
+                  console.log('Found artist match:', matchingFile?.path_lower);
                 }
                 
                 // If still no match, get the first audio file as fallback
