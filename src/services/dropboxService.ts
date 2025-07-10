@@ -25,7 +25,25 @@ const crossLog = (message: string, data?: any) => {
 };
 
 export class DropboxService {
+  private static instance: DropboxService | null = null;
   private accessToken: string | null = null;
+  
+  // Singleton pattern - ensure only one instance exists
+  constructor() {
+    if (DropboxService.instance) {
+      return DropboxService.instance;
+    }
+    DropboxService.instance = this;
+  }
+  
+  // Static method to get the singleton instance
+  static getInstance(): DropboxService {
+    if (!DropboxService.instance) {
+      DropboxService.instance = new DropboxService();
+    }
+    return DropboxService.instance;
+  }
+
   private get redirectUri(): string {
     return `${window.location.origin}/dropbox-callback`;
   }

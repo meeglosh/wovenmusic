@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 
-// Import the existing DropboxService
+// Import the existing DropboxService singleton
 import { DropboxService } from "@/services/dropboxService";
 
-const dropboxService = new DropboxService();
+const dropboxService = DropboxService.getInstance();
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
