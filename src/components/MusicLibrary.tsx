@@ -1,10 +1,12 @@
 
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Play, MoreHorizontal, Clock, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Play, MoreHorizontal, Clock, Trash2, X } from "lucide-react";
 import { Track } from "@/types/music";
 import DropboxSync from "./DropboxSync";
-import { useDeleteTrack } from "@/hooks/useDeleteTrack";
+import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -19,8 +21,36 @@ interface MusicLibraryProps {
 }
 
 const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const deleteTrackMutation = useDeleteTrack();
+  const bulkDeleteMutation = useBulkDeleteTracks();
   const { toast } = useToast();
+
+  const isSelectionMode = selectedTrackIds.size > 0;
+  const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
+  const someTracksSelected = selectedTrackIds.size > 0 && selectedTrackIds.size < tracks.length;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTrackIds(new Set(tracks.map(track => track.id)));
+    } else {
+      setSelectedTrackIds(new Set());
+    }
+  };
+
+  const handleSelectTrack = (trackId: string, checked: boolean) => {
+    const newSelection = new Set(selectedTrackIds);
+    if (checked) {
+      newSelection.add(trackId);
+    } else {
+      newSelection.delete(trackId);
+    }
+    setSelectedTrackIds(newSelection);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTrackIds(new Set());
+  };
 
   const handleDeleteTrack = async (track: Track) => {
     try {
@@ -37,12 +67,56 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
       });
     }
   };
+
+  const handleBulkDelete = async () => {
+    const selectedIds = Array.from(selectedTrackIds);
+    try {
+      await bulkDeleteMutation.mutateAsync(selectedIds);
+      setSelectedTrackIds(new Set());
+      toast({
+        title: "Tracks removed",
+        description: `${selectedIds.length} tracks have been removed from your library. The files remain in your Dropbox.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove tracks from library.",
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Your Library</h2>
-        <div className="text-sm text-muted-foreground">
-          {tracks.length} track{tracks.length !== 1 ? 's' : ''}
+        <div className="flex items-center space-x-4">
+          {isSelectionMode && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedTrackIds.size} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearSelection}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Clear Selection
+              </Button>
+            </div>
+          )}
+          <div className="text-sm text-muted-foreground">
+            {tracks.length} track{tracks.length !== 1 ? 's' : ''}
+          </div>
         </div>
       </div>
 
@@ -61,7 +135,15 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
         </div>
       ) : (
         <Card className="overflow-hidden">
-          <div className="grid grid-cols-[auto,1fr,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
+          <div className="grid grid-cols-[auto,auto,1fr,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
+            <div className="w-8">
+              <Checkbox
+                checked={allTracksSelected}
+                onCheckedChange={handleSelectAll}
+                className={someTracksSelected ? 'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground' : ''}
+                data-indeterminate={someTracksSelected}
+              />
+            </div>
             <div className="w-12"></div>
             <div>Title</div>
             <div className="flex items-center space-x-1">
@@ -75,8 +157,16 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
             {tracks.map((track, index) => (
               <div
                 key={track.id}
-                className="grid grid-cols-[auto,1fr,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group"
+                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
+                  selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
+                }`}
               >
+                <div className="w-8 flex items-center">
+                  <Checkbox
+                    checked={selectedTrackIds.has(track.id)}
+                    onCheckedChange={(checked) => handleSelectTrack(track.id, checked as boolean)}
+                  />
+                </div>
                 <div className="w-12 flex items-center">
                   <Button
                     variant="ghost"

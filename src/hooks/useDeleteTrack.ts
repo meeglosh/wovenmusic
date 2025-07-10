@@ -19,3 +19,22 @@ export const useDeleteTrack = () => {
     }
   });
 };
+
+export const useBulkDeleteTracks = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (trackIds: string[]) => {
+      const { error } = await supabase
+        .from("tracks")
+        .delete()
+        .in("id", trackIds);
+      
+      if (error) throw error;
+      return trackIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+    }
+  });
+};
