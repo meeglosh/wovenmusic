@@ -303,6 +303,8 @@ export class DropboxService {
         console.log('Entries count:', data.entries?.length || 0);
         console.log('Has more:', data.has_more);
         console.log('Cursor:', data.cursor);
+        console.log('CRITICAL: has_more value and type:', data.has_more, typeof data.has_more);
+        console.log('CRITICAL: pagination check - hasMore will be:', data.has_more);
         
         // Add entries from this page
         if (data.entries) {
@@ -314,10 +316,13 @@ export class DropboxService {
         hasMore = data.has_more;
         cursor = data.cursor;
 
+        console.log('CRITICAL: After setting hasMore =', hasMore);
+        console.log('CRITICAL: Cursor for next page =', cursor);
+
         if (hasMore) {
           console.log('More entries available, fetching next page...');
         } else {
-          console.log('All entries fetched!');
+          console.log('All entries fetched! Final count:', allEntries.length);
         }
       }
 
