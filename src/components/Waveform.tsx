@@ -141,16 +141,16 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
   }
 
   return (
-    <div className="relative">
+    <div className="relative bg-muted rounded-lg p-4">
       <canvas
         ref={canvasRef}
-        width={800}
-        height={128}
-        className="w-full h-32 bg-muted rounded cursor-pointer"
+        width={1200}
+        height={200}
+        className="w-full h-32 lg:h-48 bg-muted-foreground/10 rounded cursor-pointer"
         onClick={handleClick}
       />
       <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-        Shift+click to add comment
+        Shift+click to add comment • Click to seek
       </div>
     </div>
   );
