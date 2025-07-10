@@ -86,3 +86,55 @@ export const useAddTrackToPlaylist = () => {
     }
   });
 };
+
+export const useReorderPlaylistTracks = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ playlistId, trackIds }: { playlistId: string; trackIds: string[] }) => {
+      // Update positions for all tracks in the playlist
+      const updates = trackIds.map((trackId, index) => ({
+        playlist_id: playlistId,
+        track_id: trackId,
+        position: index
+      }));
+
+      // First, delete all existing tracks for this playlist
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("playlist_id", playlistId);
+
+      // Then insert them in the new order
+      const { data, error } = await supabase
+        .from("playlist_tracks")
+        .insert(updates)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};
+
+export const useRemoveTrackFromPlaylist = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ playlistId, trackId }: { playlistId: string; trackId: string }) => {
+      const { error } = await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("playlist_id", playlistId)
+        .eq("track_id", trackId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};
