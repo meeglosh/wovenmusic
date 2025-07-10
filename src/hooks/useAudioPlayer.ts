@@ -44,15 +44,52 @@ export const useAudioPlayer = () => {
     console.log('Track:', currentTrack.title);
     console.log('URL:', currentTrack.fileUrl);
 
-    // For Dropbox URLs, we need to modify them to be direct download links
-    let audioUrl = currentTrack.fileUrl;
-    if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
-      // Convert Dropbox preview URL to direct download URL by changing dl=0 to dl=1
-      audioUrl = audioUrl.replace('dl=0', 'dl=1');
-    }
+    const loadTrack = async () => {
+      try {
+        let audioUrl = currentTrack.fileUrl;
+        
+        // Handle different types of Dropbox URLs
+        if (audioUrl.includes('dropbox')) {
+          // If it's a Dropbox temporary link, try to use it directly
+          if (audioUrl.includes('dl.dropboxusercontent.com')) {
+            // Ensure it's set for direct download
+            audioUrl = audioUrl.replace('dl=0', 'dl=1');
+          }
+          
+          console.log('Using Dropbox URL:', audioUrl);
+        }
 
-    audio.src = audioUrl;
-    audio.load();
+        audio.src = audioUrl;
+        
+        // Create a promise to handle audio loading
+        const loadPromise = new Promise((resolve, reject) => {
+          const handleCanPlay = () => {
+            console.log('Audio can play');
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            resolve(true);
+          };
+          
+          const handleError = (e) => {
+            console.error('Audio load error:', e);
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            reject(e);
+          };
+          
+          audio.addEventListener('canplay', handleCanPlay);
+          audio.addEventListener('error', handleError);
+        });
+        
+        audio.load();
+        await loadPromise;
+        
+      } catch (error) {
+        console.error('Failed to load track:', error);
+      }
+    };
+    
+    loadTrack();
 
     const handleLoadStart = () => console.log('Audio: loadstart event');
     const handleLoadedData = () => console.log('Audio: loadeddata event');
