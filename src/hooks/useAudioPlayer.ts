@@ -101,11 +101,25 @@ export const useAudioPlayer = () => {
               if (matchingFolder) {
                 console.log('Found matching folder, searching inside:', matchingFolder.path_lower);
                 const folderFiles = await dropboxService.listFiles(matchingFolder.path_lower);
+                
+                // Try to find a file that matches both the track title AND artist
                 matchingFile = folderFiles.find(file => 
                   file['.tag'] === 'file' && 
-                  /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name)
+                  /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name) &&
+                  (file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
+                   file.name.toLowerCase().includes(currentTrack.artist.toLowerCase()))
                 );
-                console.log('Found audio file in folder:', matchingFile?.path_lower);
+                
+                // If no specific match, get the first audio file
+                if (!matchingFile) {
+                  matchingFile = folderFiles.find(file => 
+                    file['.tag'] === 'file' && 
+                    /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name)
+                  );
+                  console.log('No specific match found, using first audio file in folder:', matchingFile?.path_lower);
+                } else {
+                  console.log('Found specific matching audio file:', matchingFile?.path_lower);
+                }
               }
             }
             
