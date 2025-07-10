@@ -100,6 +100,19 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
       ctx.fill();
     });
 
+    // Draw playhead (current position indicator)
+    ctx.fillStyle = 'hsl(var(--foreground))';
+    ctx.fillRect(progressX - 1, 0, 2, height);
+    
+    // Draw playhead handle at the top
+    ctx.beginPath();
+    ctx.arc(progressX, 8, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = 'hsl(var(--background))';
+    ctx.fill();
+    ctx.strokeStyle = 'hsl(var(--foreground))';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
   }, [audioBuffer, currentTime, duration, comments]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
