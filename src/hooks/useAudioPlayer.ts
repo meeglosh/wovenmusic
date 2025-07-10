@@ -294,9 +294,10 @@ export const useAudioPlayer = () => {
     setCurrentTrackIndex(startIndex);
     const trackToPlay = tracks[startIndex];
     console.log('Setting current track:', trackToPlay);
-    setCurrentTrack(trackToPlay);
     
-    // Don't auto-play here - let the track loading useEffect handle it
+    // Force a new object reference to ensure React sees the change
+    setCurrentTrack({ ...trackToPlay });
+    
     console.log('Track set, waiting for useEffect to load and play...');
   };
 
