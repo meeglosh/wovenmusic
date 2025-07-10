@@ -210,14 +210,16 @@ export class DropboxService {
   }
 
   getStoredToken(): string | null {
-    if (!this.accessToken) {
-      this.accessToken = localStorage.getItem('dropbox_access_token');
-      console.log('Getting stored token from localStorage:', this.accessToken ? 'FOUND' : 'NOT FOUND');
-      if (this.accessToken) {
-        console.log('Token preview:', `${this.accessToken.substring(0, 10)}...`);
-      }
+    // Always check localStorage directly to avoid instance issues
+    const stored = localStorage.getItem('dropbox_access_token');
+    console.log('Getting stored token from localStorage:', stored ? 'FOUND' : 'NOT FOUND');
+    if (stored) {
+      console.log('Token preview:', `${stored.substring(0, 10)}...`);
+      this.accessToken = stored; // Update instance cache
+    } else {
+      this.accessToken = null; // Clear instance cache
     }
-    return this.accessToken;
+    return stored;
   }
 
   async listFiles(folder: string = ''): Promise<DropboxFile[]> {
@@ -479,10 +481,14 @@ export class DropboxService {
   isAuthenticated(): boolean {
     const token = this.getStoredToken();
     const isAuth = !!token;
+    
+    // Add stack trace to see what's calling this repeatedly
     console.log('=== IS AUTHENTICATED CHECK ===', { 
       hasToken: isAuth, 
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE' 
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE',
+      caller: new Error().stack?.split('\n')[1]?.trim() || 'unknown'
     });
+    
     return isAuth;
   }
 
