@@ -31,22 +31,24 @@ export const useAudioPlayer = () => {
   const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
   const [isRepeatMode, setIsRepeatMode] = useState(false);
 
-  // Create or get the audio element - do this synchronously
-  if (!audioRef.current) {
-    const audio = document.createElement('audio');
-    audio.crossOrigin = 'anonymous';
-    audioRef.current = audio;
-    console.log('Audio element created');
-  }
-
-  // Track loading and metadata
+  // Create or get the audio element
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack) {
-      console.log('Track loading skipped - audio:', !!audio, 'currentTrack:', !!currentTrack);
+    if (!audioRef.current) {
+      const audio = document.createElement('audio');
+      audio.crossOrigin = 'anonymous';
+      audioRef.current = audio;
+      console.log('Audio element created');
+    }
+  }, []);
+
+  // Track loading and metadata - simplified
+  useEffect(() => {
+    if (!currentTrack || !audioRef.current) {
+      console.log('Track loading skipped - currentTrack:', !!currentTrack, 'audioRef:', !!audioRef.current);
       return;
     }
 
+    const audio = audioRef.current;
     console.log('=== LOADING TRACK ===');
     console.log('Track:', currentTrack.title);
     console.log('URL:', currentTrack.fileUrl);
