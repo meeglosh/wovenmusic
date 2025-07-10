@@ -101,8 +101,7 @@ const Index = () => {
             />
           ) : (
             <PlaylistView 
-              playlist={selectedPlaylist}
-              tracks={tracks}
+              playlistId={selectedPlaylist?.id || ""}
               onPlayTrack={handlePlayTrack}
               onBack={() => setCurrentView("library")}
             />

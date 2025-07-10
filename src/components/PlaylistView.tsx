@@ -29,11 +29,14 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 interface PlaylistViewProps {
-  playlist: Playlist | null;
-  tracks: Track[];
+  playlistId: string;
   onPlayTrack: (track: Track) => void;
   onBack: () => void;
 }
+
+// Import the hooks we need
+import { usePlaylists } from "@/hooks/usePlaylists";
+import { useTracks } from "@/hooks/useTracks";
 
 // Sortable Track Item Component
 interface SortableTrackItemProps {
@@ -128,12 +131,19 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove }: SortableTrackItem
   );
 };
 
-const PlaylistView = ({ playlist, tracks, onPlayTrack, onBack }: PlaylistViewProps) => {
+const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) => {
   const [showAddTracksModal, setShowAddTracksModal] = useState(false);
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
   const { toast } = useToast();
+
+  // Fetch fresh data directly in this component
+  const { data: playlists = [] } = usePlaylists();
+  const { data: tracks = [] } = useTracks();
+  
+  // Find the current playlist from the fresh data
+  const playlist = playlists.find(p => p.id === playlistId) || null;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
