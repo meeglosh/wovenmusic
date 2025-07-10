@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,6 +46,7 @@ const DropboxSync = () => {
   const [manualToken, setManualToken] = useState("");
   const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -218,15 +218,35 @@ const DropboxSync = () => {
     console.log('Token exists:', !!dropboxService.getStoredToken());
     
     setIsLoading(true);
+    setDebugInfo("");
+    
     try {
       console.log('Calling dropboxService.listFiles with path:', path);
       const allItems = await dropboxService.listFiles(path);
       console.log('Raw API response:', allItems);
       
+      // Enhanced debugging
+      const debugDetails = [
+        `Total items returned: ${allItems.length}`,
+        `Path queried: "${path}"`,
+        `Items breakdown:`
+      ];
+      
+      allItems.forEach((item, index) => {
+        debugDetails.push(`  ${index + 1}. ${item.name} (${item[".tag"]}) - Path: ${item.path_lower}`);
+      });
+      
+      setDebugInfo(debugDetails.join('\n'));
+      console.log('Debug info:', debugDetails.join('\n'));
+      
       const folderItems = allItems.filter(item => item[".tag"] === "folder");
       const musicFiles = allItems.filter(item => 
         item[".tag"] === "file" && 
-        (item.name.endsWith('.mp3') || item.name.endsWith('.wav') || item.name.endsWith('.m4a'))
+        (item.name.toLowerCase().endsWith('.mp3') || 
+         item.name.toLowerCase().endsWith('.wav') || 
+         item.name.toLowerCase().endsWith('.m4a') ||
+         item.name.toLowerCase().endsWith('.flac') ||
+         item.name.toLowerCase().endsWith('.aac'))
       );
       
       console.log('Filtered results:');
@@ -236,11 +256,23 @@ const DropboxSync = () => {
       setFolders(folderItems);
       setFiles(musicFiles);
       setCurrentPath(path);
+      
+      // If no folders found in root, provide helpful message
+      if (!path && folderItems.length === 0) {
+        toast({
+          title: "No folders found",
+          description: "Your Dropbox root directory appears to be empty or contains only files. Try creating a folder in Dropbox first.",
+          variant: "default",
+        });
+      }
+      
     } catch (error) {
       console.error('=== ERROR LOADING FOLDERS ===', error);
       console.error('Error type:', typeof error);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
+      
+      setDebugInfo(`Error: ${error.message}\nPath: "${path}"`);
       
       // Show more specific error messages
       let errorMessage = "Failed to load folders from Dropbox.";
@@ -325,6 +357,7 @@ const DropboxSync = () => {
     setViewMode("folder-select");
     setConnectionError("");
     setShowBraveHelp(false);
+    setDebugInfo("");
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -481,6 +514,13 @@ const DropboxSync = () => {
         </div>
       </div>
 
+      {debugInfo && (
+        <div className="mb-4 p-3 bg-muted rounded-lg">
+          <h4 className="text-sm font-medium mb-2">Debug Information:</h4>
+          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{debugInfo}</pre>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-8">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
@@ -501,6 +541,9 @@ const DropboxSync = () => {
             <div className="text-center py-8">
               <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">No folders found in this location</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try creating a folder in your Dropbox or check the debug information above
+              </p>
               {currentPath && (
                 <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
                   Go to Root
@@ -549,7 +592,7 @@ const DropboxSync = () => {
               <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">No music files found in this folder</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Make sure you have audio files (.mp3, .wav, .m4a) in the selected folder
+                Make sure you have audio files (.mp3, .wav, .m4a, .flac, .aac) in the selected folder
               </p>
             </div>
           ) : (
