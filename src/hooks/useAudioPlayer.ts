@@ -68,13 +68,16 @@ export const useAudioPlayer = () => {
         // Handle Dropbox URLs by using Dropbox API to get temporary download links
         if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
           console.log('Converting Dropbox shared URL to temporary download link');
+          
+          // Check if user is authenticated with Dropbox
+          if (!dropboxService.isAuthenticated()) {
+            console.error('User not authenticated with Dropbox');
+            throw new Error('Please connect to Dropbox first to play music files');
+          }
+          
           try {
             // Extract the file path from the shared URL
-            // Dropbox shared URLs contain the file path in encoded form
-            // We need to get the original file path and use the Dropbox API
-            
             // For now, let's get the file name from the track and find it in Dropbox
-            // This is a temporary solution - in production you'd want to store the actual Dropbox path
             const fileName = currentTrack.title + '.mp3'; // Assuming mp3 format
             console.log('Searching for file:', fileName);
             
@@ -100,7 +103,7 @@ export const useAudioPlayer = () => {
             
           } catch (error) {
             console.error('Failed to get Dropbox temporary link:', error);
-            throw new Error('Failed to load audio from Dropbox');
+            throw new Error('Failed to load audio from Dropbox. Please check your Dropbox connection.');
           }
         }
 
