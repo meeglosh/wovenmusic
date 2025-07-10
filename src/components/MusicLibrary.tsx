@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
@@ -26,6 +26,7 @@ interface MusicLibraryProps {
 const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLibraryProps) => {
   const navigate = useNavigate();
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
+  const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
   const { toast } = useToast();
@@ -124,8 +125,40 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
         </div>
       </div>
 
+      {/* Collapsible Dropbox Sync Section */}
+      <Card className="overflow-hidden">
+        <div 
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+          onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
+        >
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <div className="text-blue-600 text-sm">☁</div>
+            </div>
+            <div>
+              <h3 className="font-medium">Dropbox Sync</h3>
+              <p className="text-sm text-muted-foreground">
+                {isDropboxSyncExpanded ? 'Click to collapse' : 'Click to manage your Dropbox connection'}
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm">
+            {isDropboxSyncExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+        
+        {isDropboxSyncExpanded && (
+          <div className="border-t border-border">
+            <DropboxSync />
+          </div>
+        )}
+      </Card>
+
       {/* Dropbox Sync Section */}
-      <DropboxSync />
 
       {tracks.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
