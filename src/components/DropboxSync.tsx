@@ -370,16 +370,17 @@ const DropboxSync = () => {
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
         const [title, artist] = fileName.split(' - ');
         
-        // Store the Dropbox file path instead of temporary link
-        // We'll generate fresh temporary links when needed for playback
-        const fileUrl = file.path_lower;
-        console.log('Storing Dropbox path for later use:', fileUrl);
+        // Store the Dropbox file path separately for easier retrieval
+        const dropboxPath = file.path_lower;
+        console.log('Storing Dropbox path for later use:', dropboxPath);
         
         await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
           duration: '0:00', // We'll need to calculate this from the actual file
-          fileUrl: fileUrl
+          fileUrl: dropboxPath,
+          source_folder: selectedFolder || currentPath,
+          dropbox_path: dropboxPath
         });
       }
       

@@ -6,6 +6,8 @@ export interface Track {
   duration: string;
   fileUrl: string;
   addedAt: Date;
+  source_folder?: string;
+  dropbox_path?: string;
 }
 
 export interface Playlist {

@@ -20,7 +20,9 @@ export const useTracks = () => {
         artist: track.artist,
         duration: track.duration,
         fileUrl: track.file_url || "#",
-        addedAt: new Date(track.created_at)
+        addedAt: new Date(track.created_at),
+        source_folder: track.source_folder,
+        dropbox_path: track.dropbox_path
       })) as Track[];
     }
   });
@@ -37,7 +39,9 @@ export const useAddTrack = () => {
           title: track.title,
           artist: track.artist,
           duration: track.duration,
-          file_url: track.fileUrl
+          file_url: track.fileUrl,
+          source_folder: track.source_folder,
+          dropbox_path: track.dropbox_path
         })
         .select()
         .single();

@@ -72,34 +72,51 @@ export const useAudioPlayer = () => {
         if (currentTrack.fileUrl.includes('dropboxusercontent.com') || currentTrack.fileUrl.startsWith('/')) {
           console.log('Getting fresh Dropbox temporary link...');
           
-          // Try to find the file in the "Woven - Sketches 24" folder since that's where user synced from
-          const fileName = `${currentTrack.title} - ${currentTrack.artist}`;
-          const possiblePaths = [
-            `/woven - sketches 24/${fileName}.aif`,
-            `/woven - sketches 24/${fileName}.mp3`,
-            `/woven - sketches 24/${fileName}.wav`,
-            `/woven - sketches 24/${currentTrack.title}.aif`,
-            `/woven - sketches 24/${currentTrack.title}.mp3`,
-            `/woven - sketches 24/${currentTrack.title}.wav`
-          ];
-          
-          let foundWorking = false;
-          for (const path of possiblePaths) {
+          // First check if we have a stored dropbox_path for this track
+          if (currentTrack.dropbox_path) {
+            console.log('Using stored dropbox_path:', currentTrack.dropbox_path);
             try {
-              console.log('Trying Dropbox path:', path);
-              audioUrl = await dropboxService.getTemporaryLink(path);
-              console.log('SUCCESS! Got fresh temporary URL:', audioUrl);
-              foundWorking = true;
-              break;
+              audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
+              console.log('SUCCESS! Got fresh temporary URL from stored path');
             } catch (error) {
-              console.log(`Path ${path} failed:`, error.message);
-              continue;
+              console.error('Stored path failed:', error.message);
+              throw new Error(`Cannot access stored file path: ${currentTrack.dropbox_path}`);
             }
-          }
-          
-          if (!foundWorking) {
-            console.error('Could not find any working path for track:', currentTrack.title);
-            throw new Error(`Cannot find audio file for "${currentTrack.title}" in Dropbox`);
+          } else {
+            // Fallback: search in the source folder with multiple extensions
+            const sourceFolder = currentTrack.source_folder || '/woven - sketches 24';
+            const fileName = `${currentTrack.title} - ${currentTrack.artist}`;
+            const possiblePaths = [
+              `${sourceFolder}/${fileName}.aif`,
+              `${sourceFolder}/${fileName}.mp3`,
+              `${sourceFolder}/${fileName}.wav`,
+              `${sourceFolder}/${currentTrack.title}.aif`,
+              `${sourceFolder}/${currentTrack.title}.mp3`,
+              `${sourceFolder}/${currentTrack.title}.wav`
+            ];
+            
+            console.log('Searching in source folder:', sourceFolder);
+            let foundWorking = false;
+            for (const path of possiblePaths) {
+              try {
+                console.log('Trying Dropbox path:', path);
+                audioUrl = await dropboxService.getTemporaryLink(path);
+                console.log('SUCCESS! Got fresh temporary URL:', audioUrl);
+                
+                // Store the working path for future use
+                console.log('Storing working path for future use:', path);
+                foundWorking = true;
+                break;
+              } catch (error) {
+                console.log(`Path ${path} failed:`, error.message);
+                continue;
+              }
+            }
+            
+            if (!foundWorking) {
+              console.error('Could not find any working path for track:', currentTrack.title);
+              throw new Error(`Cannot find audio file for "${currentTrack.title}" in folder ${sourceFolder}`);
+            }
           }
         }
 

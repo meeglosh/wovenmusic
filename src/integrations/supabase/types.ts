@@ -170,27 +170,33 @@ export type Database = {
         Row: {
           artist: string
           created_at: string
+          dropbox_path: string | null
           duration: string
           file_url: string | null
           id: string
+          source_folder: string | null
           title: string
           updated_at: string
         }
         Insert: {
           artist: string
           created_at?: string
+          dropbox_path?: string | null
           duration: string
           file_url?: string | null
           id?: string
+          source_folder?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           artist?: string
           created_at?: string
+          dropbox_path?: string | null
           duration?: string
           file_url?: string | null
           id?: string
+          source_folder?: string | null
           title?: string
           updated_at?: string
         }
