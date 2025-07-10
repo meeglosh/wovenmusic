@@ -349,6 +349,37 @@ export class DropboxService {
     return response.blob();
   }
 
+  async getTemporaryLink(path: string): Promise<string> {
+    const token = this.getStoredToken();
+    if (!token) throw new Error('Not authenticated with Dropbox');
+
+    console.log('Getting temporary link for:', path);
+
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Temporary link request failed:', response.status, errorText);
+        throw new Error(`Failed to get temporary link: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Temporary link response:', data);
+      return data.link;
+    } catch (error) {
+      console.error('Error getting temporary link:', error);
+      throw error;
+    }
+  }
+
   // Add method to check account info for debugging
   async getAccountInfo(): Promise<any> {
     const token = this.getStoredToken();

@@ -368,11 +368,23 @@ const DropboxSync = () => {
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
         const [title, artist] = fileName.split(' - ');
         
+        // Get a temporary download link for the file
+        let fileUrl = file.path_lower;
+        try {
+          console.log('Getting temporary link for:', file.path_lower);
+          const tempLink = await dropboxService.getTemporaryLink(file.path_lower);
+          fileUrl = tempLink;
+          console.log('Got temporary link:', tempLink);
+        } catch (error) {
+          console.error('Failed to get temporary link for', file.path_lower, error);
+          // Continue with relative path, but this won't be playable
+        }
+        
         await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
           duration: '0:00', // We'll need to calculate this from the actual file
-          fileUrl: file.path_lower
+          fileUrl: fileUrl
         });
       }
       

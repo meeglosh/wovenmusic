@@ -1,9 +1,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Play, MoreHorizontal, Clock } from "lucide-react";
+import { Play, MoreHorizontal, Clock, Trash2 } from "lucide-react";
 import { Track } from "@/types/music";
 import DropboxSync from "./DropboxSync";
+import { useDeleteTrack } from "@/hooks/useDeleteTrack";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MusicLibraryProps {
   tracks: Track[];
@@ -11,6 +19,24 @@ interface MusicLibraryProps {
 }
 
 const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
+  const deleteTrackMutation = useDeleteTrack();
+  const { toast } = useToast();
+
+  const handleDeleteTrack = async (track: Track) => {
+    try {
+      await deleteTrackMutation.mutateAsync(track.id);
+      toast({
+        title: "Track removed",
+        description: `"${track.title}" has been removed from your library. The file remains in your Dropbox.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove track from library.",
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -96,13 +122,26 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                 </div>
 
                 <div className="w-12 flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteTrack(track)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove from library
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}
