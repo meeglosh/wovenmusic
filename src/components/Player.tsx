@@ -1,16 +1,45 @@
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2 } from "lucide-react";
 import { Track } from "@/types/music";
 
 interface PlayerProps {
   track: Track;
   isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
   onPlayPause: () => void;
+  onSeek: (time: number) => void;
+  onVolumeChange: (volume: number) => void;
+  onFullScreen: () => void;
+  formatTime: (time: number) => string;
 }
 
-const Player = ({ track, isPlaying, onPlayPause }: PlayerProps) => {
+const Player = ({ 
+  track, 
+  isPlaying, 
+  currentTime, 
+  duration, 
+  volume, 
+  onPlayPause, 
+  onSeek, 
+  onVolumeChange, 
+  onFullScreen,
+  formatTime 
+}: PlayerProps) => {
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const handleSeek = (values: number[]) => {
+    const newTime = (values[0] / 100) * duration;
+    onSeek(newTime);
+  };
+
+  const handleVolumeChange = (values: number[]) => {
+    onVolumeChange(values[0] / 100);
+  };
+
   return (
     <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4">
       <div className="flex items-center justify-between">
@@ -61,17 +90,21 @@ const Player = ({ track, isPlaying, onPlayPause }: PlayerProps) => {
             <Button variant="ghost" size="sm">
               <Repeat className="w-4 h-4" />
             </Button>
+            <Button variant="ghost" size="sm" onClick={onFullScreen}>
+              <Maximize2 className="w-4 h-4" />
+            </Button>
           </div>
           
           <div className="flex items-center space-x-2 w-full max-w-md">
-            <span className="text-xs text-muted-foreground">0:00</span>
+            <span className="text-xs text-muted-foreground">{formatTime(currentTime)}</span>
             <Slider
-              value={[0]}
+              value={[progress]}
               max={100}
-              step={1}
+              step={0.1}
               className="flex-1"
+              onValueChange={handleSeek}
             />
-            <span className="text-xs text-muted-foreground">{track.duration}</span>
+            <span className="text-xs text-muted-foreground">{formatTime(duration)}</span>
           </div>
         </div>
 
@@ -79,10 +112,11 @@ const Player = ({ track, isPlaying, onPlayPause }: PlayerProps) => {
         <div className="flex items-center space-x-2 flex-1 justify-end">
           <Volume2 className="w-4 h-4" />
           <Slider
-            value={[75]}
+            value={[volume * 100]}
             max={100}
             step={1}
             className="w-20"
+            onValueChange={handleVolumeChange}
           />
         </div>
       </div>

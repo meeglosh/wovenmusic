@@ -5,23 +5,38 @@ import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
 import PlaylistView from "@/components/PlaylistView";
 import Player from "@/components/Player";
+import FullScreenPlayer from "@/components/FullScreenPlayer";
 import { Track, Playlist } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [showFullScreen, setShowFullScreen] = useState(false);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
   const { data: playlists = [], isLoading: playlistsLoading, error: playlistsError } = usePlaylists();
+  
+  // Audio player functionality
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    audioRef,
+    playTrack,
+    togglePlayPause,
+    seekTo,
+    setVolume,
+    formatTime
+  } = useAudioPlayer();
 
   const handlePlayTrack = (track: Track) => {
-    setCurrentTrack(track);
-    setIsPlaying(true);
+    playTrack(track);
   };
 
   const handleViewPlaylist = (playlist: Playlist) => {
@@ -59,6 +74,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <audio ref={audioRef} />
       <Header />
       
       <div className="flex flex-1 overflow-hidden">
@@ -90,7 +106,28 @@ const Index = () => {
         <Player 
           track={currentTrack}
           isPlaying={isPlaying}
-          onPlayPause={() => setIsPlaying(!isPlaying)}
+          currentTime={currentTime}
+          duration={duration}
+          volume={volume}
+          onPlayPause={togglePlayPause}
+          onSeek={seekTo}
+          onVolumeChange={setVolume}
+          onFullScreen={() => setShowFullScreen(true)}
+          formatTime={formatTime}
+        />
+      )}
+
+      {showFullScreen && currentTrack && (
+        <FullScreenPlayer
+          track={currentTrack}
+          isPlaying={isPlaying}
+          currentTime={currentTime}
+          duration={duration}
+          audioRef={audioRef}
+          onClose={() => setShowFullScreen(false)}
+          onTogglePlayPause={togglePlayPause}
+          onSeek={seekTo}
+          formatTime={formatTime}
         />
       )}
     </div>

@@ -22,3 +22,13 @@ export interface BandMember {
   email: string;
   role: string;
 }
+
+export interface Comment {
+  id: string;
+  trackId: string;
+  userId: string;
+  content: string;
+  timestampSeconds: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
