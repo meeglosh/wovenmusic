@@ -120,17 +120,41 @@ export const useAudioPlayer = () => {
                   console.log('Found title match:', matchingFile?.path_lower);
                 }
                 
-                // If still no match, try artist only  
+                // If still no match, try searching in subfolders
                 if (!matchingFile) {
-                  matchingFile = folderFiles.find(file => 
-                    file['.tag'] === 'file' && 
-                    /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
-                    file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
-                  );
-                  console.log('Found artist match:', matchingFile?.path_lower);
+                  const subfolders = folderFiles.filter(file => file['.tag'] === 'folder');
+                  for (const subfolder of subfolders) {
+                    console.log('Searching in subfolder:', subfolder.path_lower);
+                    const subfolderFiles = await dropboxService.listFiles(subfolder.path_lower);
+                    
+                    // Try both title and artist match in subfolder
+                    matchingFile = subfolderFiles.find(file => 
+                      file['.tag'] === 'file' && 
+                      /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
+                      file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) &&
+                      file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
+                    );
+                    
+                    if (matchingFile) {
+                      console.log('Found perfect match in subfolder:', matchingFile?.path_lower);
+                      break;
+                    }
+                    
+                    // Try title only in subfolder
+                    matchingFile = subfolderFiles.find(file => 
+                      file['.tag'] === 'file' && 
+                      /\.(mp3|wav|m4a|flac|aac|ogg|wma|aif|aiff)$/i.test(file.name) &&
+                      file.name.toLowerCase().includes(currentTrack.title.toLowerCase())
+                    );
+                    
+                    if (matchingFile) {
+                      console.log('Found title match in subfolder:', matchingFile?.path_lower);
+                      break;
+                    }
+                  }
                 }
                 
-                // If still no match, get the first audio file as fallback
+                // Last resort: get the first audio file from main folder
                 if (!matchingFile) {
                   matchingFile = folderFiles.find(file => 
                     file['.tag'] === 'file' && 
