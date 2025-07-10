@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
@@ -221,32 +222,110 @@ export class DropboxService {
     const token = this.getStoredToken();
     if (!token) throw new Error('Not authenticated with Dropbox');
 
+    console.log('=== ENHANCED DROPBOX API DEBUGGING ===');
     console.log('Listing files in folder:', folder);
+    console.log('Token exists:', !!token);
+    console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'NONE');
+    console.log('Request URL:', 'https://api.dropboxapi.com/2/files/list_folder');
 
-    const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        path: folder || '',
-        recursive: false,
-        include_media_info: true
-      })
+    const requestBody = {
+      path: folder || '',
+      recursive: false,
+      include_media_info: true,
+      include_deleted: false,
+      include_has_explicit_shared_members: false
+    };
+
+    console.log('Request body:', requestBody);
+    console.log('Request headers will include:', {
+      'Authorization': `Bearer ${token ? token.substring(0, 20) + '...' : 'NONE'}`,
+      'Content-Type': 'application/json'
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Dropbox API error:', response.status, errorText);
-      throw new Error('Failed to list Dropbox files');
-    }
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    const data = await response.json();
-    console.log('Dropbox API response:', data);
-    
-    // Return all entries (both files and folders)
-    return data.entries || [];
+      console.log('=== DROPBOX API RESPONSE ===');
+      console.log('Response status:', response.status);
+      console.log('Response status text:', response.statusText);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('=== DROPBOX API ERROR ===');
+        console.error('Status:', response.status);
+        console.error('Status text:', response.statusText);
+        console.error('Error response body:', errorText);
+        
+        // Try to parse error response
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('Parsed error:', errorJson);
+          
+          if (errorJson.error && errorJson.error['.tag']) {
+            const errorTag = errorJson.error['.tag'];
+            console.error('Error tag:', errorTag);
+            
+            if (errorTag === 'invalid_access_token') {
+              throw new Error('Access token is invalid or expired. Please reconnect to Dropbox.');
+            } else if (errorTag === 'insufficient_scope') {
+              throw new Error('App permissions are insufficient. Check your Dropbox app permissions.');
+            } else {
+              throw new Error(`Dropbox API error: ${errorTag} - ${errorJson.error_summary || 'Unknown error'}`);
+            }
+          }
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        
+        throw new Error(`Dropbox API request failed with status ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('=== SUCCESSFUL DROPBOX API RESPONSE ===');
+      console.log('Response data structure:', Object.keys(data));
+      console.log('Has entries:', !!data.entries);
+      console.log('Entries count:', data.entries?.length || 0);
+      console.log('Has more:', data.has_more);
+      console.log('Cursor:', data.cursor);
+      console.log('Full response:', data);
+      
+      if (data.entries && data.entries.length > 0) {
+        console.log('=== ENTRY DETAILS ===');
+        data.entries.forEach((entry: any, index: number) => {
+          console.log(`Entry ${index + 1}:`, {
+            name: entry.name,
+            tag: entry['.tag'],
+            path_lower: entry.path_lower,
+            size: entry.size
+          });
+        });
+      } else {
+        console.log('=== NO ENTRIES FOUND ===');
+        console.log('This could indicate:');
+        console.log('1. Empty Dropbox account');
+        console.log('2. App is sandboxed to a specific folder');
+        console.log('3. Permission issues despite having correct scopes');
+        console.log('4. User granted limited access during OAuth');
+      }
+      
+      // Return all entries (both files and folders)
+      return data.entries || [];
+    } catch (error) {
+      console.error('=== DROPBOX API EXCEPTION ===');
+      console.error('Error type:', typeof error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async downloadFile(path: string): Promise<Blob> {
@@ -266,6 +345,72 @@ export class DropboxService {
     }
 
     return response.blob();
+  }
+
+  // Add method to check account info for debugging
+  async getAccountInfo(): Promise<any> {
+    const token = this.getStoredToken();
+    if (!token) throw new Error('Not authenticated with Dropbox');
+
+    console.log('=== GETTING DROPBOX ACCOUNT INFO ===');
+    
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Account info request failed:', response.status, errorText);
+        throw new Error('Failed to get account info');
+      }
+
+      const accountData = await response.json();
+      console.log('=== ACCOUNT INFO ===', accountData);
+      return accountData;
+    } catch (error) {
+      console.error('Error getting account info:', error);
+      throw error;
+    }
+  }
+
+  // Add method to check app permissions
+  async checkAppPermissions(): Promise<any> {
+    const token = this.getStoredToken();
+    if (!token) throw new Error('Not authenticated with Dropbox');
+
+    console.log('=== CHECKING APP PERMISSIONS ===');
+    
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/check/app', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: "list_folder"
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('App check request failed:', response.status, errorText);
+        return null;
+      }
+
+      const appData = await response.json();
+      console.log('=== APP PERMISSIONS CHECK ===', appData);
+      return appData;
+    } catch (error) {
+      console.error('Error checking app permissions:', error);
+      return null;
+    }
   }
 
   isAuthenticated(): boolean {

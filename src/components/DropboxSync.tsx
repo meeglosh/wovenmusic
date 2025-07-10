@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import {
@@ -48,6 +49,8 @@ const DropboxSync = () => {
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [permissionIssue, setPermissionIssue] = useState<boolean>(false);
+  const [accountInfo, setAccountInfo] = useState<any>(null);
+  const [showDetailedDebug, setShowDetailedDebug] = useState(false);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -207,6 +210,23 @@ const DropboxSync = () => {
     }
   };
 
+  const loadAccountInfo = async () => {
+    if (!isConnected) return;
+    
+    try {
+      console.log('Loading account info...');
+      const accountData = await dropboxService.getAccountInfo();
+      setAccountInfo(accountData);
+      
+      // Also try to check app permissions
+      const appPermissions = await dropboxService.checkAppPermissions();
+      console.log('App permissions result:', appPermissions);
+      
+    } catch (error) {
+      console.error('Failed to load account info:', error);
+    }
+  };
+
   const loadFolders = async (path: string = "") => {
     if (!isConnected) {
       console.log('Not connected, skipping folder load');
@@ -229,23 +249,27 @@ const DropboxSync = () => {
       
       // Enhanced debugging
       const debugDetails = [
+        `=== ENHANCED DEBUGGING ===`,
         `Total items returned: ${allItems.length}`,
         `Path queried: "${path}"`,
         `Token preview: ${dropboxService.getStoredToken()?.substring(0, 20)}...`,
         `API call successful: YES`,
+        ``,
         `Items breakdown:`
       ];
       
       if (allItems.length === 0) {
         debugDetails.push(`  No items found - this could indicate:`);
         debugDetails.push(`  1. Empty directory`);
-        debugDetails.push(`  2. Permission/scope issues`);
-        debugDetails.push(`  3. App needs 'files.content.read' permission`);
+        debugDetails.push(`  2. App is in "App folder" mode (sandboxed)`);
+        debugDetails.push(`  3. User denied access to files during OAuth`);
+        debugDetails.push(`  4. Token has limited scope despite app permissions`);
+        debugDetails.push(`  5. Account has no files in root directory`);
         
         // Check if this might be a permission issue
         if (!path) { // Root directory is empty
           setPermissionIssue(true);
-          debugDetails.push(`  ⚠️  Likely cause: Dropbox app permissions`);
+          debugDetails.push(`  ⚠️  Root directory access issue detected`);
         }
       } else {
         allItems.forEach((item, index) => {
@@ -263,7 +287,9 @@ const DropboxSync = () => {
          item.name.toLowerCase().endsWith('.wav') || 
          item.name.toLowerCase().endsWith('.m4a') ||
          item.name.toLowerCase().endsWith('.flac') ||
-         item.name.toLowerCase().endsWith('.aac'))
+         item.name.toLowerCase().endsWith('.aac') ||
+         item.name.toLowerCase().endsWith('.ogg') ||
+         item.name.toLowerCase().endsWith('.wma'))
       );
       
       console.log('Filtered results:');
@@ -279,7 +305,7 @@ const DropboxSync = () => {
         setPermissionIssue(true);
         toast({
           title: "No items found",
-          description: "This usually indicates a permission issue. Check your Dropbox app settings.",
+          description: "Your Dropbox appears empty or the app has limited access. Check the debug panel below.",
           variant: "destructive",
         });
       }
@@ -290,7 +316,7 @@ const DropboxSync = () => {
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       
-      setDebugInfo(`Error: ${error.message}\nPath: "${path}"\nThis might be a permission issue.`);
+      setDebugInfo(`Error: ${error.message}\nPath: "${path}"\nThis might be a permission or authentication issue.`);
       
       // Show more specific error messages
       let errorMessage = "Failed to load folders from Dropbox.";
@@ -377,6 +403,7 @@ const DropboxSync = () => {
     setConnectionError("");
     setShowBraveHelp(false);
     setDebugInfo("");
+    setAccountInfo(null);
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -389,6 +416,7 @@ const DropboxSync = () => {
       // Add a small delay to ensure token is fully available
       setTimeout(() => {
         loadFolders("");
+        loadAccountInfo(); // Also load account info for debugging
       }, 1000);
     }
   }, [isConnected, viewMode]);
@@ -527,41 +555,57 @@ const DropboxSync = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowDetailedDebug(!showDetailedDebug)}>
+            <Info className="w-4 h-4 mr-2" />
+            Debug
+          </Button>
           <Button variant="outline" size="sm" onClick={handleDisconnect}>
             Disconnect
           </Button>
         </div>
       </div>
 
-      {permissionIssue && (
-        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-          <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="w-4 h-4" />
-            <span className="font-medium">Permission Issue Detected</span>
-          </div>
-          <div className="text-sm text-destructive/80 space-y-2">
-            <p>Your Dropbox app likely needs additional permissions. Follow these steps:</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline">Dropbox App Console</a></li>
-              <li>Select your app</li>
-              <li>Go to "Permissions" tab</li>
-              <li>Enable these permissions:
-                <ul className="list-disc list-inside ml-4 mt-1">
-                  <li><code className="bg-muted px-1 rounded">files.content.read</code></li>
-                  <li><code className="bg-muted px-1 rounded">files.metadata.read</code></li>
-                </ul>
-              </li>
-              <li>Click "Submit" to save permissions</li>
-              <li>Disconnect and reconnect here</li>
-            </ol>
+      {/* Account Info Display */}
+      {accountInfo && showDetailedDebug && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="text-sm font-medium mb-2">Account Information:</h4>
+          <div className="text-xs text-blue-800 space-y-1">
+            <p><strong>Name:</strong> {accountInfo.name?.display_name || 'Unknown'}</p>
+            <p><strong>Email:</strong> {accountInfo.email || 'Unknown'}</p>
+            <p><strong>Account ID:</strong> {accountInfo.account_id || 'Unknown'}</p>
+            <p><strong>Account Type:</strong> {accountInfo.account_type?.['.tag'] || 'Unknown'}</p>
           </div>
         </div>
       )}
 
-      {debugInfo && (
+      {permissionIssue && (
+        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="flex items-center gap-2 text-destructive mb-2">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">Dropbox Access Issue Detected</span>
+          </div>
+          <div className="text-sm text-destructive/80 space-y-2">
+            <p>Your Dropbox app may have limited access. This can happen if:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>Your app is set to "App folder" mode (only accesses a specific folder)</li>
+              <li>You denied full access during OAuth authorization</li>
+              <li>Your Dropbox account is empty</li>
+              <li>There are permission scope issues despite correct app settings</li>
+            </ol>
+            <p className="mt-2"><strong>Try:</strong></p>
+            <ul className="list-disc list-inside ml-2">
+              <li>Check if your Dropbox app is set to "Full Dropbox" access mode</li>
+              <li>Disconnect and reconnect, granting full access when prompted</li>
+              <li>Verify your Dropbox account has files in the root directory</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {debugInfo && showDetailedDebug && (
         <div className="mb-4 p-3 bg-muted rounded-lg">
-          <h4 className="text-sm font-medium mb-2">Debug Information:</h4>
-          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{debugInfo}</pre>
+          <h4 className="text-sm font-medium mb-2">Enhanced Debug Information:</h4>
+          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">{debugInfo}</pre>
         </div>
       )}
 
@@ -589,7 +633,8 @@ const DropboxSync = () => {
                 <p>This usually means:</p>
                 <ul className="list-disc list-inside">
                   <li>Your Dropbox root is empty, or</li>
-                  <li>Your app needs permission to read files</li>
+                  <li>Your app has limited access permissions, or</li>
+                  <li>You're in "App folder" mode instead of full Dropbox access</li>
                 </ul>
                 <p className="mt-2">Check the debug information above for details.</p>
               </div>
@@ -641,7 +686,7 @@ const DropboxSync = () => {
               <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">No music files found in this folder</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Make sure you have audio files (.mp3, .wav, .m4a, .flac, .aac) in the selected folder
+                Make sure you have audio files (.mp3, .wav, .m4a, .flac, .aac, .ogg, .wma) in the selected folder
               </p>
             </div>
           ) : (
