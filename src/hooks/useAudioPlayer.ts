@@ -119,6 +119,15 @@ export const useAudioPlayer = () => {
         await loadPromise;
         console.log('Audio loaded successfully!');
         
+        // Auto-play after successful load
+        setTimeout(() => {
+          console.log('Attempting to auto-play after load...');
+          audio.play().catch((error) => {
+            console.error('Auto-play failed:', error);
+          });
+          setIsPlaying(true);
+        }, 100);
+        
       } catch (error) {
         console.error('Failed to load track:', error);
         // You could show a toast notification here
@@ -251,20 +260,8 @@ export const useAudioPlayer = () => {
     console.log('Setting current track:', trackToPlay);
     setCurrentTrack(trackToPlay);
     
-    // Auto-play the first track
-    setTimeout(() => {
-      console.log('Attempting to auto-play...');
-      const audio = audioRef.current;
-      if (audio) {
-        console.log('Audio element available, calling play()');
-        audio.play().catch((error) => {
-          console.error('Play failed:', error);
-        });
-        setIsPlaying(true);
-      } else {
-        console.error('Audio element not available');
-      }
-    }, 100);
+    // Don't auto-play here - let the track loading useEffect handle it
+    console.log('Track set, waiting for useEffect to load and play...');
   };
 
   const togglePlayPause = async () => {
