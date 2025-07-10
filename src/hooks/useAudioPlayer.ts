@@ -65,30 +65,41 @@ export const useAudioPlayer = () => {
         
         let audioUrl = currentTrack.fileUrl;
         
-        // Handle Dropbox URLs by downloading and converting to blob
+        // Handle Dropbox URLs by using Dropbox API to get temporary download links
         if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
-          console.log('Converting Dropbox URL to blob');
+          console.log('Converting Dropbox shared URL to temporary download link');
           try {
-            // Remove /file suffix and add dl=1 for direct download
-            let downloadUrl = audioUrl.replace('/file', '') + '?dl=1';
-            console.log('Download URL:', downloadUrl);
+            // Extract the file path from the shared URL
+            // Dropbox shared URLs contain the file path in encoded form
+            // We need to get the original file path and use the Dropbox API
             
-            const response = await fetch(downloadUrl);
-            console.log('Fetch response status:', response.status);
+            // For now, let's get the file name from the track and find it in Dropbox
+            // This is a temporary solution - in production you'd want to store the actual Dropbox path
+            const fileName = currentTrack.title + '.mp3'; // Assuming mp3 format
+            console.log('Searching for file:', fileName);
             
-            if (!response.ok) {
-              throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+            // List files to find the one that matches
+            const files = await dropboxService.listFiles('/Music'); // Assuming files are in /Music folder
+            const matchingFile = files.find(file => 
+              file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
+              file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
+            );
+            
+            if (matchingFile) {
+              console.log('Found matching file:', matchingFile.path_lower);
+              const tempLink = await dropboxService.getTemporaryLink(matchingFile.path_lower);
+              console.log('Got temporary download link:', tempLink);
+              audioUrl = tempLink;
+            } else {
+              console.log('No matching file found, trying direct download of blob');
+              // Fallback: try to download the blob directly
+              const blob = await dropboxService.downloadFile(currentTrack.fileUrl);
+              audioUrl = URL.createObjectURL(blob);
+              console.log('Created blob URL from direct download:', audioUrl);
             }
             
-            const blob = await response.blob();
-            console.log('Downloaded blob:', blob.type, blob.size, 'bytes');
-            
-            // Create blob URL for audio element
-            audioUrl = URL.createObjectURL(blob);
-            console.log('Created blob URL:', audioUrl);
-            
           } catch (error) {
-            console.error('Failed to download Dropbox file:', error);
+            console.error('Failed to get Dropbox temporary link:', error);
             throw new Error('Failed to load audio from Dropbox');
           }
         }
