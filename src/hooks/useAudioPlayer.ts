@@ -57,62 +57,61 @@ export const useAudioPlayer = () => {
     console.log('URL:', currentTrack.fileUrl);
 
     const loadTrack = async () => {
+      if (!currentTrack?.fileUrl) {
+        console.log('No file URL for track:', currentTrack?.title);
+        return;
+      }
+
       try {
         console.log('=== ATTEMPTING TO LOAD TRACK ===');
         console.log('Track file URL:', currentTrack.fileUrl);
-        console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
         
-        if (!currentTrack.fileUrl) {
-          console.log('No file URL for track:', currentTrack.title);
-          throw new Error('Track has no file URL');
-        }
-
         // Use the stored file URL directly - exactly what the user wants!
         console.log('Using stored file URL from original sync location:', currentTrack.fileUrl);
         const audioUrl = currentTrack.fileUrl;
 
         console.log('Final audio URL:', audioUrl);
-        audio.src = audioUrl;
         
-        // Create a promise to handle audio loading
-        const loadPromise = new Promise((resolve, reject) => {
+        // Set the audio source and load it
+        audio.src = audioUrl;
+        audio.load();
+        
+        // Wait for the audio to be ready
+        const canPlayPromise = new Promise((resolve, reject) => {
           const handleCanPlay = () => {
             console.log('Audio can play - track loaded successfully');
-            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('canplaythrough', handleCanPlay);
             audio.removeEventListener('error', handleError);
             resolve(true);
           };
           
           const handleError = (e) => {
             console.error('Audio load error:', e);
-            console.error('Audio element error code:', audio.error?.code);
-            console.error('Audio element error message:', audio.error?.message);
-            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('canplaythrough', handleCanPlay);
             audio.removeEventListener('error', handleError);
             reject(e);
           };
           
-          audio.addEventListener('canplay', handleCanPlay);
+          audio.addEventListener('canplaythrough', handleCanPlay);
           audio.addEventListener('error', handleError);
+          
+          // Also try to play immediately if it's already loaded
+          if (audio.readyState >= 3) {
+            handleCanPlay();
+          }
         });
         
         console.log('Starting audio load...');
-        audio.load();
-        await loadPromise;
+        await canPlayPromise;
         console.log('Audio loaded successfully!');
         
         // Auto-play after successful load
-        setTimeout(() => {
-          console.log('Attempting to auto-play after load...');
-          audio.play().catch((error) => {
-            console.error('Auto-play failed:', error);
-          });
-          setIsPlaying(true);
-        }, 100);
+        console.log('Attempting to auto-play after load...');
+        await audio.play();
+        setIsPlaying(true);
         
       } catch (error) {
         console.error('Failed to load track:', error);
-        // You could show a toast notification here
       }
     };
     
