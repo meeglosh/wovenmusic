@@ -8,9 +8,10 @@ interface WaveformProps {
   onSeek: (time: number) => void;
   comments: Comment[];
   onAddComment: (timestampSeconds: number) => void;
+  isAuthenticated?: boolean;
 }
 
-const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComment }: WaveformProps) => {
+const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComment, isAuthenticated = false }: WaveformProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -150,7 +151,7 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
         onClick={handleClick}
       />
       <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-        Shift+click to add comment • Click to seek
+        Click to seek • {isAuthenticated ? "Shift+click to add comment" : "Login to add comments"}
       </div>
     </div>
   );

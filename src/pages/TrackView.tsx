@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Play, Pause, MessageSquare, Send, ArrowLeft } from "lucide-react";
+import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn } from "lucide-react";
 import { useComments, useAddComment } from "@/hooks/useComments";
 import Waveform from "@/components/Waveform";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 
 const TrackView = () => {
@@ -17,6 +18,7 @@ const TrackView = () => {
   const { data: tracks, isLoading } = useTracks();
   const audioPlayer = useAudioPlayer();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentTime, setCommentTime] = useState(0);
@@ -34,6 +36,19 @@ const TrackView = () => {
   }, [track, audioPlayer]);
 
   const handleAddComment = (timestampSeconds: number) => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to add comments to tracks.",
+        action: (
+          <Button size="sm" onClick={() => navigate('/auth')}>
+            <LogIn className="w-4 h-4 mr-2" />
+            Login
+          </Button>
+        ),
+      });
+      return;
+    }
     setCommentTime(timestampSeconds);
     setShowCommentForm(true);
   };
@@ -128,6 +143,7 @@ const TrackView = () => {
               onSeek={audioPlayer.seekTo}
               comments={comments}
               onAddComment={handleAddComment}
+              isAuthenticated={!!user}
             />
           </div>
 
@@ -198,8 +214,17 @@ const TrackView = () => {
                   <CardContent className="p-6 text-center">
                     <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">
-                      No comments yet. Shift+click on the waveform to add the first one!
+                      {user 
+                        ? "No comments yet. Shift+click on the waveform to add the first one!" 
+                        : "No comments yet. Log in to add comments!"
+                      }
                     </p>
+                    {!user && (
+                      <Button className="mt-4" onClick={() => navigate('/auth')}>
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login to Comment
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ) : (
