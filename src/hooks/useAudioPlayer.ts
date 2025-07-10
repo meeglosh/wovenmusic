@@ -86,6 +86,10 @@ export const useAudioPlayer = () => {
 
     const loadTrack = async () => {
       try {
+        console.log('=== ATTEMPTING TO LOAD TRACK ===');
+        console.log('Track file URL:', currentTrack.fileUrl);
+        console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
+        
         let audioUrl = currentTrack.fileUrl;
         
         // Handle Dropbox file paths - generate fresh temporary links
@@ -99,18 +103,22 @@ export const useAudioPlayer = () => {
             console.error('Failed to get fresh temporary link:', error);
             throw new Error('Failed to get playable link from Dropbox');
           }
+        } else if (audioUrl.startsWith('/') && !dropboxService.isAuthenticated()) {
+          console.error('Dropbox file detected but not authenticated');
+          throw new Error('Dropbox authentication required to play this track');
         } else if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
           // Existing temporary link - ensure it's set for direct download
           audioUrl = audioUrl.replace('dl=0', 'dl=1');
           console.log('Using existing Dropbox URL:', audioUrl);
         }
 
+        console.log('Final audio URL:', audioUrl);
         audio.src = audioUrl;
         
         // Create a promise to handle audio loading
         const loadPromise = new Promise((resolve, reject) => {
           const handleCanPlay = () => {
-            console.log('Audio can play');
+            console.log('Audio can play - track loaded successfully');
             audio.removeEventListener('canplay', handleCanPlay);
             audio.removeEventListener('error', handleError);
             resolve(true);
@@ -118,6 +126,8 @@ export const useAudioPlayer = () => {
           
           const handleError = (e) => {
             console.error('Audio load error:', e);
+            console.error('Audio element error code:', audio.error?.code);
+            console.error('Audio element error message:', audio.error?.message);
             audio.removeEventListener('canplay', handleCanPlay);
             audio.removeEventListener('error', handleError);
             reject(e);
@@ -132,6 +142,7 @@ export const useAudioPlayer = () => {
         
       } catch (error) {
         console.error('Failed to load track:', error);
+        // You could show a toast notification here
       }
     };
     
@@ -270,20 +281,29 @@ export const useAudioPlayer = () => {
     console.log('=== PLAY PLAYLIST ===');
     console.log('Tracks count:', tracks.length);
     console.log('Start index:', startIndex);
+    console.log('First track details:', tracks[0]);
+    console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
     
     if (tracks.length === 0) return;
     
     setPlaylist(tracks);
     setCurrentTrackIndex(startIndex);
     const trackToPlay = tracks[startIndex];
+    console.log('Setting current track:', trackToPlay);
     setCurrentTrack(trackToPlay);
     
     // Auto-play the first track
     setTimeout(() => {
+      console.log('Attempting to auto-play...');
       const audio = audioRef.current;
       if (audio) {
-        audio.play().catch(console.error);
+        console.log('Audio element available, calling play()');
+        audio.play().catch((error) => {
+          console.error('Play failed:', error);
+        });
         setIsPlaying(true);
+      } else {
+        console.error('Audio element not available');
       }
     }, 100);
   };
