@@ -44,7 +44,14 @@ export const useAudioPlayer = () => {
     console.log('Track:', currentTrack.title);
     console.log('URL:', currentTrack.fileUrl);
 
-    audio.src = currentTrack.fileUrl;
+    // For Dropbox URLs, we need to modify them to be direct download links
+    let audioUrl = currentTrack.fileUrl;
+    if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
+      // Convert Dropbox preview URL to direct download URL by changing dl=0 to dl=1
+      audioUrl = audioUrl.replace('dl=0', 'dl=1');
+    }
+
+    audio.src = audioUrl;
     audio.load();
 
     const handleLoadStart = () => console.log('Audio: loadstart event');
