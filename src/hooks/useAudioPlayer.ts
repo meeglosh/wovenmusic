@@ -43,7 +43,10 @@ export const useAudioPlayer = () => {
   // Track loading and metadata
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
+    if (!audio || !currentTrack) {
+      console.log('Track loading skipped - audio:', !!audio, 'currentTrack:', !!currentTrack);
+      return;
+    }
 
     console.log('=== LOADING TRACK ===');
     console.log('Track:', currentTrack.title);
@@ -115,8 +118,10 @@ export const useAudioPlayer = () => {
           audio.addEventListener('error', handleError);
         });
         
+        console.log('Starting audio load...');
         audio.load();
         await loadPromise;
+        console.log('Audio loaded successfully!');
         
       } catch (error) {
         console.error('Failed to load track:', error);
@@ -125,27 +130,7 @@ export const useAudioPlayer = () => {
     };
     
     loadTrack();
-
-    const handleLoadStart = () => console.log('Audio: loadstart event');
-    const handleLoadedData = () => console.log('Audio: loadeddata event');
-    const handleCanPlay = () => console.log('Audio: canplay event');
-    const handleError = (e: any) => console.error('Audio: error event', e);
-    const handleLoadedMetadata = () => console.log('Audio: loadedmetadata event');
-
-    audio.addEventListener('loadstart', handleLoadStart);
-    audio.addEventListener('loadeddata', handleLoadedData);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('error', handleError);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-
-    return () => {
-      audio.removeEventListener('loadstart', handleLoadStart);
-      audio.removeEventListener('loadeddata', handleLoadedData);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('error', handleError);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-    };
-  }, [currentTrack]);
+  }, [currentTrack]); // Make sure we include currentTrack in dependencies
 
   // Time and duration updates
   useEffect(() => {
