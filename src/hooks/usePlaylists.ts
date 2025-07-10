@@ -147,3 +147,49 @@ export const useRemoveTrackFromPlaylist = () => {
     }
   });
 };
+
+export const useUpdatePlaylist = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data, error } = await supabase
+        .from("playlists")
+        .update({ name })
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};
+
+export const useDeletePlaylist = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (playlistId: string) => {
+      // Delete playlist tracks first (cascade should handle this, but being explicit)
+      await supabase
+        .from("playlist_tracks")
+        .delete()
+        .eq("playlist_id", playlistId);
+      
+      // Delete the playlist
+      const { error } = await supabase
+        .from("playlists")
+        .delete()
+        .eq("id", playlistId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};

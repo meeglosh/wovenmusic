@@ -3,11 +3,39 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X } from "lucide-react";
 import { Track, Playlist, getFileName } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
-import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist } from "@/hooks/usePlaylists";
+import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -118,14 +146,34 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: Sortabl
 
       {/* Actions */}
       <div className="w-12 flex items-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-          onClick={() => onRemove(track.id)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove track from playlist?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove "{getFileName(track)}" from this playlist?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onRemove(track.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove from playlist
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
@@ -133,9 +181,13 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: Sortabl
 
 const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) => {
   const [showAddTracksModal, setShowAddTracksModal] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
+  const updatePlaylistMutation = useUpdatePlaylist();
+  const deletePlaylistMutation = useDeletePlaylist();
   const { toast } = useToast();
 
   // Fetch fresh data directly in this component
@@ -216,6 +268,51 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handleRenamePlaylist = async () => {
+    if (!newPlaylistName.trim()) return;
+    
+    try {
+      await updatePlaylistMutation.mutateAsync({
+        id: playlist.id,
+        name: newPlaylistName.trim()
+      });
+      
+      setShowRenameDialog(false);
+      setNewPlaylistName("");
+      
+      toast({
+        title: "Playlist renamed",
+        description: `Playlist renamed to "${newPlaylistName.trim()}".`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error renaming playlist",
+        description: "Could not rename playlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePlaylist = async () => {
+    try {
+      await deletePlaylistMutation.mutateAsync(playlist.id);
+      
+      toast({
+        title: "Playlist deleted",
+        description: `"${playlist.name}" has been deleted.`,
+      });
+      
+      // Navigate back to library after deletion
+      onBack();
+    } catch (error) {
+      toast({
+        title: "Error deleting playlist",
+        description: "Could not delete playlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <Button
@@ -279,9 +376,48 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </Button>
-            <Button variant="ghost" size="lg">
-              <MoreHorizontal className="w-5 h-5" />
-            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="lg">
+                  <MoreHorizontal className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  setNewPlaylistName(playlist.name);
+                  setShowRenameDialog(true);
+                }}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Rename playlist
+                </DropdownMenuItem>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete playlist
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeletePlaylist}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete playlist
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -332,6 +468,45 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         allTracks={tracks}
         existingTrackIds={playlist.trackIds}
       />
+
+      {/* Rename Playlist Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename playlist</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this playlist.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="playlist-name">Playlist name</Label>
+              <Input
+                id="playlist-name"
+                value={newPlaylistName}
+                onChange={(e) => setNewPlaylistName(e.target.value)}
+                placeholder="Enter playlist name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenamePlaylist();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRenamePlaylist}
+              disabled={!newPlaylistName.trim() || newPlaylistName.trim() === playlist.name}
+            >
+              Rename playlist
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
