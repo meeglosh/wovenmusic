@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 
 // Import the existing DropboxService singleton
-import { DropboxService } from "@/services/dropboxService";
-
-const dropboxService = DropboxService.getInstance();
+import { dropboxService } from "@/services/dropboxService";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -46,6 +44,7 @@ export const useAudioPlayer = () => {
     console.log('=== TRACK LOADING USEEFFECT TRIGGERED ===');
     console.log('currentTrack:', currentTrack);
     console.log('audioRef.current:', audioRef.current);
+    console.log('currentTrack changed, current ID:', currentTrack?.id);
     
     if (!currentTrack || !audioRef.current) {
       console.log('Track loading skipped - currentTrack:', !!currentTrack, 'audioRef:', !!audioRef.current);
