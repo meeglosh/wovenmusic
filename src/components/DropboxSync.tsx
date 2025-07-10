@@ -47,6 +47,7 @@ const DropboxSync = () => {
   const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [permissionIssue, setPermissionIssue] = useState<boolean>(false);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -219,6 +220,7 @@ const DropboxSync = () => {
     
     setIsLoading(true);
     setDebugInfo("");
+    setPermissionIssue(false);
     
     try {
       console.log('Calling dropboxService.listFiles with path:', path);
@@ -229,12 +231,27 @@ const DropboxSync = () => {
       const debugDetails = [
         `Total items returned: ${allItems.length}`,
         `Path queried: "${path}"`,
+        `Token preview: ${dropboxService.getStoredToken()?.substring(0, 20)}...`,
+        `API call successful: YES`,
         `Items breakdown:`
       ];
       
-      allItems.forEach((item, index) => {
-        debugDetails.push(`  ${index + 1}. ${item.name} (${item[".tag"]}) - Path: ${item.path_lower}`);
-      });
+      if (allItems.length === 0) {
+        debugDetails.push(`  No items found - this could indicate:`);
+        debugDetails.push(`  1. Empty directory`);
+        debugDetails.push(`  2. Permission/scope issues`);
+        debugDetails.push(`  3. App needs 'files.content.read' permission`);
+        
+        // Check if this might be a permission issue
+        if (!path) { // Root directory is empty
+          setPermissionIssue(true);
+          debugDetails.push(`  ⚠️  Likely cause: Dropbox app permissions`);
+        }
+      } else {
+        allItems.forEach((item, index) => {
+          debugDetails.push(`  ${index + 1}. ${item.name} (${item[".tag"]}) - Path: ${item.path_lower}`);
+        });
+      }
       
       setDebugInfo(debugDetails.join('\n'));
       console.log('Debug info:', debugDetails.join('\n'));
@@ -257,12 +274,13 @@ const DropboxSync = () => {
       setFiles(musicFiles);
       setCurrentPath(path);
       
-      // If no folders found in root, provide helpful message
-      if (!path && folderItems.length === 0) {
+      // Enhanced empty state handling
+      if (!path && allItems.length === 0) {
+        setPermissionIssue(true);
         toast({
-          title: "No folders found",
-          description: "Your Dropbox root directory appears to be empty or contains only files. Try creating a folder in Dropbox first.",
-          variant: "default",
+          title: "No items found",
+          description: "This usually indicates a permission issue. Check your Dropbox app settings.",
+          variant: "destructive",
         });
       }
       
@@ -272,7 +290,7 @@ const DropboxSync = () => {
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       
-      setDebugInfo(`Error: ${error.message}\nPath: "${path}"`);
+      setDebugInfo(`Error: ${error.message}\nPath: "${path}"\nThis might be a permission issue.`);
       
       // Show more specific error messages
       let errorMessage = "Failed to load folders from Dropbox.";
@@ -281,6 +299,7 @@ const DropboxSync = () => {
         handleDisconnect();
       } else if (error.message?.includes('insufficient_scope') || error.message?.includes('not permitted')) {
         errorMessage = "Insufficient permissions. Please update your Dropbox app permissions and reconnect.";
+        setPermissionIssue(true);
       } else if (error.message) {
         errorMessage = `Dropbox API error: ${error.message}`;
       }
@@ -514,6 +533,31 @@ const DropboxSync = () => {
         </div>
       </div>
 
+      {permissionIssue && (
+        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="flex items-center gap-2 text-destructive mb-2">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">Permission Issue Detected</span>
+          </div>
+          <div className="text-sm text-destructive/80 space-y-2">
+            <p>Your Dropbox app likely needs additional permissions. Follow these steps:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline">Dropbox App Console</a></li>
+              <li>Select your app</li>
+              <li>Go to "Permissions" tab</li>
+              <li>Enable these permissions:
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li><code className="bg-muted px-1 rounded">files.content.read</code></li>
+                  <li><code className="bg-muted px-1 rounded">files.metadata.read</code></li>
+                </ul>
+              </li>
+              <li>Click "Submit" to save permissions</li>
+              <li>Disconnect and reconnect here</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
       {debugInfo && (
         <div className="mb-4 p-3 bg-muted rounded-lg">
           <h4 className="text-sm font-medium mb-2">Debug Information:</h4>
@@ -541,9 +585,14 @@ const DropboxSync = () => {
             <div className="text-center py-8">
               <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">No folders found in this location</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try creating a folder in your Dropbox or check the debug information above
-              </p>
+              <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                <p>This usually means:</p>
+                <ul className="list-disc list-inside">
+                  <li>Your Dropbox root is empty, or</li>
+                  <li>Your app needs permission to read files</li>
+                </ul>
+                <p className="mt-2">Check the debug information above for details.</p>
+              </div>
               {currentPath && (
                 <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
                   Go to Root
