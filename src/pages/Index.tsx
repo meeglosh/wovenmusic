@@ -28,20 +28,33 @@ const Index = () => {
     duration,
     volume,
     audioRef,
+    isShuffleMode,
+    isRepeatMode,
     playTrack,
+    playPlaylist,
     togglePlayPause,
+    playNext,
+    playPrevious,
+    toggleShuffle,
+    toggleRepeat,
     seekTo,
     setVolume,
     formatTime
   } = useAudioPlayer();
 
-  const handlePlayTrack = (track: Track) => {
-    // If it's the same track, toggle play/pause
-    if (currentTrack?.id === track.id) {
-      togglePlayPause();
+  const handlePlayTrack = (track: Track, playlist?: Track[]) => {
+    if (playlist) {
+      // Play as playlist starting from the selected track
+      const startIndex = playlist.findIndex(t => t.id === track.id);
+      playPlaylist(playlist, startIndex !== -1 ? startIndex : 0);
     } else {
-      // If it's a different track, play the new track
-      playTrack(track);
+      // If it's the same track, toggle play/pause
+      if (currentTrack?.id === track.id) {
+        togglePlayPause();
+      } else {
+        // If it's a different track, play the new track
+        playTrack(track);
+      }
     }
   };
 
@@ -116,9 +129,15 @@ const Index = () => {
           currentTime={currentTime}
           duration={duration}
           volume={volume}
+          isShuffleMode={isShuffleMode}
+          isRepeatMode={isRepeatMode}
           onPlayPause={togglePlayPause}
           onSeek={seekTo}
           onVolumeChange={setVolume}
+          onNext={playNext}
+          onPrevious={playPrevious}
+          onShuffle={toggleShuffle}
+          onRepeat={toggleRepeat}
           onFullScreen={() => setShowFullScreen(true)}
           formatTime={formatTime}
         />

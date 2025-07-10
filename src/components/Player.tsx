@@ -10,10 +10,16 @@ interface PlayerProps {
   currentTime: number;
   duration: number;
   volume: number;
+  isShuffleMode?: boolean;
+  isRepeatMode?: boolean;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (volume: number) => void;
-  onFullScreen: () => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  onShuffle?: () => void;
+  onRepeat?: () => void;
+  onFullScreen?: () => void;
   formatTime: (time: number) => string;
 }
 
@@ -23,9 +29,15 @@ const Player = ({
   currentTime, 
   duration, 
   volume, 
+  isShuffleMode = false,
+  isRepeatMode = false,
   onPlayPause, 
   onSeek, 
   onVolumeChange, 
+  onNext,
+  onPrevious,
+  onShuffle,
+  onRepeat,
   onFullScreen,
   formatTime 
 }: PlayerProps) => {
@@ -66,10 +78,20 @@ const Player = ({
         {/* Controls */}
         <div className="flex flex-col items-center space-y-2 flex-1">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant={isShuffleMode ? "default" : "ghost"} 
+              size="sm"
+              onClick={onShuffle}
+              disabled={!onShuffle}
+            >
               <Shuffle className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onPrevious}
+              disabled={!onPrevious}
+            >
               <SkipBack className="w-4 h-4" />
             </Button>
             <Button
@@ -84,15 +106,27 @@ const Player = ({
                 <Play className="w-4 h-4 fill-current" />
               )}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onNext}
+              disabled={!onNext}
+            >
               <SkipForward className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant={isRepeatMode ? "default" : "ghost"} 
+              size="sm"
+              onClick={onRepeat}
+              disabled={!onRepeat}
+            >
               <Repeat className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onFullScreen}>
-              <Maximize2 className="w-4 h-4" />
-            </Button>
+            {onFullScreen && (
+              <Button variant="ghost" size="sm" onClick={onFullScreen}>
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center space-x-2 w-full max-w-md">

@@ -18,7 +18,7 @@ import {
 
 interface MusicLibraryProps {
   tracks: Track[];
-  onPlayTrack: (track: Track) => void;
+  onPlayTrack: (track: Track, playlist?: Track[]) => void;
   currentTrack?: Track | null;
   isPlaying?: boolean;
 }

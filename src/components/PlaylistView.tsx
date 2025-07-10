@@ -30,7 +30,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface PlaylistViewProps {
   playlistId: string;
-  onPlayTrack: (track: Track) => void;
+  onPlayTrack: (track: Track, playlist?: Track[]) => void;
   onBack: () => void;
 }
 
@@ -42,11 +42,12 @@ import { useTracks } from "@/hooks/useTracks";
 interface SortableTrackItemProps {
   track: Track;
   index: number;
-  onPlay: (track: Track) => void;
+  onPlay: (track: Track, playlist?: Track[]) => void;
   onRemove: (trackId: string) => void;
+  playlist: Track[];
 }
 
-const SortableTrackItem = ({ track, index, onPlay, onRemove }: SortableTrackItemProps) => {
+const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: SortableTrackItemProps) => {
   const {
     attributes,
     listeners,
@@ -83,7 +84,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove }: SortableTrackItem
           variant="ghost"
           size="sm"
           className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => onPlay(track)}
+          onClick={() => onPlay(track, playlist)}
         >
           <Play className="w-4 h-4 fill-current" />
         </Button>
@@ -262,7 +263,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               size="lg" 
               className="rounded-full"
               disabled={playlistTracks.length === 0}
-              onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0])}
+              onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0], playlistTracks)}
             >
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
@@ -316,6 +317,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   index={index}
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
+                  playlist={playlistTracks}
                 />
               ))}
             </SortableContext>
