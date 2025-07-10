@@ -55,8 +55,12 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                      !track.fileUrl || track.fileUrl === '#' ? 'cursor-not-allowed opacity-50' : ''
+                    }`}
                     onClick={() => onPlayTrack(track)}
+                    disabled={!track.fileUrl || track.fileUrl === '#'}
+                    title={!track.fileUrl || track.fileUrl === '#' ? 'No audio file available' : 'Play track'}
                   >
                     <Play className="w-4 h-4 fill-current" />
                   </Button>

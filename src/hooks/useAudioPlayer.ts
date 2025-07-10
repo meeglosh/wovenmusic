@@ -11,6 +11,11 @@ export const useAudioPlayer = () => {
 
   useEffect(() => {
     if (currentTrack && audioRef.current) {
+      console.log('Loading track:', currentTrack.title, 'with URL:', currentTrack.fileUrl);
+      if (currentTrack.fileUrl === '#' || !currentTrack.fileUrl) {
+        console.warn('Track has invalid file URL:', currentTrack.fileUrl);
+        return;
+      }
       audioRef.current.src = currentTrack.fileUrl;
       audioRef.current.load();
     }
@@ -42,21 +47,37 @@ export const useAudioPlayer = () => {
   }, [volume]);
 
   const playTrack = useCallback((track: Track) => {
+    console.log('Attempting to play track:', track.title, 'URL:', track.fileUrl);
+    if (!track.fileUrl || track.fileUrl === '#') {
+      console.error('Cannot play track - invalid or missing file URL:', track.fileUrl);
+      return;
+    }
     setCurrentTrack(track);
     setIsPlaying(true);
   }, []);
 
   const togglePlayPause = useCallback(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current) {
+      console.warn('Audio element not available');
+      return;
+    }
+    
+    if (!currentTrack || !currentTrack.fileUrl || currentTrack.fileUrl === '#') {
+      console.error('Cannot play - no valid track or file URL');
+      return;
+    }
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(error => {
+        console.error('Error playing audio:', error);
+        setIsPlaying(false);
+      });
       setIsPlaying(true);
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack]);
 
   const seekTo = useCallback((time: number) => {
     if (audioRef.current) {
