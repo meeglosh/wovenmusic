@@ -1,6 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 
+// Import DropboxService for getting fresh temporary links
+class DropboxService {
+  private accessToken: string | null = null;
+
+  getStoredToken(): string | null {
+    if (!this.accessToken) {
+      this.accessToken = localStorage.getItem('dropbox_access_token');
+    }
+    return this.accessToken;
+  }
+
+  async getTemporaryLink(path: string): Promise<string> {
+    const token = this.getStoredToken();
+    if (!token) throw new Error('Not authenticated with Dropbox');
+
+    const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get temporary link: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.link;
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getStoredToken();
+  }
+}
+
+const dropboxService = new DropboxService();
+
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
   const shuffled = [...array];
@@ -48,15 +88,21 @@ export const useAudioPlayer = () => {
       try {
         let audioUrl = currentTrack.fileUrl;
         
-        // Handle different types of Dropbox URLs
-        if (audioUrl.includes('dropbox')) {
-          // If it's a Dropbox temporary link, try to use it directly
-          if (audioUrl.includes('dl.dropboxusercontent.com')) {
-            // Ensure it's set for direct download
-            audioUrl = audioUrl.replace('dl=0', 'dl=1');
+        // Handle Dropbox file paths - generate fresh temporary links
+        if (audioUrl.startsWith('/') && dropboxService.isAuthenticated()) {
+          console.log('Generating fresh temporary link for Dropbox file:', audioUrl);
+          try {
+            const tempLink = await dropboxService.getTemporaryLink(audioUrl);
+            audioUrl = tempLink;
+            console.log('Got fresh temporary link:', tempLink);
+          } catch (error) {
+            console.error('Failed to get fresh temporary link:', error);
+            throw new Error('Failed to get playable link from Dropbox');
           }
-          
-          console.log('Using Dropbox URL:', audioUrl);
+        } else if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
+          // Existing temporary link - ensure it's set for direct download
+          audioUrl = audioUrl.replace('dl=0', 'dl=1');
+          console.log('Using existing Dropbox URL:', audioUrl);
         }
 
         audio.src = audioUrl;
