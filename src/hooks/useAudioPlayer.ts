@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
+import { useUpdateTrack } from "@/hooks/useTracks";
 
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
@@ -14,6 +15,15 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
+// Helper function to format time
+const formatTime = (time: number): string => {
+  if (!time || isNaN(time)) return "0:00";
+  
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 export const useAudioPlayer = () => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -21,6 +31,9 @@ export const useAudioPlayer = () => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.75);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Add mutation for updating track duration
+  const updateTrackMutation = useUpdateTrack();
 
   // Playlist functionality
   const [playlist, setPlaylist] = useState<Track[]>([]);
@@ -122,15 +135,6 @@ export const useAudioPlayer = () => {
 
         console.log('Final audio URL after format check:', audioUrl);
         
-        // Test browser codec support for debugging - use original file path for extension
-        const fileExt = currentTrack.fileUrl?.split('.').pop()?.toLowerCase() || '';
-        console.log('File extension:', fileExt);
-        console.log('Browser codec support test:');
-        console.log('- audio/wav:', audio.canPlayType('audio/wav'));
-        console.log('- audio/aiff:', audio.canPlayType('audio/aiff'));
-        console.log('- audio/x-aiff:', audio.canPlayType('audio/x-aiff'));
-        console.log('- audio/mpeg:', audio.canPlayType('audio/mpeg'));
-        
         // Set the audio source and load it
         audio.src = audioUrl;
         audio.load();
@@ -195,7 +199,20 @@ export const useAudioPlayer = () => {
     if (!audio) return;
 
     const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration || 0);
+    const updateDuration = () => {
+      const audioDuration = audio.duration || 0;
+      setDuration(audioDuration);
+      
+      // Update track duration in database if it's currently 0:00 and we have a valid duration
+      if (currentTrack && audioDuration > 0 && (currentTrack.duration === '0:00' || currentTrack.duration === '00:00')) {
+        const formattedDuration = formatTime(audioDuration);
+        console.log(`Updating track duration from ${currentTrack.duration} to ${formattedDuration}`);
+        updateTrackMutation.mutate({
+          id: currentTrack.id,
+          updates: { duration: formattedDuration }
+        });
+      }
+    };
     const handleEnded = () => {
       console.log('Track ended, playing next...');
       playNext();
@@ -210,7 +227,7 @@ export const useAudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode]);
+  }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode, currentTrack, updateTrackMutation]);
 
   // Volume control
   useEffect(() => {
@@ -397,13 +414,6 @@ export const useAudioPlayer = () => {
     setVolume(Math.max(0, Math.min(1, newVolume)));
   };
 
-  const formatTime = (time: number): string => {
-    if (!time || isNaN(time)) return "0:00";
-    
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   return {
     currentTrack,

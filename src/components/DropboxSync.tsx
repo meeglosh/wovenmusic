@@ -377,7 +377,7 @@ const DropboxSync = () => {
         await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
-          duration: '0:00', // We'll need to calculate this from the actual file
+          duration: '--:--', // Will be updated when the track is first played
           fileUrl: dropboxPath,
           source_folder: selectedFolder || currentPath,
           dropbox_path: dropboxPath

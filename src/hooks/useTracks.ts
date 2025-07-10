@@ -54,3 +54,24 @@ export const useAddTrack = () => {
     }
   });
 };
+
+export const useUpdateTrack = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string }> }) => {
+      const { data, error } = await supabase
+        .from("tracks")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+    }
+  });
+};
