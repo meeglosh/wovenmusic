@@ -1,43 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 
-// Import DropboxService for getting fresh temporary links
-class DropboxService {
-  private accessToken: string | null = null;
-
-  getStoredToken(): string | null {
-    if (!this.accessToken) {
-      this.accessToken = localStorage.getItem('dropbox_access_token');
-    }
-    return this.accessToken;
-  }
-
-  async getTemporaryLink(path: string): Promise<string> {
-    const token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
-
-    const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ path })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to get temporary link: ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.link;
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.getStoredToken();
-  }
-}
+// Import the existing DropboxService
+import { DropboxService } from "@/services/dropboxService";
 
 const dropboxService = new DropboxService();
 
@@ -107,9 +72,22 @@ export const useAudioPlayer = () => {
           console.error('Dropbox file detected but not authenticated');
           throw new Error('Dropbox authentication required to play this track');
         } else if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
-          // Existing temporary link - ensure it's set for direct download
-          audioUrl = audioUrl.replace('dl=0', 'dl=1');
-          console.log('Using existing Dropbox URL:', audioUrl);
+          // Existing temporary link - convert to direct download
+          console.log('Converting Dropbox temporary link to direct download');
+          
+          // Replace the /file suffix and add dl=1 parameter for direct download
+          if (audioUrl.endsWith('/file')) {
+            audioUrl = audioUrl.replace('/file', '');
+          }
+          
+          // Add or replace dl parameter to force download
+          if (audioUrl.includes('?')) {
+            audioUrl = audioUrl.replace(/[?&]dl=[01]/, '') + '?dl=1';
+          } else {
+            audioUrl = audioUrl + '?dl=1';
+          }
+          
+          console.log('Converted Dropbox URL:', audioUrl);
         }
 
         console.log('Final audio URL:', audioUrl);
