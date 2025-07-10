@@ -122,6 +122,15 @@ export const useAudioPlayer = () => {
 
         console.log('Final audio URL after format check:', audioUrl);
         
+        // Test browser codec support for debugging
+        const fileExt = audioUrl.split('.').pop()?.toLowerCase();
+        console.log('File extension:', fileExt);
+        console.log('Browser codec support test:');
+        console.log('- audio/wav:', audio.canPlayType('audio/wav'));
+        console.log('- audio/aiff:', audio.canPlayType('audio/aiff'));
+        console.log('- audio/x-aiff:', audio.canPlayType('audio/x-aiff'));
+        console.log('- audio/mpeg:', audio.canPlayType('audio/mpeg'));
+        
         // Set the audio source and load it
         audio.src = audioUrl;
         audio.load();
