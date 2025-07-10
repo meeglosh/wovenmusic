@@ -71,7 +71,7 @@ const AddTracksModal = ({
     setIsLoading(true);
     
     try {
-      // Add tracks one by one to maintain proper order
+      // Add tracks sequentially to ensure proper order
       for (const trackId of selectedTracks) {
         await addTrackMutation.mutateAsync({ playlistId, trackId });
       }
@@ -85,6 +85,7 @@ const AddTracksModal = ({
       setSearchQuery("");
       onOpenChange(false);
     } catch (error) {
+      console.error("Error adding tracks:", error);
       toast({
         title: "Error adding tracks",
         description: "Something went wrong. Please try again.",

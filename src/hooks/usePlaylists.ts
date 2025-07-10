@@ -48,7 +48,9 @@ export const useCreatePlaylist = () => {
       return data;
     },
     onSuccess: () => {
+      // Invalidate and refetch playlists to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.refetchQueries({ queryKey: ["playlists"] });
     }
   });
 };
@@ -82,7 +84,10 @@ export const useAddTrackToPlaylist = () => {
       return data;
     },
     onSuccess: () => {
+      // Invalidate both playlists query to update the sidebar and specific queries
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      // Force refetch of playlists to ensure UI updates immediately
+      queryClient.refetchQueries({ queryKey: ["playlists"] });
     }
   });
 };
@@ -115,7 +120,9 @@ export const useReorderPlaylistTracks = () => {
       return data;
     },
     onSuccess: () => {
+      // Invalidate and refetch playlists to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.refetchQueries({ queryKey: ["playlists"] });
     }
   });
 };
@@ -134,7 +141,9 @@ export const useRemoveTrackFromPlaylist = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate and refetch playlists to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      queryClient.refetchQueries({ queryKey: ["playlists"] });
     }
   });
 };

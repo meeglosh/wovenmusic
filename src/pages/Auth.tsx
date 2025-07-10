@@ -120,8 +120,8 @@ const Auth = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-lg">W</span>
           </div>
-          <CardTitle className="text-2xl bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-            Welcome to Woven Music
+          <CardTitle className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+            Welcome to Wovenmusic
           </CardTitle>
           <CardDescription>
             Sync, organize, and share music with your band
