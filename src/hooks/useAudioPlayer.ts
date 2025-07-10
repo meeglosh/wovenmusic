@@ -31,14 +31,13 @@ export const useAudioPlayer = () => {
   const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
   const [isRepeatMode, setIsRepeatMode] = useState(false);
 
-  // Create or get the audio element
-  useEffect(() => {
-    if (!audioRef.current) {
-      const audio = document.createElement('audio');
-      audio.crossOrigin = 'anonymous';
-      audioRef.current = audio;
-    }
-  }, []);
+  // Create or get the audio element - do this synchronously
+  if (!audioRef.current) {
+    const audio = document.createElement('audio');
+    audio.crossOrigin = 'anonymous';
+    audioRef.current = audio;
+    console.log('Audio element created');
+  }
 
   // Track loading and metadata
   useEffect(() => {
