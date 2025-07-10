@@ -41,8 +41,12 @@ export const useAudioPlayer = () => {
     }
   }, []);
 
-  // Track loading and metadata - simplified
+  // Track loading and metadata - simplified with debug
   useEffect(() => {
+    console.log('=== TRACK LOADING USEEFFECT TRIGGERED ===');
+    console.log('currentTrack:', currentTrack);
+    console.log('audioRef.current:', audioRef.current);
+    
     if (!currentTrack || !audioRef.current) {
       console.log('Track loading skipped - currentTrack:', !!currentTrack, 'audioRef:', !!audioRef.current);
       return;
