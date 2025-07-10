@@ -33,7 +33,9 @@ export class DropboxService {
   async authenticate(): Promise<void> {
     console.log('=== STARTING DROPBOX AUTHENTICATION ===');
     console.log('Current URL:', window.location.href);
+    console.log('Window location origin:', window.location.origin);
     console.log('Redirect URI:', this.redirectUri);
+    console.log('IMPORTANT: Add this EXACT URL to your Dropbox app settings:', this.redirectUri);
     
     // Get Dropbox app key from Supabase secrets
     const { data, error } = await supabase.functions.invoke('get-dropbox-config');
