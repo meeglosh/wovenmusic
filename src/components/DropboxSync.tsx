@@ -286,6 +286,8 @@ const DropboxSync = () => {
         (item.name.toLowerCase().endsWith('.mp3') || 
          item.name.toLowerCase().endsWith('.wav') || 
          item.name.toLowerCase().endsWith('.m4a') ||
+         item.name.toLowerCase().endsWith('.aif') ||
+         item.name.toLowerCase().endsWith('.aiff') ||
          item.name.toLowerCase().endsWith('.flac') ||
          item.name.toLowerCase().endsWith('.aac') ||
          item.name.toLowerCase().endsWith('.ogg') ||
@@ -698,7 +700,7 @@ const DropboxSync = () => {
               <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">No music files found in this folder</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Make sure you have audio files (.mp3, .wav, .m4a, .flac, .aac, .ogg, .wma) in the selected folder
+                Make sure you have audio files (.mp3, .wav, .m4a, .aif, .aiff, .flac, .aac, .ogg, .wma) in the selected folder
               </p>
             </div>
           ) : (
