@@ -11,13 +11,41 @@ export const useAudioPlayer = () => {
 
   useEffect(() => {
     if (currentTrack && audioRef.current) {
+      console.log('=== LOADING AUDIO ===');
       console.log('Loading track:', currentTrack.title, 'with URL:', currentTrack.fileUrl);
       if (currentTrack.fileUrl === '#' || !currentTrack.fileUrl) {
         console.warn('Track has invalid file URL:', currentTrack.fileUrl);
         return;
       }
-      audioRef.current.src = currentTrack.fileUrl;
-      audioRef.current.load();
+      
+      const audio = audioRef.current;
+      
+      // Add event listeners for debugging
+      const handleLoadStart = () => console.log('Audio: loadstart event');
+      const handleLoadedData = () => console.log('Audio: loadeddata event');
+      const handleCanPlay = () => console.log('Audio: canplay event');
+      const handleError = (e) => console.error('Audio: error event', e, audio.error);
+      const handleLoadedMetadata = () => console.log('Audio: loadedmetadata event');
+      
+      audio.addEventListener('loadstart', handleLoadStart);
+      audio.addEventListener('loadeddata', handleLoadedData);
+      audio.addEventListener('canplay', handleCanPlay);
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      audio.src = currentTrack.fileUrl;
+      console.log('Audio src set to:', audio.src);
+      audio.load();
+      console.log('Audio.load() called');
+      
+      // Cleanup listeners when component unmounts or track changes
+      return () => {
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('loadeddata', handleLoadedData);
+        audio.removeEventListener('canplay', handleCanPlay);
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
     }
   }, [currentTrack]);
 
@@ -60,6 +88,17 @@ export const useAudioPlayer = () => {
     }
     setCurrentTrack(track);
     setIsPlaying(true);
+    
+    // Try to play immediately after setting the track
+    setTimeout(() => {
+      if (audioRef.current) {
+        console.log('=== ATTEMPTING AUTO-PLAY ===');
+        audioRef.current.play().catch(error => {
+          console.error('Auto-play failed:', error);
+          setIsPlaying(false);
+        });
+      }
+    }, 100);
   }, []);
 
   const togglePlayPause = useCallback(() => {
