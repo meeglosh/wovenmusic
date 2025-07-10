@@ -47,7 +47,13 @@ export const useAudioPlayer = () => {
   }, [volume]);
 
   const playTrack = useCallback((track: Track) => {
-    console.log('Attempting to play track:', track.title, 'URL:', track.fileUrl);
+    console.log('=== PLAY TRACK DEBUG ===');
+    console.log('Track object:', track);
+    console.log('Track title:', track.title);
+    console.log('Track fileUrl:', track.fileUrl);
+    console.log('Track fileUrl type:', typeof track.fileUrl);
+    console.log('Is fileUrl valid?', track.fileUrl && track.fileUrl !== '#');
+    
     if (!track.fileUrl || track.fileUrl === '#') {
       console.error('Cannot play track - invalid or missing file URL:', track.fileUrl);
       return;
