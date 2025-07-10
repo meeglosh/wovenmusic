@@ -61,11 +61,32 @@ export const useAudioPlayer = () => {
         
         let audioUrl = currentTrack.fileUrl;
         
-        // For testing - let's try with a working audio URL first
-        if (audioUrl.includes('dropbox')) {
-          console.log('TEMPORARY FIX: Using test audio URL instead of Dropbox');
-          audioUrl = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
-          console.log('Test audio URL:', audioUrl);
+        // Handle Dropbox URLs by downloading and converting to blob
+        if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
+          console.log('Converting Dropbox URL to blob');
+          try {
+            // Remove /file suffix and add dl=1 for direct download
+            let downloadUrl = audioUrl.replace('/file', '') + '?dl=1';
+            console.log('Download URL:', downloadUrl);
+            
+            const response = await fetch(downloadUrl);
+            console.log('Fetch response status:', response.status);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+            }
+            
+            const blob = await response.blob();
+            console.log('Downloaded blob:', blob.type, blob.size, 'bytes');
+            
+            // Create blob URL for audio element
+            audioUrl = URL.createObjectURL(blob);
+            console.log('Created blob URL:', audioUrl);
+            
+          } catch (error) {
+            console.error('Failed to download Dropbox file:', error);
+            throw new Error('Failed to load audio from Dropbox');
+          }
         }
 
         console.log('Final audio URL:', audioUrl);
