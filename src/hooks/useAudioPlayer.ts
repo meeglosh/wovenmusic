@@ -82,22 +82,41 @@ export const useAudioPlayer = () => {
             
             // List files to find the one that matches
             const files = await dropboxService.listFiles('/Music'); // Assuming files are in /Music folder
-            const matchingFile = files.find(file => 
-              file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
-              file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())
+            let matchingFile = files.find(file => 
+              file['.tag'] === 'file' && // Only look for actual files
+              (file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
+               file.name.toLowerCase().includes(currentTrack.artist.toLowerCase())) &&
+              // Check for audio file extensions
+              /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name)
             );
             
+            // If no direct file match, look for a folder that matches and search inside it
+            if (!matchingFile) {
+              const matchingFolder = files.find(file => 
+                file['.tag'] === 'folder' && 
+                (file.name.toLowerCase().includes(currentTrack.title.toLowerCase()) ||
+                 file.name.toLowerCase().includes(currentTrack.artist.toLowerCase()))
+              );
+              
+              if (matchingFolder) {
+                console.log('Found matching folder, searching inside:', matchingFolder.path_lower);
+                const folderFiles = await dropboxService.listFiles(matchingFolder.path_lower);
+                matchingFile = folderFiles.find(file => 
+                  file['.tag'] === 'file' && 
+                  /\.(mp3|wav|m4a|flac|aac|ogg|wma)$/i.test(file.name)
+                );
+                console.log('Found audio file in folder:', matchingFile?.path_lower);
+              }
+            }
+            
             if (matchingFile) {
-              console.log('Found matching file:', matchingFile.path_lower);
+              console.log('Found matching audio file:', matchingFile.path_lower);
               const tempLink = await dropboxService.getTemporaryLink(matchingFile.path_lower);
               console.log('Got temporary download link:', tempLink);
               audioUrl = tempLink;
             } else {
-              console.log('No matching file found, trying direct download of blob');
-              // Fallback: try to download the blob directly
-              const blob = await dropboxService.downloadFile(currentTrack.fileUrl);
-              audioUrl = URL.createObjectURL(blob);
-              console.log('Created blob URL from direct download:', audioUrl);
+              console.log('No matching audio file found, trying fallback approach');
+              throw new Error('No matching audio file found in Dropbox');
             }
             
           } catch (error) {
