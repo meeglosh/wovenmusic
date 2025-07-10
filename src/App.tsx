@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import DropboxCallback from "./pages/DropboxCallback";
 import NotFound from "./pages/NotFound";
+import TrackView from "./pages/TrackView";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/dropbox-callback" element={<DropboxCallback />} />
+            <Route path="/track/:trackId" element={<TrackView />} />
             <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

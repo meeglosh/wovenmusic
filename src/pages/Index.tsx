@@ -36,7 +36,13 @@ const Index = () => {
   } = useAudioPlayer();
 
   const handlePlayTrack = (track: Track) => {
-    playTrack(track);
+    // If it's the same track, toggle play/pause
+    if (currentTrack?.id === track.id) {
+      togglePlayPause();
+    } else {
+      // If it's a different track, play the new track
+      playTrack(track);
+    }
   };
 
   const handleViewPlaylist = (playlist: Playlist) => {
@@ -90,6 +96,8 @@ const Index = () => {
             <MusicLibrary 
               tracks={tracks} 
               onPlayTrack={handlePlayTrack}
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
             />
           ) : (
             <PlaylistView 

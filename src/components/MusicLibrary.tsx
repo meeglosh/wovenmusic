@@ -1,9 +1,10 @@
 
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, MoreHorizontal, Clock, Trash2, X } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X } from "lucide-react";
 import { Track } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
@@ -18,9 +19,12 @@ import {
 interface MusicLibraryProps {
   tracks: Track[];
   onPlayTrack: (track: Track) => void;
+  currentTrack?: Track | null;
+  isPlaying?: boolean;
 }
 
-const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLibraryProps) => {
+  const navigate = useNavigate();
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
@@ -168,18 +172,31 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                   />
                 </div>
                 <div className="w-12 flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                      !track.fileUrl || track.fileUrl === '#' ? 'cursor-not-allowed opacity-50' : ''
-                    }`}
-                    onClick={() => onPlayTrack(track)}
-                    disabled={!track.fileUrl || track.fileUrl === '#'}
-                    title={!track.fileUrl || track.fileUrl === '#' ? 'No audio file available' : 'Play track'}
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                  </Button>
+                  {/* Show play/pause button based on current track and playing state */}
+                  {currentTrack?.id === track.id && isPlaying ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => onPlayTrack(track)}
+                      title="Pause track"
+                    >
+                      <Pause className="w-4 h-4 fill-current" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        !track.fileUrl || track.fileUrl === '#' ? 'cursor-not-allowed opacity-50' : ''
+                      }`}
+                      onClick={() => onPlayTrack(track)}
+                      disabled={!track.fileUrl || track.fileUrl === '#'}
+                      title={!track.fileUrl || track.fileUrl === '#' ? 'No audio file available' : 'Play track'}
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                    </Button>
+                  )}
                   <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
                     {index + 1}
                   </span>
@@ -198,7 +215,13 @@ const MusicLibrary = ({ tracks, onPlayTrack }: MusicLibraryProps) => {
                     </div>
                   </div>
                   <div>
-                    <p className="font-medium">{track.title}</p>
+                    <button 
+                      className="text-left font-medium hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => navigate(`/track/${track.id}`)}
+                      title="Open track view with comments"
+                    >
+                      {track.title}
+                    </button>
                     <p className="text-sm text-muted-foreground">{track.artist}</p>
                   </div>
                 </div>
