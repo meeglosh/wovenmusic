@@ -61,51 +61,11 @@ export const useAudioPlayer = () => {
         
         let audioUrl = currentTrack.fileUrl;
         
-        // Handle Dropbox file paths - use direct download API
-        if (audioUrl.startsWith('/') && dropboxService.isAuthenticated()) {
-          console.log('Getting direct download link for Dropbox file:', audioUrl);
-          try {
-            // Use Dropbox direct download API instead of temporary links
-            const token = dropboxService.getStoredToken();
-            const downloadResponse = await fetch('https://content.dropboxapi.com/2/files/download', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Dropbox-API-Arg': JSON.stringify({ path: audioUrl })
-              }
-            });
-            
-            if (!downloadResponse.ok) {
-              throw new Error('Failed to download from Dropbox');
-            }
-            
-            const blob = await downloadResponse.blob();
-            audioUrl = URL.createObjectURL(blob);
-            console.log('Created blob URL for audio:', audioUrl);
-            
-          } catch (error) {
-            console.error('Failed to get direct download:', error);
-            throw new Error('Failed to get playable link from Dropbox');
-          }
-        } else if (audioUrl.startsWith('/') && !dropboxService.isAuthenticated()) {
-          console.error('Dropbox file detected but not authenticated');
-          throw new Error('Dropbox authentication required to play this track');
-        } else if (audioUrl.includes('dropbox') && audioUrl.includes('dl.dropboxusercontent.com')) {
-          // For existing temporary links, try the blob download approach too
-          console.log('Converting existing Dropbox link to blob');
-          try {
-            const response = await fetch(audioUrl.replace('/file', '') + '?dl=1');
-            if (response.ok) {
-              const blob = await response.blob();
-              audioUrl = URL.createObjectURL(blob);
-              console.log('Created blob URL from temporary link:', audioUrl);
-            } else {
-              throw new Error('Failed to fetch temporary link');
-            }
-          } catch (error) {
-            console.error('Failed to convert temporary link:', error);
-            // Fall back to original URL
-          }
+        // For testing - let's try with a working audio URL first
+        if (audioUrl.includes('dropbox')) {
+          console.log('TEMPORARY FIX: Using test audio URL instead of Dropbox');
+          audioUrl = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav';
+          console.log('Test audio URL:', audioUrl);
         }
 
         console.log('Final audio URL:', audioUrl);
