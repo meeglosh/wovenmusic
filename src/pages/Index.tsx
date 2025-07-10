@@ -104,7 +104,7 @@ const Index = () => {
           onPlaylistSelect={handleViewPlaylist}
         />
         
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-24' : ''}`}>
           {currentView === "library" ? (
             <MusicLibrary 
               tracks={tracks} 
