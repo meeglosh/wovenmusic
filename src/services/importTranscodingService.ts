@@ -1,59 +1,37 @@
-import { audioTranscodingService } from './audioTranscodingService';
 import { supabase } from '@/integrations/supabase/client';
 
 export class ImportTranscodingService {
   
   async transcodeAndStore(audioUrl: string, fileName: string): Promise<string> {
-    console.log('Starting transcode and store for:', fileName);
+    console.log('Starting server-side transcode for:', fileName);
     
     try {
-      // Transcode the audio file
-      console.log('Transcoding audio file...');
-      const transcodedResult = await audioTranscodingService.transcodeAudio(audioUrl, 'mp3');
+      // Use the edge function for server-side FFmpeg transcoding
+      console.log('Calling FFmpeg transcoding edge function...');
       
-      // If transcoding returned the original URL (unsupported format), return it directly
-      if (transcodedResult === audioUrl) {
-        console.log('Transcoding skipped due to unsupported format, using original URL');
-        return audioUrl;
+      const { data, error } = await supabase.functions.invoke('transcode-audio', {
+        body: {
+          audioUrl,
+          fileName
+        }
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(`Transcoding failed: ${error.message}`);
       }
       
-      // Convert blob URL to actual blob
-      const response = await fetch(transcodedResult);
-      const blob = await response.blob();
-      
-      // Generate a unique filename for storage
-      const timestamp = Date.now();
-      const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `${timestamp}_${safeName}.mp3`;
-      
-      console.log('Uploading transcoded file to storage:', storagePath);
-      
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('transcoded-audio')
-        .upload(storagePath, blob, {
-          contentType: 'audio/mpeg',
-          cacheControl: '3600'
-        });
-      
-      if (uploadError) {
-        console.error('Failed to upload transcoded file:', uploadError);
-        throw uploadError;
+      if (!data.success) {
+        console.error('Transcoding failed:', data.error);
+        throw new Error(`Transcoding failed: ${data.error}`);
       }
       
-      console.log('Successfully uploaded transcoded file:', uploadData.path);
+      console.log('Server-side transcoding completed successfully');
+      console.log('Transcoded file available at:', data.publicUrl);
+      console.log('Original size:', data.originalSize, 'bytes');
+      console.log('Transcoded size:', data.transcodedSize, 'bytes');
       
-      // Get the public URL for the uploaded file
-      const { data: urlData } = supabase.storage
-        .from('transcoded-audio')
-        .getPublicUrl(uploadData.path);
-      
-      console.log('Transcoded file available at:', urlData.publicUrl);
-      
-      // Clean up the blob URL
-      URL.revokeObjectURL(transcodedResult);
-      
-      return urlData.publicUrl;
+      return data.publicUrl;
       
     } catch (error) {
       console.error('Failed to transcode and store audio:', error);
@@ -62,7 +40,9 @@ export class ImportTranscodingService {
   }
   
   needsTranscoding(filePath: string): boolean {
-    return audioTranscodingService.needsTranscoding(filePath);
+    // Only .aif/.aiff files need transcoding - .wav and .mp3 play natively
+    const url = filePath.toLowerCase();
+    return url.includes('.aif') || url.includes('.aiff');
   }
 }
 
