@@ -731,15 +731,15 @@ const DropboxSync = () => {
         </div>
       )}
 
-      <ResizablePanelGroup direction="vertical" className="min-h-[400px]">
-        <ResizablePanel defaultSize={100} minSize={30}>
+      <div className="min-h-[300px] max-h-[600px] resize-y overflow-hidden border rounded-lg">
+        <div className="h-full overflow-y-auto">
           {isLoading ? (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">Loading from Dropbox...</p>
             </div>
           ) : viewMode === "folder-select" ? (
-            <div>
+            <div className="p-2">
               <div className="mb-4">
                 <h4 className="text-sm font-medium mb-2">Choose a folder to sync:</h4>
                 {currentPath && (
@@ -769,54 +769,49 @@ const DropboxSync = () => {
                   )}
                 </div>
               ) : browsingMode === 'columns' ? (
-                <ResizablePanelGroup direction="horizontal" className="h-full">
-                  <ResizablePanel defaultSize={50} minSize={30}>
-                    <div className="p-2 h-full overflow-y-auto">
-                      <h5 className="text-sm font-medium mb-2">Folders</h5>
-                      <div className="space-y-1">
-                        {currentPath && (
-                          <div 
-                            className="flex items-center p-2 rounded cursor-pointer hover:bg-muted/50 text-sm"
-                            onClick={() => {
-                              const parentPath = currentPath.split('/').slice(0, -1).join('/');
-                              loadFolders(parentPath);
-                            }}
-                          >
-                            <Folder className="w-4 h-4 mr-2" />
-                            <span>.. (Go back)</span>
+                <div className="grid grid-cols-2 gap-4 h-full">
+                  <div className="border-r pr-4">
+                    <h5 className="text-sm font-medium mb-2">Folders</h5>
+                    <div className="space-y-1 max-h-96 overflow-y-auto">
+                      {currentPath && (
+                        <div 
+                          className="flex items-center p-2 rounded cursor-pointer hover:bg-muted/50 text-sm"
+                          onClick={() => {
+                            const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                            loadFolders(parentPath);
+                          }}
+                        >
+                          <Folder className="w-4 h-4 mr-2" />
+                          <span>.. (Go back)</span>
+                        </div>
+                      )}
+                      {folders.map((folder) => (
+                        <div 
+                          key={folder.path_lower} 
+                          className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                          onClick={() => navigateToFolder(folder.path_lower)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Folder className="w-4 h-4" />
+                            <span className="truncate">{folder.name}</span>
                           </div>
-                        )}
-                        {folders.map((folder) => (
-                          <div 
-                            key={folder.path_lower} 
-                            className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
-                            onClick={() => navigateToFolder(folder.path_lower)}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <Folder className="w-4 h-4" />
-                              <span>{folder.name}</span>
-                            </div>
-                            <Button size="sm" variant="ghost" onClick={(e) => {
-                              e.stopPropagation();
-                              handleFolderSelect(folder.path_lower);
-                            }}>
-                              Select
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                          <Button size="sm" variant="ghost" onClick={(e) => {
+                            e.stopPropagation();
+                            handleFolderSelect(folder.path_lower);
+                          }}>
+                            Select
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  </ResizablePanel>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={50} minSize={30}>
-                    <div className="p-2 h-full overflow-y-auto">
-                      <h5 className="text-sm font-medium mb-2">Preview</h5>
-                      <p className="text-xs text-muted-foreground">Click on a folder to preview its contents</p>
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                  </div>
+                  <div className="pl-4">
+                    <h5 className="text-sm font-medium mb-2">Preview</h5>
+                    <p className="text-xs text-muted-foreground">Click on a folder to preview its contents</p>
+                  </div>
+                </div>
               ) : (
-                <div className="space-y-2 overflow-y-auto">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {currentPath && (
                     <div 
                       className="flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50"
@@ -851,7 +846,7 @@ const DropboxSync = () => {
               )}
             </div>
           ) : (
-            <div>
+            <div className="p-2">
               {files.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
@@ -876,7 +871,7 @@ const DropboxSync = () => {
                     </Button>
                   </div>
                   
-                  <div className="space-y-2 overflow-y-auto">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {files.map((file) => (
                       <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
                         <div className="flex items-center space-x-3">
@@ -901,14 +896,13 @@ const DropboxSync = () => {
               )}
             </div>
           )}
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={0} minSize={0} maxSize={50}>
-          <div className="p-4 text-center text-muted-foreground">
-            <p className="text-sm">Resize area for additional information</p>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+        
+        {/* Resize handle indicator */}
+        <div className="absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize opacity-50 hover:opacity-100 transition-opacity">
+          <div className="w-full h-full bg-muted-foreground/20 rounded-tl-lg"></div>
+        </div>
+      </div>
     </Card>
   );
 };
