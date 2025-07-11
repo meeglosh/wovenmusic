@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Grid3x3, List, Check } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import {
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface DropboxFile {
   name: string;
@@ -51,6 +53,11 @@ const DropboxSync = () => {
   const [permissionIssue, setPermissionIssue] = useState<boolean>(false);
   const [accountInfo, setAccountInfo] = useState<any>(null);
   const [showDetailedDebug, setShowDetailedDebug] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'modified'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [browsingMode, setBrowsingMode] = useState<'list' | 'columns'>('list');
+  const [folderHistory, setFolderHistory] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -294,13 +301,18 @@ const DropboxSync = () => {
          item.name.toLowerCase().endsWith('.wma'))
       );
       
-      console.log('Filtered results:');
-      console.log('- Folders:', folderItems.length, folderItems);
-      console.log('- Music files:', musicFiles.length, musicFiles);
+      // Sort folders and files
+      const sortedFolders = sortItems(folderItems);
+      const sortedFiles = sortItems(musicFiles);
       
-      setFolders(folderItems);
-      setFiles(musicFiles);
+      console.log('Filtered and sorted results:');
+      console.log('- Folders:', sortedFolders.length, sortedFolders);
+      console.log('- Music files:', sortedFiles.length, sortedFiles);
+      
+      setFolders(sortedFolders);
+      setFiles(sortedFiles);
       setCurrentPath(path);
+      setSelectedFiles(new Set()); // Clear selection when loading new folder
       
       // Enhanced empty state handling
       if (!path && allItems.length === 0) {
@@ -342,9 +354,24 @@ const DropboxSync = () => {
     }
   };
 
+  const sortItems = (items: DropboxFile[]) => {
+    return [...items].sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortBy === 'modified') {
+        comparison = new Date(a.server_modified).getTime() - new Date(b.server_modified).getTime();
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
+
   const handleFolderSelect = (folderPath: string) => {
     setSelectedFolder(folderPath);
     setViewMode("file-view");
+    setFolderHistory([...folderHistory, currentPath]);
     loadFolders(folderPath);
   };
 
@@ -354,18 +381,49 @@ const DropboxSync = () => {
     setCurrentPath("");
     setFiles([]);
     setFolders([]);
+    setFolderHistory([]);
+    setSelectedFiles(new Set());
   };
 
   const navigateToFolder = (folderPath: string) => {
+    setFolderHistory([...folderHistory, currentPath]);
     loadFolders(folderPath);
   };
 
+  const handleFileToggle = (filePath: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(filePath)) {
+      newSelected.delete(filePath);
+    } else {
+      newSelected.add(filePath);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleSelectAll = () => {
+    if (selectedFiles.size === files.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(files.map(f => f.path_lower)));
+    }
+  };
+
   const syncFiles = async () => {
-    if (!isConnected || files.length === 0) return;
+    if (!isConnected) return;
+    
+    const filesToSync = selectedFiles.size > 0 
+      ? files.filter(file => selectedFiles.has(file.path_lower))
+      : files;
+    
+    if (filesToSync.length === 0) return;
     
     setIsSyncing(true);
     try {
-      for (const file of files) {
+      for (const file of filesToSync) {
         // Extract basic info from filename
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
         const [title, artist] = fileName.split(' - ');
@@ -386,8 +444,9 @@ const DropboxSync = () => {
       
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${files.length} tracks from Dropbox.`,
+        description: `Successfully synced ${filesToSync.length} tracks from Dropbox.`,
       });
+      setSelectedFiles(new Set()); // Clear selection after sync
     } catch (error) {
       toast({
         title: "Sync Failed",
@@ -412,6 +471,8 @@ const DropboxSync = () => {
     setShowBraveHelp(false);
     setDebugInfo("");
     setAccountInfo(null);
+    setFolderHistory([]);
+    setSelectedFiles(new Set());
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -573,6 +634,59 @@ const DropboxSync = () => {
         </div>
       </div>
 
+      {/* Sorting and View Controls */}
+      {(folders.length > 0 || files.length > 0) && (
+        <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Label className="text-sm">Sort by:</Label>
+              <Select value={sortBy} onValueChange={(value: 'name' | 'modified') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="modified">Modified</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={toggleSortOrder}>
+                {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+              </Button>
+            </div>
+            {viewMode === "folder-select" && (
+              <div className="flex items-center space-x-2">
+                <Label className="text-sm">View:</Label>
+                <Button
+                  variant={browsingMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBrowsingMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={browsingMode === 'columns' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBrowsingMode('columns')}
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          {viewMode === "file-view" && files.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                <Check className="w-4 h-4 mr-2" />
+                {selectedFiles.size === files.length ? 'Deselect All' : 'Select All'}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {selectedFiles.size > 0 ? `${selectedFiles.size} selected` : 'None selected'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Account Info Display */}
       {accountInfo && showDetailedDebug && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -617,117 +731,184 @@ const DropboxSync = () => {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="text-center py-8">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading from Dropbox...</p>
-        </div>
-      ) : viewMode === "folder-select" ? (
-        <div>
-          <div className="mb-4">
-            <h4 className="text-sm font-medium mb-2">Choose a folder to sync:</h4>
-            {currentPath && (
-              <div className="flex items-center text-sm text-muted-foreground mb-2">
-                <span>Current path: /{currentPath.replace(/^\//, '')}</span>
-              </div>
-            )}
-          </div>
-          
-          {folders.length === 0 ? (
+      <ResizablePanelGroup direction="vertical" className="min-h-[400px]">
+        <ResizablePanel defaultSize={100} minSize={30}>
+          {isLoading ? (
             <div className="text-center py-8">
-              <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-muted-foreground">No folders found in this location</p>
-              <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                <p>This usually means:</p>
-                <ul className="list-disc list-inside">
-                  <li>Your Dropbox root is empty, or</li>
-                  <li>Your app has limited access permissions, or</li>
-                  <li>You're in "App folder" mode instead of full Dropbox access</li>
-                </ul>
-                <p className="mt-2">Check the debug information above for details.</p>
-              </div>
-              {currentPath && (
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
-                  Go to Root
-                </Button>
-              )}
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+              <p className="text-muted-foreground">Loading from Dropbox...</p>
             </div>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {currentPath && (
-                <div 
-                  className="flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50"
-                  onClick={() => {
-                    const parentPath = currentPath.split('/').slice(0, -1).join('/');
-                    loadFolders(parentPath);
-                  }}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Folder className="w-4 h-4" />
-                    <span className="text-sm">.. (Go back)</span>
+          ) : viewMode === "folder-select" ? (
+            <div>
+              <div className="mb-4">
+                <h4 className="text-sm font-medium mb-2">Choose a folder to sync:</h4>
+                {currentPath && (
+                  <div className="flex items-center text-sm text-muted-foreground mb-2">
+                    <span>Current path: /{currentPath.replace(/^\//, '')}</span>
                   </div>
+                )}
+              </div>
+              
+              {folders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-muted-foreground">No folders found in this location</p>
+                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                    <p>This usually means:</p>
+                    <ul className="list-disc list-inside">
+                      <li>Your Dropbox root is empty, or</li>
+                      <li>Your app has limited access permissions, or</li>
+                      <li>You're in "App folder" mode instead of full Dropbox access</li>
+                    </ul>
+                    <p className="mt-2">Check the debug information above for details.</p>
+                  </div>
+                  {currentPath && (
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
+                      Go to Root
+                    </Button>
+                  )}
+                </div>
+              ) : browsingMode === 'columns' ? (
+                <ResizablePanelGroup direction="horizontal" className="h-full">
+                  <ResizablePanel defaultSize={50} minSize={30}>
+                    <div className="p-2 h-full overflow-y-auto">
+                      <h5 className="text-sm font-medium mb-2">Folders</h5>
+                      <div className="space-y-1">
+                        {currentPath && (
+                          <div 
+                            className="flex items-center p-2 rounded cursor-pointer hover:bg-muted/50 text-sm"
+                            onClick={() => {
+                              const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                              loadFolders(parentPath);
+                            }}
+                          >
+                            <Folder className="w-4 h-4 mr-2" />
+                            <span>.. (Go back)</span>
+                          </div>
+                        )}
+                        {folders.map((folder) => (
+                          <div 
+                            key={folder.path_lower} 
+                            className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                            onClick={() => navigateToFolder(folder.path_lower)}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <Folder className="w-4 h-4" />
+                              <span>{folder.name}</span>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={(e) => {
+                              e.stopPropagation();
+                              handleFolderSelect(folder.path_lower);
+                            }}>
+                              Select
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={50} minSize={30}>
+                    <div className="p-2 h-full overflow-y-auto">
+                      <h5 className="text-sm font-medium mb-2">Preview</h5>
+                      <p className="text-xs text-muted-foreground">Click on a folder to preview its contents</p>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              ) : (
+                <div className="space-y-2 overflow-y-auto">
+                  {currentPath && (
+                    <div 
+                      className="flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                        loadFolders(parentPath);
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Folder className="w-4 h-4" />
+                        <span className="text-sm">.. (Go back)</span>
+                      </div>
+                    </div>
+                  )}
+                  {folders.map((folder) => (
+                    <div key={folder.path_lower} className="flex items-center justify-between p-3 rounded border">
+                      <div className="flex items-center space-x-2">
+                        <Folder className="w-4 h-4" />
+                        <span className="font-medium text-sm">{folder.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
+                          Select
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {folders.map((folder) => (
-                <div key={folder.path_lower} className="flex items-center justify-between p-3 rounded border">
-                  <div className="flex items-center space-x-2">
-                    <Folder className="w-4 h-4" />
-                    <span className="font-medium text-sm">{folder.name}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                    <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
-                      Select
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div>
-          {files.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-muted-foreground">No music files found in this folder</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Make sure you have audio files (.mp3, .wav, .m4a, .aif, .aiff, .flac, .aac, .ogg, .wma) in the selected folder
-              </p>
             </div>
           ) : (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
-                </p>
-                <Button onClick={syncFiles} disabled={isSyncing || addTrackMutation.isPending}>
-                  <Download className="w-4 h-4 mr-2" />
-                  {isSyncing ? 'Syncing...' : 'Sync to Library'}
-                </Button>
-              </div>
-              
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {files.map((file) => (
-                  <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
-                    <div>
-                      <p className="font-medium text-sm">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(1)} MB
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {new Date(file.server_modified).toLocaleDateString()}
-                    </Badge>
+              {files.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-muted-foreground">No music files found in this folder</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Make sure you have audio files (.mp3, .wav, .m4a, .aif, .aiff, .flac, .aac, .ogg, .wma) in the selected folder
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
+                      {selectedFiles.size > 0 && ` (${selectedFiles.size} selected)`}
+                    </p>
+                    <Button 
+                      onClick={syncFiles} 
+                      disabled={isSyncing || addTrackMutation.isPending || (selectedFiles.size === 0 && files.length > 0)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      {isSyncing ? 'Syncing...' : `Sync ${selectedFiles.size > 0 ? selectedFiles.size : files.length} File${selectedFiles.size === 1 || files.length === 1 ? '' : 's'}`}
+                    </Button>
                   </div>
-                ))}
-              </div>
+                  
+                  <div className="space-y-2 overflow-y-auto">
+                    {files.map((file) => (
+                      <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={selectedFiles.has(file.path_lower)}
+                            onCheckedChange={() => handleFileToggle(file.path_lower)}
+                          />
+                          <div>
+                            <p className="font-medium text-sm">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(1)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {new Date(file.server_modified).toLocaleDateString()}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={0} minSize={0} maxSize={50}>
+          <div className="p-4 text-center text-muted-foreground">
+            <p className="text-sm">Resize area for additional information</p>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </Card>
   );
 };
