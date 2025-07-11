@@ -21,31 +21,64 @@ class AudioTranscodingService {
 
   private async loadFFmpeg(): Promise<void> {
     try {
-      console.log('Initializing FFmpeg...');
+      console.log('=== LOADING FFMPEG ===');
       this.ffmpeg = new FFmpeg();
       
-      // Load FFmpeg with optimized settings for audio
-      const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
+      // Try different CDN configurations based on what's most reliable
+      const configurations = [
+        // Primary: jsdelivr with single-threaded core for better compatibility
+        {
+          name: 'jsdelivr-st',
+          baseURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd',
+          config: {
+            coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+            wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+          }
+        },
+        // Fallback: unpkg
+        {
+          name: 'unpkg-st', 
+          baseURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd',
+          config: {
+            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+          }
+        }
+      ];
       
       this.ffmpeg.on('log', ({ message }) => {
         console.log('[FFmpeg]', message);
       });
 
-      await this.ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
-      });
+      // Try each configuration until one works
+      for (const config of configurations) {
+        try {
+          console.log(`Trying FFmpeg configuration: ${config.name}`);
+          await this.ffmpeg.load({
+            coreURL: await toBlobURL(config.config.coreURL, 'text/javascript'),
+            wasmURL: await toBlobURL(config.config.wasmURL, 'application/wasm')
+          });
+          console.log(`FFmpeg loaded successfully with ${config.name}`);
+          break;
+        } catch (configError) {
+          console.warn(`Failed to load with ${config.name}:`, configError);
+          if (config === configurations[configurations.length - 1]) {
+            throw configError; // Re-throw if it's the last config
+          }
+        }
+      }
 
       this.isLoaded = true;
-      console.log('FFmpeg loaded successfully');
+      console.log('=== FFMPEG READY ===');
     } catch (error) {
-      console.error('Failed to load FFmpeg:', error);
+      console.error('=== FFMPEG LOAD FAILED ===', error);
       throw error;
     }
   }
 
   async transcodeAudio(audioUrl: string, outputFormat = 'mp3'): Promise<string> {
+    console.log('=== TRANSCODING START ===', audioUrl);
+    
     // Check cache first
     const cacheKey = `${audioUrl}_${outputFormat}`;
     if (this.cache[cacheKey]) {
@@ -53,19 +86,21 @@ class AudioTranscodingService {
       return this.cache[cacheKey];
     }
 
-    // Add timeout wrapper
+    // Add timeout wrapper with more granular logging
     const transcodeWithTimeout = async (): Promise<string> => {
+      console.log('Initializing FFmpeg...');
       await this.initialize();
       if (!this.ffmpeg) throw new Error('FFmpeg not initialized');
+      console.log('FFmpeg initialized successfully');
 
       console.log('Starting audio transcoding for:', audioUrl);
       
-      // Fetch the input file with longer timeout
+      // Fetch the input file with shorter timeout and better error handling
       console.log('Fetching audio file...');
       const inputData = await Promise.race([
         fetchFile(audioUrl),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('File fetch timeout')), 45000)
+          setTimeout(() => reject(new Error('File fetch timeout after 30 seconds')), 30000)
         )
       ]) as Uint8Array;
       
