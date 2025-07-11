@@ -24,54 +24,44 @@ class AudioTranscodingService {
       console.log('=== LOADING FFMPEG ===');
       this.ffmpeg = new FFmpeg();
       
-      // Try different CDN configurations based on what's most reliable
-      const configurations = [
-        // Primary: jsdelivr with single-threaded core for better compatibility
-        {
-          name: 'jsdelivr-st',
-          baseURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd',
-          config: {
-            coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-            wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-          }
-        },
-        // Fallback: unpkg
-        {
-          name: 'unpkg-st', 
-          baseURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd',
-          config: {
-            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-          }
-        }
-      ];
+      // Use a simple, reliable configuration
+      const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js';
+      const wasmURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm';
       
       this.ffmpeg.on('log', ({ message }) => {
         console.log('[FFmpeg]', message);
       });
 
-      // Try each configuration until one works
-      for (const config of configurations) {
-        try {
-          console.log(`Trying FFmpeg configuration: ${config.name}`);
-          await this.ffmpeg.load({
-            coreURL: await toBlobURL(config.config.coreURL, 'text/javascript'),
-            wasmURL: await toBlobURL(config.config.wasmURL, 'application/wasm')
-          });
-          console.log(`FFmpeg loaded successfully with ${config.name}`);
-          break;
-        } catch (configError) {
-          console.warn(`Failed to load with ${config.name}:`, configError);
-          if (config === configurations[configurations.length - 1]) {
-            throw configError; // Re-throw if it's the last config
-          }
-        }
-      }
+      console.log('Loading FFmpeg core files...');
+      
+      // Add timeout to FFmpeg loading
+      const loadWithTimeout = async (): Promise<void> => {
+        console.log('Converting URLs to blobs...');
+        const [coreBlobURL, wasmBlobURL] = await Promise.all([
+          toBlobURL(coreURL, 'text/javascript'),
+          toBlobURL(wasmURL, 'application/wasm')
+        ]);
+        
+        console.log('Loading FFmpeg with blob URLs...');
+        await this.ffmpeg!.load({
+          coreURL: coreBlobURL,
+          wasmURL: wasmBlobURL
+        });
+      };
+
+      await Promise.race([
+        loadWithTimeout(),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('FFmpeg initialization timeout after 60 seconds')), 60000)
+        )
+      ]);
 
       this.isLoaded = true;
       console.log('=== FFMPEG READY ===');
     } catch (error) {
       console.error('=== FFMPEG LOAD FAILED ===', error);
+      this.isLoaded = false;
+      this.ffmpeg = null;
       throw error;
     }
   }
