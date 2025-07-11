@@ -376,8 +376,7 @@ const DropboxSync = () => {
     setSelectedFolder(folderPath);
     setViewMode("file-view");
     setFolderHistory([...folderHistory, currentPath]);
-    // Switch to list view for file browsing but remember the last selection
-    setBrowsingMode('list');
+    // Don't change browsing mode - keep whatever the user had selected
     loadFolders(folderPath);
   };
 
@@ -962,10 +961,15 @@ const DropboxSync = () => {
                           className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
                           onClick={() => handleFolderClick(folder.path_lower)}
                         >
-                          <div className="flex items-center space-x-2">
-                            <Folder className="w-4 h-4" />
-                            <span className="truncate">{folder.name}</span>
-                          </div>
+                           <div className="flex items-center space-x-2">
+                             <Folder className="w-4 h-4" />
+                             <span 
+                               className="truncate cursor-pointer hover:text-primary"
+                               onDoubleClick={() => handleFolderSelect(folder.path_lower)}
+                             >
+                               {folder.name}
+                             </span>
+                           </div>
                           <Button size="sm" variant="ghost" onClick={(e) => {
                             e.stopPropagation();
                             handleFolderSelect(folder.path_lower);
