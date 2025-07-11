@@ -56,6 +56,7 @@ const DropboxSync = () => {
   const [sortBy, setSortBy] = useState<'name' | 'modified'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [browsingMode, setBrowsingMode] = useState<'list' | 'columns'>('list');
+  const [lastSelectedBrowsingMode, setLastSelectedBrowsingMode] = useState<'list' | 'columns'>('list');
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -375,6 +376,8 @@ const DropboxSync = () => {
     setSelectedFolder(folderPath);
     setViewMode("file-view");
     setFolderHistory([...folderHistory, currentPath]);
+    // Switch to list view for file browsing but remember the last selection
+    setBrowsingMode('list');
     loadFolders(folderPath);
   };
 
@@ -386,6 +389,8 @@ const DropboxSync = () => {
     setFolders([]);
     setFolderHistory([]);
     setSelectedFiles(new Set());
+    // Restore the last selected browsing mode
+    setBrowsingMode(lastSelectedBrowsingMode);
   };
 
   const navigateToFolder = (folderPath: string) => {
@@ -785,14 +790,20 @@ const DropboxSync = () => {
                 <Button
                   variant={browsingMode === 'list' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setBrowsingMode('list')}
+                  onClick={() => {
+                    setBrowsingMode('list');
+                    setLastSelectedBrowsingMode('list');
+                  }}
                 >
                   <List className="w-4 h-4" />
                 </Button>
                 <Button
                   variant={browsingMode === 'columns' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setBrowsingMode('columns')}
+                  onClick={() => {
+                    setBrowsingMode('columns');
+                    setLastSelectedBrowsingMode('columns');
+                  }}
                 >
                   <Grid3x3 className="w-4 h-4" />
                 </Button>
@@ -1002,8 +1013,13 @@ const DropboxSync = () => {
                               <ChevronRight className="w-4 h-4" />
                             )}
                           </Button>
-                          <Folder className="w-4 h-4" />
-                          <span className="font-medium text-sm">{folder.name}</span>
+                           <Folder className="w-4 h-4" />
+                           <span 
+                             className="font-medium text-sm cursor-pointer hover:text-primary"
+                             onDoubleClick={() => handleFolderSelect(folder.path_lower)}
+                           >
+                             {folder.name}
+                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
