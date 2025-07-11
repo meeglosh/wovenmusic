@@ -8,6 +8,7 @@ import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLef
 import { dropboxService } from "@/services/dropboxService";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { useAddTrack } from "@/hooks/useTracks";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -66,6 +67,7 @@ const DropboxSync = () => {
   const [globalFileSelection, setGlobalFileSelection] = useState<Map<string, DropboxFile>>(new Map());
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
+  const queryClient = useQueryClient();
 
   // Only show privacy browser warning if there's actually an error
   const shouldShowPrivacyWarning = connectionError.includes('blocked') || connectionError.includes('privacy');
@@ -614,6 +616,9 @@ const DropboxSync = () => {
             .update({ duration: 'Transcoding...' })
             .eq('id', track.id);
           
+          // Invalidate queries to refresh UI immediately
+          queryClient.invalidateQueries({ queryKey: ["tracks"] });
+          
           // Get temporary link for the original file
           const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
           
@@ -636,6 +641,9 @@ const DropboxSync = () => {
           
           console.log('Successfully updated track with transcoded URL:', transcodedUrl);
           
+          // Invalidate queries to show completion
+          queryClient.invalidateQueries({ queryKey: ["tracks"] });
+          
           toast({
             title: "Transcoding Complete",
             description: `${file.name} is now ready for playback.`,
@@ -649,6 +657,9 @@ const DropboxSync = () => {
             .from('tracks')
             .update({ duration: 'Failed' })
             .eq('id', track.id);
+          
+          // Invalidate queries to show failure state
+          queryClient.invalidateQueries({ queryKey: ["tracks"] });
           
           toast({
             title: "Transcoding Failed",

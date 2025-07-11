@@ -24,37 +24,20 @@ class AudioTranscodingService {
       console.log('=== LOADING FFMPEG ===');
       this.ffmpeg = new FFmpeg();
       
-      // Use a simple, reliable configuration
-      const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js';
-      const wasmURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm';
+      // Use jsdelivr with explicit version - most reliable option
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.4/dist/umd';
       
       this.ffmpeg.on('log', ({ message }) => {
         console.log('[FFmpeg]', message);
       });
 
-      console.log('Loading FFmpeg core files...');
+      console.log('Loading FFmpeg from jsdelivr...');
       
-      // Add timeout to FFmpeg loading
-      const loadWithTimeout = async (): Promise<void> => {
-        console.log('Converting URLs to blobs...');
-        const [coreBlobURL, wasmBlobURL] = await Promise.all([
-          toBlobURL(coreURL, 'text/javascript'),
-          toBlobURL(wasmURL, 'application/wasm')
-        ]);
-        
-        console.log('Loading FFmpeg with blob URLs...');
-        await this.ffmpeg!.load({
-          coreURL: coreBlobURL,
-          wasmURL: wasmBlobURL
-        });
-      };
-
-      await Promise.race([
-        loadWithTimeout(),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('FFmpeg initialization timeout after 60 seconds')), 60000)
-        )
-      ]);
+      // Simpler approach - no timeout on individual operations
+      await this.ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
 
       this.isLoaded = true;
       console.log('=== FFMPEG READY ===');
@@ -62,6 +45,7 @@ class AudioTranscodingService {
       console.error('=== FFMPEG LOAD FAILED ===', error);
       this.isLoaded = false;
       this.ffmpeg = null;
+      this.loadPromise = null; // Reset so it can be retried
       throw error;
     }
   }
@@ -76,8 +60,7 @@ class AudioTranscodingService {
       return this.cache[cacheKey];
     }
 
-    // Add timeout wrapper with more granular logging
-    const transcodeWithTimeout = async (): Promise<string> => {
+    try {
       console.log('Initializing FFmpeg...');
       await this.initialize();
       if (!this.ffmpeg) throw new Error('FFmpeg not initialized');
@@ -85,15 +68,9 @@ class AudioTranscodingService {
 
       console.log('Starting audio transcoding for:', audioUrl);
       
-      // Fetch the input file with shorter timeout and better error handling
+      // Fetch the input file
       console.log('Fetching audio file...');
-      const inputData = await Promise.race([
-        fetchFile(audioUrl),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('File fetch timeout after 30 seconds')), 30000)
-        )
-      ]) as Uint8Array;
-      
+      const inputData = await fetchFile(audioUrl);
       console.log('Audio file fetched, size:', inputData.length, 'bytes');
       
       const inputFileName = 'input.aif';
@@ -103,15 +80,13 @@ class AudioTranscodingService {
       console.log('Writing input file to FFmpeg filesystem...');
       await this.ffmpeg.writeFile(inputFileName, inputData);
 
-      // Optimized transcoding settings for fastest conversion
+      // Simple, fast transcoding settings
       const args = [
         '-i', inputFileName,
-        '-acodec', 'libmp3lame',  // Always use MP3 for fastest encoding
-        '-ar', '44100',           // Standard sample rate
-        '-b:a', '96k',            // Even lower bitrate for speed
-        '-ac', '2',               // Stereo
-        '-preset', 'ultrafast',   // Fastest encoding preset
-        '-f', 'mp3',
+        '-acodec', 'libmp3lame',
+        '-ar', '44100',
+        '-b:a', '128k',
+        '-ac', '2',
         outputFileName
       ];
 
@@ -136,20 +111,10 @@ class AudioTranscodingService {
       await this.ffmpeg.deleteFile(inputFileName);
       await this.ffmpeg.deleteFile(outputFileName);
 
-      console.log('Audio transcoding completed successfully');
+      console.log('=== TRANSCODING SUCCESS ===');
       return transcodedUrl;
-    };
-
-    try {
-      // Extended timeout for transcoding process
-      return await Promise.race([
-        transcodeWithTimeout(),
-        new Promise<string>((_, reject) => 
-          setTimeout(() => reject(new Error('Transcoding timeout after 180 seconds')), 180000)
-        )
-      ]);
     } catch (error) {
-      console.error('Audio transcoding failed:', error);
+      console.error('=== TRANSCODING FAILED ===', error);
       throw error;
     }
   }
