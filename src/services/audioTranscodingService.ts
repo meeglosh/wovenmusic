@@ -1,54 +1,9 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
-
 interface TranscodingCache {
   [key: string]: string; // originalUrl -> transcodedBlobUrl
 }
 
 class AudioTranscodingService {
-  private ffmpeg: FFmpeg | null = null;
-  private isLoaded = false;
-  private loadPromise: Promise<void> | null = null;
   private cache: TranscodingCache = {};
-
-  async initialize(): Promise<void> {
-    if (this.isLoaded) return;
-    if (this.loadPromise) return this.loadPromise;
-
-    this.loadPromise = this.loadFFmpeg();
-    await this.loadPromise;
-  }
-
-  private async loadFFmpeg(): Promise<void> {
-    try {
-      console.log('=== LOADING FFMPEG ===');
-      this.ffmpeg = new FFmpeg();
-      
-      // Use jsdelivr with explicit version - most reliable option
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.4/dist/umd';
-      
-      this.ffmpeg.on('log', ({ message }) => {
-        console.log('[FFmpeg]', message);
-      });
-
-      console.log('Loading FFmpeg from jsdelivr...');
-      
-      // Simpler approach - no timeout on individual operations
-      await this.ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
-
-      this.isLoaded = true;
-      console.log('=== FFMPEG READY ===');
-    } catch (error) {
-      console.error('=== FFMPEG LOAD FAILED ===', error);
-      this.isLoaded = false;
-      this.ffmpeg = null;
-      this.loadPromise = null; // Reset so it can be retried
-      throw error;
-    }
-  }
 
   async transcodeAudio(audioUrl: string, outputFormat = 'mp3'): Promise<string> {
     console.log('=== TRANSCODING START ===', audioUrl);
@@ -61,55 +16,33 @@ class AudioTranscodingService {
     }
 
     try {
-      console.log('Initializing FFmpeg...');
-      await this.initialize();
-      if (!this.ffmpeg) throw new Error('FFmpeg not initialized');
-      console.log('FFmpeg initialized successfully');
-
-      console.log('Starting audio transcoding for:', audioUrl);
+      console.log('Starting Web Audio API transcoding for:', audioUrl);
       
-      // Fetch the input file
+      // Fetch the audio file
       console.log('Fetching audio file...');
-      const inputData = await fetchFile(audioUrl);
-      console.log('Audio file fetched, size:', inputData.length, 'bytes');
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('Audio file fetched, size:', arrayBuffer.byteLength, 'bytes');
+
+      // Create audio context
+      console.log('Creating audio context...');
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      const inputFileName = 'input.aif';
-      const outputFileName = `output.${outputFormat}`;
+      // Decode audio data
+      console.log('Decoding audio data...');
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log('Audio decoded successfully, duration:', audioBuffer.duration, 'seconds');
 
-      // Write input file to FFmpeg filesystem
-      console.log('Writing input file to FFmpeg filesystem...');
-      await this.ffmpeg.writeFile(inputFileName, inputData);
-
-      // Simple, fast transcoding settings
-      const args = [
-        '-i', inputFileName,
-        '-acodec', 'libmp3lame',
-        '-ar', '44100',
-        '-b:a', '128k',
-        '-ac', '2',
-        outputFileName
-      ];
-
-      console.log('Starting FFmpeg transcoding with command:', args.join(' '));
-      await this.ffmpeg.exec(args);
-      console.log('FFmpeg transcoding completed');
-
-      // Read the output file
-      console.log('Reading transcoded output...');
-      const outputData = await this.ffmpeg.readFile(outputFileName);
+      // Convert to WAV format (which browsers can play natively)
+      console.log('Converting to WAV format...');
+      const wavBuffer = this.audioBufferToWav(audioBuffer);
       
-      // Create blob URL for the transcoded audio
-      const blob = new Blob([outputData], { 
-        type: 'audio/mpeg'
-      });
+      // Create blob URL
+      const blob = new Blob([wavBuffer], { type: 'audio/wav' });
       const transcodedUrl = URL.createObjectURL(blob);
 
       // Cache the result
       this.cache[cacheKey] = transcodedUrl;
-
-      // Clean up FFmpeg filesystem
-      await this.ffmpeg.deleteFile(inputFileName);
-      await this.ffmpeg.deleteFile(outputFileName);
 
       console.log('=== TRANSCODING SUCCESS ===');
       return transcodedUrl;
@@ -117,6 +50,47 @@ class AudioTranscodingService {
       console.error('=== TRANSCODING FAILED ===', error);
       throw error;
     }
+  }
+
+  private audioBufferToWav(audioBuffer: AudioBuffer): ArrayBuffer {
+    const numberOfChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const length = audioBuffer.length * numberOfChannels * 2; // 16-bit samples
+    const buffer = new ArrayBuffer(44 + length);
+    const view = new DataView(buffer);
+
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length, true);
+
+    // Convert audio data
+    let offset = 44;
+    for (let i = 0; i < audioBuffer.length; i++) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+        view.setInt16(offset, sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+
+    return buffer;
   }
 
   needsTranscoding(audioUrl: string): boolean {
