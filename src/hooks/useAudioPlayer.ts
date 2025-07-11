@@ -141,11 +141,13 @@ export const useAudioPlayer = () => {
         if (audioTranscodingService.needsTranscoding(originalPath)) {
           console.log('Audio file needs transcoding, converting...', originalPath);
           try {
-            audioUrl = await audioTranscodingService.transcodeAudio(audioUrl);
-            console.log('Transcoding completed, using converted audio');
+            const transcodedUrl = await audioTranscodingService.transcodeAudio(audioUrl);
+            console.log('Transcoding completed successfully, using converted audio');
+            audioUrl = transcodedUrl;
           } catch (transcodingError) {
-            console.warn('Transcoding failed, trying original file:', transcodingError);
-            // Continue with original URL if transcoding fails
+            console.warn('Transcoding failed, falling back to original file:', transcodingError);
+            console.warn('Note: .aif files may not play correctly in some browsers without transcoding');
+            // Continue with original URL - some browsers may still be able to play .aif files
           }
         }
         
