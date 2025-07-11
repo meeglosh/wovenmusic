@@ -4,7 +4,6 @@ import { useUpdateTrack } from "@/hooks/useTracks";
 
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
-import { audioTranscodingService } from "@/services/audioTranscodingService";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -82,8 +81,13 @@ export const useAudioPlayer = () => {
         
         let audioUrl = currentTrack.fileUrl;
         
-        // ALWAYS get a fresh temporary link for Dropbox files
-        if (currentTrack.fileUrl.includes('dropboxusercontent.com') || currentTrack.fileUrl.startsWith('/')) {
+        // Check if this is already a processed URL (Supabase Storage or external URL)
+        if (audioUrl.startsWith('http')) {
+          console.log('Using direct URL (already transcoded or external):', audioUrl);
+          // No need to process, use directly
+        } 
+        // Handle Dropbox paths that need temporary link generation
+        else if (audioUrl.includes('dropboxusercontent.com') || audioUrl.startsWith('/')) {
           console.log('Getting fresh Dropbox temporary link...');
           
           // First check if we have a stored dropbox_path for this track
@@ -134,22 +138,7 @@ export const useAudioPlayer = () => {
           }
         }
 
-        console.log('Final audio URL after format check:', audioUrl);
-        
-        // Check if transcoding is needed based on the original file path
-        const originalPath = currentTrack.dropbox_path || currentTrack.fileUrl;
-        if (audioTranscodingService.needsTranscoding(originalPath)) {
-          console.log('Audio file needs transcoding, converting...', originalPath);
-          try {
-            const transcodedUrl = await audioTranscodingService.transcodeAudio(audioUrl);
-            console.log('Transcoding completed successfully, using converted audio');
-            audioUrl = transcodedUrl;
-          } catch (transcodingError) {
-            console.warn('Transcoding failed, falling back to original file:', transcodingError);
-            console.warn('Note: .aif files may not play correctly in some browsers without transcoding');
-            // Continue with original URL - some browsers may still be able to play .aif files
-          }
-        }
+        console.log('Final audio URL ready for playback:', audioUrl);
         
         // Set the audio source and load it
         audio.src = audioUrl;

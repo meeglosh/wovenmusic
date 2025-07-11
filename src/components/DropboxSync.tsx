@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Grid3x3, List, Check, ChevronDown } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
+import { importTranscodingService } from "@/services/importTranscodingService";
 import { useAddTrack } from "@/hooks/useTracks";
 import {
   Select,
@@ -554,15 +555,49 @@ const DropboxSync = () => {
         
         // Store the Dropbox file path separately for easier retrieval
         const dropboxPath = file.path_lower;
-        console.log('Storing Dropbox path for later use:', dropboxPath);
+        console.log('Processing file for sync:', dropboxPath);
+        
+        let finalFileUrl = dropboxPath;
+        
+        // Check if this file needs transcoding
+        if (importTranscodingService.needsTranscoding(dropboxPath)) {
+          console.log('File needs transcoding, starting transcoding process...');
+          
+          try {
+            // Get temporary link for the original file
+            const tempUrl = await dropboxService.getTemporaryLink(dropboxPath);
+            console.log('Got temporary URL for transcoding:', tempUrl);
+            
+            // Transcode and store in Supabase Storage
+            const transcodedUrl = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
+            console.log('File transcoded and stored:', transcodedUrl);
+            
+            // Use the transcoded URL instead of the original Dropbox path
+            finalFileUrl = transcodedUrl;
+            
+            toast({
+              title: "File Transcoded",
+              description: `${file.name} was converted to MP3 for optimal playback.`,
+            });
+            
+          } catch (transcodingError) {
+            console.warn('Transcoding failed for file:', file.name, transcodingError);
+            toast({
+              title: "Transcoding Failed",
+              description: `${file.name} will be stored as-is. Playback may be limited.`,
+              variant: "destructive",
+            });
+            // Continue with original path if transcoding fails
+          }
+        }
         
         await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
           duration: '--:--', // Will be updated when the track is first played
-          fileUrl: dropboxPath,
+          fileUrl: finalFileUrl, // Use transcoded URL if available, otherwise original path
           source_folder: file.path_lower.split('/').slice(0, -1).join('/'), // Get folder path
-          dropbox_path: dropboxPath
+          dropbox_path: dropboxPath // Always store the original Dropbox path for reference
         });
       }
       
@@ -575,6 +610,7 @@ const DropboxSync = () => {
       setSelectedFiles(new Set());
       setGlobalFileSelection(new Map());
     } catch (error) {
+      console.error('Sync failed:', error);
       toast({
         title: "Sync Failed",
         description: "Failed to sync some files. Please try again.",
