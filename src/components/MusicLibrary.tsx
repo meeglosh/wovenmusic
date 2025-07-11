@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
+import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,9 +39,12 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
   const navigate = useNavigate();
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
+  const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
   const { toast } = useToast();
+
+  const selectedTracks = tracks.filter(track => selectedTrackIds.has(track.id));
 
   const isSelectionMode = selectedTrackIds.size > 0;
   const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
@@ -109,8 +113,16 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
           {isSelectionMode && (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-muted-foreground">
-                {selectedTrackIds.size} selected
-              </span>
+                 {selectedTrackIds.size} selected
+               </span>
+               <Button
+                 variant="default"
+                 size="sm"
+                 onClick={() => setIsBulkAddModalOpen(true)}
+               >
+                 <Plus className="w-4 h-4 mr-2" />
+                 Add to Playlist
+               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -344,6 +356,13 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
           </div>
         </Card>
       )}
+
+      {/* Bulk Add to Playlist Modal */}
+      <BulkAddToPlaylistModal
+        open={isBulkAddModalOpen}
+        onOpenChange={setIsBulkAddModalOpen}
+        selectedTracks={selectedTracks}
+      />
     </div>
   );
 };
