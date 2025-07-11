@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { UnsupportedFilesModal } from "./UnsupportedFilesModal";
 
 interface DropboxFile {
   name: string;
@@ -65,6 +66,9 @@ const DropboxSync = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [folderContents, setFolderContents] = useState<Map<string, DropboxFile[]>>(new Map());
   const [globalFileSelection, setGlobalFileSelection] = useState<Map<string, DropboxFile>>(new Map());
+  const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
+  const [unsupportedFiles, setUnsupportedFiles] = useState<string[]>([]);
+  const [supportedImportCount, setSupportedImportCount] = useState(0);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -296,18 +300,14 @@ const DropboxSync = () => {
       console.log('Debug info:', debugDetails.join('\n'));
       
       const folderItems = allItems.filter(item => item[".tag"] === "folder");
-      const musicFiles = allItems.filter(item => 
-        item[".tag"] === "file" && 
-        (item.name.toLowerCase().endsWith('.mp3') || 
-         item.name.toLowerCase().endsWith('.wav') || 
-         item.name.toLowerCase().endsWith('.m4a') ||
-         item.name.toLowerCase().endsWith('.aif') ||
-         item.name.toLowerCase().endsWith('.aiff') ||
-         item.name.toLowerCase().endsWith('.flac') ||
-         item.name.toLowerCase().endsWith('.aac') ||
-         item.name.toLowerCase().endsWith('.ogg') ||
-         item.name.toLowerCase().endsWith('.wma'))
-       );
+      const musicFiles = allItems.filter(item => {
+        if (item[".tag"] !== "file") return false;
+        
+        const fileName = item.name.toLowerCase();
+        // Only include supported formats, exclude .aif/.aiff files
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        return supportedExtensions.some(ext => fileName.endsWith(ext));
+      });
        
        // Sort folders and files
        const sortedFolders = sortItems(folderItems);
@@ -430,19 +430,15 @@ const DropboxSync = () => {
       console.log('Raw items from folder:', allItems);
       
       const musicFiles = allItems.filter(item => {
-        const isFile = item[".tag"] === "file";
-        const hasAudioExtension = item.name.toLowerCase().endsWith('.mp3') || 
-         item.name.toLowerCase().endsWith('.wav') || 
-         item.name.toLowerCase().endsWith('.m4a') ||
-         item.name.toLowerCase().endsWith('.aif') ||
-         item.name.toLowerCase().endsWith('.aiff') ||
-         item.name.toLowerCase().endsWith('.flac') ||
-         item.name.toLowerCase().endsWith('.aac') ||
-         item.name.toLowerCase().endsWith('.ogg') ||
-         item.name.toLowerCase().endsWith('.wma');
-         
-        console.log(`File: ${item.name}, isFile: ${isFile}, hasAudioExtension: ${hasAudioExtension}`);
-        return isFile && hasAudioExtension;
+        if (item[".tag"] !== "file") return false;
+        
+        const fileName = item.name.toLowerCase();
+        // Only include supported formats, exclude .aif/.aiff files
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        const isSupported = supportedExtensions.some(ext => fileName.endsWith(ext));
+        
+        console.log(`File: ${item.name}, isFile: ${item[".tag"] === "file"}, isSupported: ${isSupported}`);
+        return isSupported;
       });
       
       console.log('Filtered music files:', musicFiles);
@@ -549,11 +545,41 @@ const DropboxSync = () => {
     
     if (filesToSync.length === 0) return;
     
+    // Separate supported and unsupported files
+    const supportedFiles: DropboxFile[] = [];
+    const unsupportedAifFiles: string[] = [];
+    
+    filesToSync.forEach(file => {
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.aif') || fileName.endsWith('.aiff')) {
+        unsupportedAifFiles.push(file.name);
+      } else {
+        // Only include truly supported formats
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        if (supportedExtensions.some(ext => fileName.endsWith(ext))) {
+          supportedFiles.push(file);
+        }
+      }
+    });
+    
+    // Show modal if there are unsupported .aif files
+    if (unsupportedAifFiles.length > 0) {
+      setUnsupportedFiles(unsupportedAifFiles);
+      setSupportedImportCount(supportedFiles.length);
+      setShowUnsupportedModal(true);
+    }
+    
+    // If no supported files, just show modal and return
+    if (supportedFiles.length === 0) {
+      return;
+    }
+    
     setIsSyncing(true);
     
+    
     try {
-      // Phase 1: Add all tracks immediately to the database
-      const trackPromises = filesToSync.map(async (file) => {
+      // Phase 1: Add all supported tracks immediately to the database
+      const trackPromises = supportedFiles.map(async (file) => {
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
         const [title, artist] = fileName.split(' - ');
         const dropboxPath = file.path_lower;
@@ -597,8 +623,8 @@ const DropboxSync = () => {
       toast({
         title: "Tracks Added",
         description: transcodingCount > 0 
-          ? `Added ${filesToSync.length} tracks. ${transcodingCount} files are being transcoded...`
-          : `Added ${filesToSync.length} tracks successfully.`,
+          ? `Added ${supportedFiles.length} tracks. ${transcodingCount} files are being transcoded...`
+          : `Added ${supportedFiles.length} tracks successfully.`,
       });
       
       // Phase 2: Process transcoding in background for files that need it
@@ -1258,6 +1284,13 @@ const DropboxSync = () => {
           <div className="w-full h-full bg-muted-foreground/20 rounded-tl-lg"></div>
         </div>
       </div>
+      
+      <UnsupportedFilesModal 
+        isOpen={showUnsupportedModal}
+        onClose={() => setShowUnsupportedModal(false)}
+        unsupportedFiles={unsupportedFiles}
+        supportedCount={supportedImportCount}
+      />
     </Card>
   );
 };

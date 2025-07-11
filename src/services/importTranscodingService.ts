@@ -40,9 +40,9 @@ export class ImportTranscodingService {
   }
   
   needsTranscoding(filePath: string): boolean {
-    // Only .aif/.aiff files need transcoding - .wav and .mp3 play natively
-    const url = filePath.toLowerCase();
-    return url.includes('.aif') || url.includes('.aiff');
+    // No files need transcoding since .aif files are now blocked
+    // and all other supported formats (.wav, .mp3, etc.) play natively
+    return false;
   }
 }
 
