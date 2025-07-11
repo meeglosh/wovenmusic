@@ -303,20 +303,20 @@ const DropboxSync = () => {
          item.name.toLowerCase().endsWith('.aac') ||
          item.name.toLowerCase().endsWith('.ogg') ||
          item.name.toLowerCase().endsWith('.wma'))
-      );
-      
-      // Sort folders and files
-      const sortedFolders = sortItems(folderItems);
-      const sortedFiles = sortItems(musicFiles);
-      
-      console.log('Filtered and sorted results:');
-      console.log('- Folders:', sortedFolders.length, sortedFolders);
-      console.log('- Music files:', sortedFiles.length, sortedFiles);
-      
-      setFolders(sortedFolders);
-      setFiles(sortedFiles);
-      setCurrentPath(path);
-      setSelectedFiles(new Set()); // Clear selection when loading new folder
+       );
+       
+       // Sort folders and files
+       const sortedFolders = sortItems(folderItems);
+       const sortedFiles = sortItems(musicFiles);
+       
+       console.log('Filtered and sorted results:');
+       console.log('- Folders:', sortedFolders.length, sortedFolders);
+       console.log('- Music files:', sortedFiles.length, sortedFiles);
+       
+       setFolders(sortedFolders);
+       setFiles(sortedFiles);
+       setCurrentPath(path);
+       setSelectedFiles(new Set()); // Clear selection when loading new folder
       
       // Enhanced empty state handling
       if (!path && allItems.length === 0) {
@@ -619,6 +619,16 @@ const DropboxSync = () => {
       }, 1000);
     }
   }, [isConnected, viewMode]);
+
+  // Re-sort items when sort criteria changes
+  useEffect(() => {
+    if (folders.length > 0) {
+      setFolders(prev => sortItems([...prev]));
+    }
+    if (files.length > 0) {
+      setFiles(prev => sortItems([...prev]));
+    }
+  }, [sortBy, sortOrder]);
 
   if (!isConnected) {
     return (
@@ -1082,19 +1092,36 @@ const DropboxSync = () => {
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
-                      {selectedFiles.size > 0 && ` (${selectedFiles.size} selected)`}
-                    </p>
-                    <Button 
-                      onClick={syncFiles} 
-                      disabled={isSyncing || addTrackMutation.isPending || (selectedFiles.size === 0 && files.length > 0)}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      {isSyncing ? 'Syncing...' : `Sync ${selectedFiles.size > 0 ? selectedFiles.size : files.length} File${selectedFiles.size === 1 || files.length === 1 ? '' : 's'}`}
-                    </Button>
-                  </div>
+                   <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center space-x-4">
+                       <p className="text-sm text-muted-foreground">
+                         Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
+                         {selectedFiles.size > 0 && ` (${selectedFiles.size} selected)`}
+                       </p>
+                       {files.length > 0 && (
+                         <div className="flex items-center space-x-2">
+                           <Checkbox
+                             checked={selectedFiles.size === files.length}
+                             onCheckedChange={() => {
+                               if (selectedFiles.size === files.length) {
+                                 setSelectedFiles(new Set());
+                               } else {
+                                 setSelectedFiles(new Set(files.map(f => f.path_lower)));
+                               }
+                             }}
+                           />
+                           <label className="text-sm">Select All</label>
+                         </div>
+                       )}
+                     </div>
+                     <Button 
+                       onClick={syncFiles} 
+                       disabled={isSyncing || addTrackMutation.isPending || (selectedFiles.size === 0 && files.length > 0)}
+                     >
+                       <Download className="w-4 h-4 mr-2" />
+                       {isSyncing ? 'Syncing...' : `Sync ${selectedFiles.size > 0 ? selectedFiles.size : files.length} File${selectedFiles.size === 1 || files.length === 1 ? '' : 's'}`}
+                     </Button>
+                   </div>
                   
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {files.map((file) => (
