@@ -136,9 +136,10 @@ export const useAudioPlayer = () => {
 
         console.log('Final audio URL after format check:', audioUrl);
         
-        // Check if transcoding is needed
-        if (audioTranscodingService.needsTranscoding(audioUrl)) {
-          console.log('Audio file needs transcoding, converting...');
+        // Check if transcoding is needed based on the original file path
+        const originalPath = currentTrack.dropbox_path || currentTrack.fileUrl;
+        if (audioTranscodingService.needsTranscoding(originalPath)) {
+          console.log('Audio file needs transcoding, converting...', originalPath);
           try {
             audioUrl = await audioTranscodingService.transcodeAudio(audioUrl);
             console.log('Transcoding completed, using converted audio');
