@@ -481,6 +481,21 @@ const DropboxSync = () => {
     setExpandedFolders(newExpanded);
   };
 
+  const handleFolderClick = async (folderPath: string) => {
+    console.log('=== HANDLE FOLDER CLICK ===');
+    console.log('Folder path:', folderPath);
+    console.log('View mode:', viewMode);
+    
+    if (viewMode === "folder-select") {
+      // In folder-select mode, expand/collapse to show contents
+      await toggleFolderExpansion(folderPath);
+    } else {
+      // In file-view mode, navigate into the folder
+      console.log('Navigating into folder (file-view mode)');
+      await loadFolders(folderPath);
+    }
+  };
+
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
@@ -934,7 +949,7 @@ const DropboxSync = () => {
                         <div 
                           key={folder.path_lower} 
                           className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
-                          onClick={() => navigateToFolder(folder.path_lower)}
+                          onClick={() => handleFolderClick(folder.path_lower)}
                         >
                           <div className="flex items-center space-x-2">
                             <Folder className="w-4 h-4" />
