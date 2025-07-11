@@ -4,6 +4,7 @@ import { useUpdateTrack } from "@/hooks/useTracks";
 
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
+import { audioTranscodingService } from "@/services/audioTranscodingService";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -134,6 +135,18 @@ export const useAudioPlayer = () => {
         }
 
         console.log('Final audio URL after format check:', audioUrl);
+        
+        // Check if transcoding is needed
+        if (audioTranscodingService.needsTranscoding(audioUrl)) {
+          console.log('Audio file needs transcoding, converting...');
+          try {
+            audioUrl = await audioTranscodingService.transcodeAudio(audioUrl);
+            console.log('Transcoding completed, using converted audio');
+          } catch (transcodingError) {
+            console.warn('Transcoding failed, trying original file:', transcodingError);
+            // Continue with original URL if transcoding fails
+          }
+        }
         
         // Set the audio source and load it
         audio.src = audioUrl;
