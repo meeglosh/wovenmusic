@@ -558,11 +558,14 @@ const DropboxSync = () => {
         
         console.log('Adding track immediately:', dropboxPath);
         
+        // For files that need transcoding, add with a placeholder status
+        const needsTranscoding = importTranscodingService.needsTranscoding(file.path_lower);
+        
         // Add track with original Dropbox path initially
         const track = await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
-          duration: '--:--',
+          duration: needsTranscoding ? 'Transcoding...' : '--:--',
           fileUrl: dropboxPath, // Start with original path
           source_folder: file.path_lower.split('/').slice(0, -1).join('/'),
           dropbox_path: dropboxPath
@@ -573,9 +576,15 @@ const DropboxSync = () => {
       
       const addedTracks = await Promise.all(trackPromises);
       
+      const transcodingCount = addedTracks.filter(({ file }) => 
+        importTranscodingService.needsTranscoding(file.path_lower)
+      ).length;
+      
       toast({
         title: "Tracks Added",
-        description: `Added ${filesToSync.length} tracks. Transcoding files that need it...`,
+        description: transcodingCount > 0 
+          ? `Added ${filesToSync.length} tracks. ${transcodingCount} files are being transcoded...`
+          : `Added ${filesToSync.length} tracks successfully.`,
       });
       
       // Phase 2: Process transcoding in background for files that need it
@@ -587,16 +596,25 @@ const DropboxSync = () => {
         console.log('Background transcoding for:', file.name);
         
         try {
+          // Update status to show transcoding is in progress
+          await supabase
+            .from('tracks')
+            .update({ duration: 'Transcoding...' })
+            .eq('id', track.id);
+          
           // Get temporary link for the original file
           const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
           
           // Transcode and store in Supabase Storage
           const transcodedUrl = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
           
-          // Update the track with transcoded URL
+          // Update the track with transcoded URL and reset duration
           const { error: updateError } = await supabase
             .from('tracks')
-            .update({ file_url: transcodedUrl })
+            .update({ 
+              file_url: transcodedUrl,
+              duration: '--:--'  // Reset duration so it can be detected on play
+            })
             .eq('id', track.id);
             
           if (updateError) {
@@ -613,6 +631,13 @@ const DropboxSync = () => {
           
         } catch (transcodingError) {
           console.warn('Transcoding failed for file:', file.name, transcodingError);
+          
+          // Update the track to show transcoding failed
+          await supabase
+            .from('tracks')
+            .update({ duration: 'Failed' })
+            .eq('id', track.id);
+          
           toast({
             title: "Transcoding Failed",
             description: `${file.name} will use original format. Playback may be limited.`,

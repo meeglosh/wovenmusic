@@ -59,12 +59,12 @@ class AudioTranscodingService {
 
       console.log('Starting audio transcoding for:', audioUrl);
       
-      // Fetch the input file with timeout
+      // Fetch the input file with longer timeout
       console.log('Fetching audio file...');
       const inputData = await Promise.race([
         fetchFile(audioUrl),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('File fetch timeout')), 30000)
+          setTimeout(() => reject(new Error('File fetch timeout')), 45000)
         )
       ]) as Uint8Array;
       
@@ -77,13 +77,15 @@ class AudioTranscodingService {
       console.log('Writing input file to FFmpeg filesystem...');
       await this.ffmpeg.writeFile(inputFileName, inputData);
 
-      // Transcode with optimized settings for fast conversion
+      // Optimized transcoding settings for fastest conversion
       const args = [
         '-i', inputFileName,
-        '-acodec', outputFormat === 'mp3' ? 'libmp3lame' : 'libvorbis',
-        '-ar', '44100', // Standard sample rate
-        '-b:a', '128k', // Lower bitrate for faster processing
-        '-f', outputFormat,
+        '-acodec', 'libmp3lame',  // Always use MP3 for fastest encoding
+        '-ar', '44100',           // Standard sample rate
+        '-b:a', '96k',            // Even lower bitrate for speed
+        '-ac', '2',               // Stereo
+        '-preset', 'ultrafast',   // Fastest encoding preset
+        '-f', 'mp3',
         outputFileName
       ];
 
@@ -97,7 +99,7 @@ class AudioTranscodingService {
       
       // Create blob URL for the transcoded audio
       const blob = new Blob([outputData], { 
-        type: outputFormat === 'mp3' ? 'audio/mpeg' : 'audio/ogg' 
+        type: 'audio/mpeg'
       });
       const transcodedUrl = URL.createObjectURL(blob);
 
@@ -113,11 +115,11 @@ class AudioTranscodingService {
     };
 
     try {
-      // Apply overall timeout to the entire transcoding process - increased timeout
+      // Extended timeout for transcoding process
       return await Promise.race([
         transcodeWithTimeout(),
         new Promise<string>((_, reject) => 
-          setTimeout(() => reject(new Error('Transcoding timeout after 120 seconds')), 120000)
+          setTimeout(() => reject(new Error('Transcoding timeout after 180 seconds')), 180000)
         )
       ]);
     } catch (error) {

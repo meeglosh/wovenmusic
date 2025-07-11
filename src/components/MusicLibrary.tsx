@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
@@ -303,7 +303,16 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                 </div>
 
                 <div className="flex items-center text-muted-foreground">
-                  {track.duration}
+                  {track.duration === 'Transcoding...' ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Transcoding...</span>
+                    </div>
+                  ) : track.duration === 'Failed' ? (
+                    <span className="text-destructive text-sm">Failed</span>
+                  ) : (
+                    track.duration
+                  )}
                 </div>
 
                 <div className="flex items-center text-sm text-muted-foreground">
