@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image } from "lucide-react";
 import { Track, Playlist, getFileName } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
+import SharePlaylistModal from "./SharePlaylistModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -192,6 +193,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
 
 const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) => {
   const [showAddTracksModal, setShowAddTracksModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
@@ -438,7 +440,11 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Plus className="w-4 h-4 mr-2" />
               Add Tracks
             </Button>
-            <Button variant="outline" size="lg">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => setShowShareModal(true)}
+            >
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </Button>
@@ -578,6 +584,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SharePlaylistModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        playlist={playlist}
+      />
     </div>
   );
 };

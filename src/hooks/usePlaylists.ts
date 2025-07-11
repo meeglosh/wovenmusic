@@ -14,6 +14,9 @@ export const usePlaylists = () => {
           playlist_tracks (
             track_id,
             position
+          ),
+          playlist_shares (
+            email
           )
         `)
         .order("created_at", { ascending: false });
@@ -28,7 +31,7 @@ export const usePlaylists = () => {
           .sort((a, b) => a.position - b.position)
           .map(pt => pt.track_id),
         createdAt: new Date(playlist.created_at),
-        sharedWith: [] // We'll implement sharing later
+        sharedWith: playlist.playlist_shares?.map(share => share.email) || []
       })) as Playlist[];
     }
   });
