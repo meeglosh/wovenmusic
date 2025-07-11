@@ -79,6 +79,38 @@ export type Database = {
           },
         ]
       }
+      playlist_shares: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          playlist_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          playlist_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          playlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_shares_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_tracks: {
         Row: {
           added_at: string
@@ -121,23 +153,32 @@ export type Database = {
       playlists: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           image_url: string | null
+          is_public: boolean
           name: string
+          share_token: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           image_url?: string | null
+          is_public?: boolean
           name: string
+          share_token?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           image_url?: string | null
+          is_public?: boolean
           name?: string
+          share_token?: string | null
           updated_at?: string
         }
         Relationships: []
