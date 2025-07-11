@@ -23,6 +23,7 @@ export const usePlaylists = () => {
       return data.map(playlist => ({
         id: playlist.id,
         name: playlist.name,
+        imageUrl: playlist.image_url,
         trackIds: playlist.playlist_tracks
           .sort((a, b) => a.position - b.position)
           .map(pt => pt.track_id),
@@ -152,10 +153,14 @@ export const useUpdatePlaylist = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+    mutationFn: async ({ id, name, imageUrl }: { id: string; name?: string; imageUrl?: string }) => {
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (imageUrl !== undefined) updateData.image_url = imageUrl;
+      
       const { data, error } = await supabase
         .from("playlists")
-        .update({ name })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
@@ -187,6 +192,41 @@ export const useDeletePlaylist = () => {
         .eq("id", playlistId);
       
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};
+
+export const useUploadPlaylistImage = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${playlistId}-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('playlist-images')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('playlist-images')
+        .getPublicUrl(fileName);
+      
+      // Update playlist with image URL
+      const { data, error } = await supabase
+        .from("playlists")
+        .update({ image_url: publicUrl })
+        .eq("id", playlistId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists"] });

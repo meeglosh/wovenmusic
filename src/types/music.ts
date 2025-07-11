@@ -22,6 +22,7 @@ export const getFileName = (track: Track): string => {
 export interface Playlist {
   id: string;
   name: string;
+  imageUrl?: string;
   trackIds: string[];
   createdAt: Date;
   sharedWith: string[];

@@ -1,12 +1,12 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X } from "lucide-react";
+import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image } from "lucide-react";
 import { Track, Playlist, getFileName } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
-import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist } from "@/hooks/usePlaylists";
+import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -73,9 +73,10 @@ interface SortableTrackItemProps {
   onPlay: (track: Track, playlist?: Track[]) => void;
   onRemove: (trackId: string) => void;
   playlist: Track[];
+  playlistImageUrl?: string;
 }
 
-const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: SortableTrackItemProps) => {
+const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistImageUrl }: SortableTrackItemProps) => {
   const {
     attributes,
     listeners,
@@ -123,16 +124,26 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist }: Sortabl
 
       {/* Track Info */}
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
-          <div className="flex space-x-px">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="w-0.5 bg-primary/60 wave-bar rounded-full"
-                style={{ height: `${Math.random() * 16 + 4}px` }}
-              />
-            ))}
-          </div>
+        <div className="w-10 h-10 rounded overflow-hidden">
+          {playlistImageUrl ? (
+            <img 
+              src={playlistImageUrl} 
+              alt="Track thumbnail" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center border border-primary/20">
+              <div className="flex space-x-px">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-0.5 bg-primary/60 wave-bar rounded-full"
+                    style={{ height: `${Math.random() * 16 + 4}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <p className="font-medium">{getFileName(track)}</p>
@@ -184,10 +195,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
   const updatePlaylistMutation = useUpdatePlaylist();
   const deletePlaylistMutation = useDeletePlaylist();
+  const uploadImageMutation = useUploadPlaylistImage();
   const { toast } = useToast();
 
   // Fetch fresh data directly in this component
@@ -313,6 +326,36 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await uploadImageMutation.mutateAsync({ file, playlistId: playlist.id });
+      
+      toast({
+        title: "Image uploaded",
+        description: "Playlist image has been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error uploading image",
+        description: "Could not upload image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <Button
@@ -325,9 +368,32 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       </Button>
 
       <div className="flex items-start space-x-6 mb-8">
-        <div className="w-48 h-48 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center border border-primary/20">
-          <div className="text-6xl text-primary/60">♪</div>
+        <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20" onClick={() => fileInputRef.current?.click()}>
+          {playlist.imageUrl ? (
+            <img 
+              src={playlist.imageUrl} 
+              alt={playlist.name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+              <div className="text-6xl text-primary/60">♪</div>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="text-center text-white">
+              <Upload className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm font-medium">Upload Image</p>
+            </div>
+          </div>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
 
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
@@ -391,6 +457,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   <Edit className="w-4 h-4 mr-2" />
                   Rename playlist
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Image className="w-4 h-4 mr-2" />
+                  Change image
+                </DropdownMenuItem>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -453,6 +523,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
                   playlist={playlistTracks}
+                  playlistImageUrl={playlist.imageUrl}
                 />
               ))}
             </SortableContext>
