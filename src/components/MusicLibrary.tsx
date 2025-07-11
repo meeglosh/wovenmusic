@@ -250,7 +250,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                 </div>
                 <div className="w-12 flex items-center">
                   {/* Show play/pause button based on current track and playing state */}
-                  {currentTrack?.id === track.id && isPlaying ? (
+                  {track.duration === 'Transcoding...' ? (
+                    // Show nothing during transcoding
+                    null
+                  ) : currentTrack?.id === track.id && isPlaying ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -265,11 +268,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                       variant="ghost"
                       size="sm"
                       className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                        track.duration === 'Transcoding...' || track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
+                        track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
                       }`}
                       onClick={() => onPlayTrack(track)}
-                      disabled={track.duration === 'Transcoding...' || track.duration === 'Failed'}
-                      title={track.duration === 'Transcoding...' ? 'Transcoding in progress...' : track.duration === 'Failed' ? 'Transcoding failed' : 'Play track'}
+                      disabled={track.duration === 'Failed'}
+                      title={track.duration === 'Failed' ? 'Transcoding failed' : 'Play track'}
                     >
                       <Play className="w-4 h-4 fill-current" />
                     </Button>
