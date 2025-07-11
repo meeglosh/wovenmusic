@@ -18,7 +18,7 @@ interface SharePlaylistModalProps {
 
 export default function SharePlaylistModal({ open, onOpenChange, playlist }: SharePlaylistModalProps) {
   const [email, setEmail] = useState("");
-  const [isPublic, setIsPublic] = useState(false); // We'll get this from playlist data later
+  const [isPublic, setIsPublic] = useState(playlist.isPublic || false);
   
   const sharePlaylistMutation = useSharePlaylist();
   const updateVisibilityMutation = useUpdatePlaylistVisibility();
@@ -68,8 +68,10 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
   };
 
   const copyShareLink = () => {
-    // We'll implement share links later when we have the share_token functionality
-    navigator.clipboard.writeText(`${window.location.origin}/playlist/${playlist.id}`);
+    const shareUrl = playlist.shareToken 
+      ? `${window.location.origin}/?playlist=${playlist.shareToken}`
+      : `${window.location.origin}/playlist/${playlist.id}`;
+    navigator.clipboard.writeText(shareUrl);
     toast.success("Share link copied to clipboard!");
   };
 
@@ -111,7 +113,10 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
               <Label>Share Link</Label>
               <div className="flex space-x-2">
                 <Input 
-                  value={`${window.location.origin}/playlist/${playlist.id}`}
+                  value={playlist.shareToken 
+                    ? `${window.location.origin}/?playlist=${playlist.shareToken}`
+                    : `${window.location.origin}/playlist/${playlist.id}`
+                  }
                   readOnly
                   className="flex-1"
                 />

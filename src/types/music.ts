@@ -26,6 +26,8 @@ export interface Playlist {
   trackIds: string[];
   createdAt: Date;
   sharedWith: string[];
+  isPublic?: boolean;
+  shareToken?: string;
 }
 
 export interface BandMember {
