@@ -561,12 +561,24 @@ const DropboxSync = () => {
         // For files that need transcoding, add with a placeholder status
         const needsTranscoding = importTranscodingService.needsTranscoding(file.path_lower);
         
-        // Add track with original Dropbox path initially
+        let fileUrl = dropboxPath;
+        
+        // For files that don't need transcoding, get the temporary URL immediately
+        if (!needsTranscoding) {
+          try {
+            fileUrl = await dropboxService.getTemporaryLink(file.path_lower);
+            console.log('Got temporary URL for native file:', fileUrl);
+          } catch (error) {
+            console.warn('Failed to get temporary URL, using dropbox path:', error);
+          }
+        }
+        
+        // Add track
         const track = await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
           duration: needsTranscoding ? 'Transcoding...' : '--:--',
-          fileUrl: dropboxPath, // Start with original path
+          fileUrl: fileUrl,
           source_folder: file.path_lower.split('/').slice(0, -1).join('/'),
           dropbox_path: dropboxPath
         });

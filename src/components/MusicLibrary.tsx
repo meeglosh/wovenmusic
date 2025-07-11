@@ -265,11 +265,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                       variant="ghost"
                       size="sm"
                       className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                        !track.fileUrl || track.fileUrl === '#' ? 'cursor-not-allowed opacity-50' : ''
+                        track.duration === 'Transcoding...' || track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
                       }`}
                       onClick={() => onPlayTrack(track)}
-                      disabled={!track.fileUrl || track.fileUrl === '#'}
-                      title={!track.fileUrl || track.fileUrl === '#' ? 'No audio file available' : 'Play track'}
+                      disabled={track.duration === 'Transcoding...' || track.duration === 'Failed'}
+                      title={track.duration === 'Transcoding...' ? 'Transcoding in progress...' : track.duration === 'Failed' ? 'Transcoding failed' : 'Play track'}
                     >
                       <Play className="w-4 h-4 fill-current" />
                     </Button>
@@ -293,7 +293,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                   </div>
                   <div>
                     <button 
-                      className="text-left font-medium hover:text-primary transition-colors cursor-pointer"
+                      className={`text-left font-medium hover:text-primary transition-colors cursor-pointer ${
+                        track.duration === 'Transcoding...' ? 'opacity-50' : ''
+                      }`}
                       onClick={() => navigate(`/track/${track.id}`)}
                       title="Open track view with comments"
                     >
