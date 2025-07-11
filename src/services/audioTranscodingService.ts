@@ -74,6 +74,13 @@ class AudioTranscodingService {
       if (error instanceof Error) {
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
+        
+        // If it's an encoding error, the file format is not supported by Web Audio API
+        if (error.message.includes('Unable to decode audio data') || error.name === 'EncodingError') {
+          console.log('=== TRANSCODING SKIPPED - UNSUPPORTED FORMAT ===');
+          console.log('Returning original URL for direct browser playback');
+          return audioUrl; // Return original URL - browser might still be able to play it
+        }
       }
       throw error;
     }

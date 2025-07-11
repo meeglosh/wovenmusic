@@ -9,10 +9,16 @@ export class ImportTranscodingService {
     try {
       // Transcode the audio file
       console.log('Transcoding audio file...');
-      const transcodedBlobUrl = await audioTranscodingService.transcodeAudio(audioUrl, 'mp3');
+      const transcodedResult = await audioTranscodingService.transcodeAudio(audioUrl, 'mp3');
+      
+      // If transcoding returned the original URL (unsupported format), return it directly
+      if (transcodedResult === audioUrl) {
+        console.log('Transcoding skipped due to unsupported format, using original URL');
+        return audioUrl;
+      }
       
       // Convert blob URL to actual blob
-      const response = await fetch(transcodedBlobUrl);
+      const response = await fetch(transcodedResult);
       const blob = await response.blob();
       
       // Generate a unique filename for storage
@@ -45,7 +51,7 @@ export class ImportTranscodingService {
       console.log('Transcoded file available at:', urlData.publicUrl);
       
       // Clean up the blob URL
-      URL.revokeObjectURL(transcodedBlobUrl);
+      URL.revokeObjectURL(transcodedResult);
       
       return urlData.publicUrl;
       
