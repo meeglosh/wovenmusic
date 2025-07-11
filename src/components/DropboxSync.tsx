@@ -746,7 +746,7 @@ const DropboxSync = () => {
         )}
 
         <div className="space-y-3">
-          <Button onClick={handleConnect} disabled={isConnecting} className="w-full">
+          <Button onClick={handleConnect} disabled={isConnecting} className="w-full max-w-[343px]">
             <Cloud className="w-4 h-4 mr-2" />
             {isConnecting ? 'Connecting...' : 'Connect Dropbox'}
           </Button>
