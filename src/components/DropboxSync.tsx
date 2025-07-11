@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Grid3x3, List, Check } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Grid3x3, List, Check, ChevronDown } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import {
@@ -58,6 +58,9 @@ const DropboxSync = () => {
   const [browsingMode, setBrowsingMode] = useState<'list' | 'columns'>('list');
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [folderContents, setFolderContents] = useState<Map<string, DropboxFile[]>>(new Map());
+  const [globalFileSelection, setGlobalFileSelection] = useState<Map<string, DropboxFile>>(new Map());
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
 
@@ -400,24 +403,100 @@ const DropboxSync = () => {
     setSelectedFiles(newSelected);
   };
 
+  const handleGlobalFileToggle = (file: DropboxFile) => {
+    const newSelection = new Map(globalFileSelection);
+    if (newSelection.has(file.path_lower)) {
+      newSelection.delete(file.path_lower);
+    } else {
+      newSelection.set(file.path_lower, file);
+    }
+    setGlobalFileSelection(newSelection);
+  };
+
+  const loadFolderContents = async (folderPath: string) => {
+    try {
+      const allItems = await dropboxService.listFiles(folderPath);
+      const musicFiles = allItems.filter(item => 
+        item[".tag"] === "file" && 
+        (item.name.toLowerCase().endsWith('.mp3') || 
+         item.name.toLowerCase().endsWith('.wav') || 
+         item.name.toLowerCase().endsWith('.m4a') ||
+         item.name.toLowerCase().endsWith('.aif') ||
+         item.name.toLowerCase().endsWith('.aiff') ||
+         item.name.toLowerCase().endsWith('.flac') ||
+         item.name.toLowerCase().endsWith('.aac') ||
+         item.name.toLowerCase().endsWith('.ogg') ||
+         item.name.toLowerCase().endsWith('.wma'))
+      );
+      
+      const sortedFiles = sortItems(musicFiles);
+      setFolderContents(prev => new Map(prev.set(folderPath, sortedFiles)));
+    } catch (error) {
+      console.error('Failed to load folder contents:', error);
+      toast({
+        title: "Error",
+        description: `Failed to load contents of folder: ${folderPath}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleFolderExpansion = async (folderPath: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderPath)) {
+      newExpanded.delete(folderPath);
+    } else {
+      newExpanded.add(folderPath);
+      // Load folder contents if not already loaded
+      if (!folderContents.has(folderPath)) {
+        await loadFolderContents(folderPath);
+      }
+    }
+    setExpandedFolders(newExpanded);
+  };
+
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
   const handleSelectAll = () => {
-    if (selectedFiles.size === files.length) {
-      setSelectedFiles(new Set());
+    if (viewMode === "folder-select") {
+      // In folder select mode, work with global file selection
+      if (globalFileSelection.size === 0) {
+        // Select all visible files from all expanded folders
+        const newSelection = new Map<string, DropboxFile>();
+        expandedFolders.forEach(folderPath => {
+          const files = folderContents.get(folderPath) || [];
+          files.forEach(file => newSelection.set(file.path_lower, file));
+        });
+        setGlobalFileSelection(newSelection);
+      } else {
+        setGlobalFileSelection(new Map());
+      }
     } else {
-      setSelectedFiles(new Set(files.map(f => f.path_lower)));
+      // In file view mode, work with current folder selection
+      if (selectedFiles.size === files.length) {
+        setSelectedFiles(new Set());
+      } else {
+        setSelectedFiles(new Set(files.map(f => f.path_lower)));
+      }
     }
   };
 
   const syncFiles = async () => {
     if (!isConnected) return;
     
-    const filesToSync = selectedFiles.size > 0 
-      ? files.filter(file => selectedFiles.has(file.path_lower))
-      : files;
+    let filesToSync: DropboxFile[] = [];
+    
+    if (viewMode === "folder-select") {
+      // Sync globally selected files
+      filesToSync = Array.from(globalFileSelection.values());
+    } else {
+      // Sync files from current folder
+      filesToSync = selectedFiles.size > 0 
+        ? files.filter(file => selectedFiles.has(file.path_lower))
+        : files;
+    }
     
     if (filesToSync.length === 0) return;
     
@@ -437,7 +516,7 @@ const DropboxSync = () => {
           artist: artist || 'Unknown Artist',
           duration: '--:--', // Will be updated when the track is first played
           fileUrl: dropboxPath,
-          source_folder: selectedFolder || currentPath,
+          source_folder: file.path_lower.split('/').slice(0, -1).join('/'), // Get folder path
           dropbox_path: dropboxPath
         });
       }
@@ -446,7 +525,10 @@ const DropboxSync = () => {
         title: "Sync Complete",
         description: `Successfully synced ${filesToSync.length} tracks from Dropbox.`,
       });
-      setSelectedFiles(new Set()); // Clear selection after sync
+      
+      // Clear selections
+      setSelectedFiles(new Set());
+      setGlobalFileSelection(new Map());
     } catch (error) {
       toast({
         title: "Sync Failed",
@@ -473,6 +555,9 @@ const DropboxSync = () => {
     setAccountInfo(null);
     setFolderHistory([]);
     setSelectedFiles(new Set());
+    setExpandedFolders(new Set());
+    setFolderContents(new Map());
+    setGlobalFileSelection(new Map());
     toast({
       title: "Disconnected",
       description: "Disconnected from Dropbox.",
@@ -684,6 +769,40 @@ const DropboxSync = () => {
               </span>
             </div>
           )}
+          {viewMode === "folder-select" && globalFileSelection.size > 0 && (
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                <Check className="w-4 h-4 mr-2" />
+                Clear All Selections
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {globalFileSelection.size} file{globalFileSelection.size === 1 ? '' : 's'} selected
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Global Sync Button for folder browsing mode */}
+      {viewMode === "folder-select" && globalFileSelection.size > 0 && (
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">
+                {globalFileSelection.size} file{globalFileSelection.size === 1 ? '' : 's'} selected for sync
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Files selected from {new Set(Array.from(globalFileSelection.values()).map(f => f.path_lower.split('/').slice(0, -1).join('/'))).size} folder{new Set(Array.from(globalFileSelection.values()).map(f => f.path_lower.split('/').slice(0, -1).join('/'))).size === 1 ? '' : 's'}
+              </p>
+            </div>
+            <Button 
+              onClick={syncFiles} 
+              disabled={isSyncing || addTrackMutation.isPending}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isSyncing ? 'Syncing...' : `Sync ${globalFileSelection.size} File${globalFileSelection.size === 1 ? '' : 's'}`}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -827,19 +946,64 @@ const DropboxSync = () => {
                     </div>
                   )}
                   {folders.map((folder) => (
-                    <div key={folder.path_lower} className="flex items-center justify-between p-3 rounded border">
-                      <div className="flex items-center space-x-2">
-                        <Folder className="w-4 h-4" />
-                        <span className="font-medium text-sm">{folder.name}</span>
+                    <div key={folder.path_lower} className="border rounded-lg">
+                      <div className="flex items-center justify-between p-3">
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleFolderExpansion(folder.path_lower)}
+                            className="h-auto p-1"
+                          >
+                            {expandedFolders.has(folder.path_lower) ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Folder className="w-4 h-4" />
+                          <span className="font-medium text-sm">{folder.name}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
+                            Browse
+                          </Button>
+                          <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
+                            Select All
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
-                          Select
-                        </Button>
-                      </div>
+                      
+                      {/* Expanded folder contents */}
+                      {expandedFolders.has(folder.path_lower) && (
+                        <div className="border-t border-border px-3 pb-3">
+                          {folderContents.get(folder.path_lower)?.length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-2">No audio files found</p>
+                          ) : (
+                            <div className="space-y-1 mt-2 max-h-32 overflow-y-auto">
+                              {folderContents.get(folder.path_lower)?.map((file) => (
+                                <div key={file.path_lower} className="flex items-center justify-between p-2 rounded hover:bg-muted/30">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={globalFileSelection.has(file.path_lower)}
+                                      onCheckedChange={() => handleGlobalFileToggle(file)}
+                                    />
+                                    <div>
+                                      <p className="font-medium text-xs">{file.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {(file.size / 1024 / 1024).toFixed(1)} MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs">
+                                    {new Date(file.server_modified).toLocaleDateString()}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
