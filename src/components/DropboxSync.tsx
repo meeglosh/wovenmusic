@@ -414,11 +414,16 @@ const DropboxSync = () => {
   };
 
   const loadFolderContents = async (folderPath: string) => {
+    console.log('=== LOADING FOLDER CONTENTS ===');
+    console.log('Folder path:', folderPath);
+    
     try {
       const allItems = await dropboxService.listFiles(folderPath);
-      const musicFiles = allItems.filter(item => 
-        item[".tag"] === "file" && 
-        (item.name.toLowerCase().endsWith('.mp3') || 
+      console.log('Raw items from folder:', allItems);
+      
+      const musicFiles = allItems.filter(item => {
+        const isFile = item[".tag"] === "file";
+        const hasAudioExtension = item.name.toLowerCase().endsWith('.mp3') || 
          item.name.toLowerCase().endsWith('.wav') || 
          item.name.toLowerCase().endsWith('.m4a') ||
          item.name.toLowerCase().endsWith('.aif') ||
@@ -426,11 +431,22 @@ const DropboxSync = () => {
          item.name.toLowerCase().endsWith('.flac') ||
          item.name.toLowerCase().endsWith('.aac') ||
          item.name.toLowerCase().endsWith('.ogg') ||
-         item.name.toLowerCase().endsWith('.wma'))
-      );
+         item.name.toLowerCase().endsWith('.wma');
+         
+        console.log(`File: ${item.name}, isFile: ${isFile}, hasAudioExtension: ${hasAudioExtension}`);
+        return isFile && hasAudioExtension;
+      });
       
+      console.log('Filtered music files:', musicFiles);
       const sortedFiles = sortItems(musicFiles);
-      setFolderContents(prev => new Map(prev.set(folderPath, sortedFiles)));
+      console.log('Sorted music files:', sortedFiles);
+      
+      setFolderContents(prev => {
+        const newMap = new Map(prev);
+        newMap.set(folderPath, sortedFiles);
+        console.log('Updated folder contents map:', newMap);
+        return newMap;
+      });
     } catch (error) {
       console.error('Failed to load folder contents:', error);
       toast({
@@ -442,16 +458,26 @@ const DropboxSync = () => {
   };
 
   const toggleFolderExpansion = async (folderPath: string) => {
+    console.log('=== TOGGLE FOLDER EXPANSION ===');
+    console.log('Folder path:', folderPath);
+    console.log('Currently expanded folders:', expandedFolders);
+    
     const newExpanded = new Set(expandedFolders);
     if (newExpanded.has(folderPath)) {
+      console.log('Collapsing folder');
       newExpanded.delete(folderPath);
     } else {
+      console.log('Expanding folder');
       newExpanded.add(folderPath);
       // Load folder contents if not already loaded
       if (!folderContents.has(folderPath)) {
+        console.log('Loading folder contents for first time');
         await loadFolderContents(folderPath);
+      } else {
+        console.log('Folder contents already loaded:', folderContents.get(folderPath));
       }
     }
+    console.log('New expanded folders:', newExpanded);
     setExpandedFolders(newExpanded);
   };
 
