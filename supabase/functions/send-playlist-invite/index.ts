@@ -23,12 +23,18 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization')!;
     const { playlistId, email, playlistName, inviterName }: PlaylistInviteRequest = await req.json();
 
-    // Initialize Supabase client
+    // Initialize Supabase client with auth header
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
     );
 
     // Get playlist details
@@ -42,7 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Playlist not found");
     }
 
-    const shareUrl = `${Deno.env.get("SUPABASE_URL")?.replace("woakvdhlpludrttjixxq.supabase.co", "woakvdhlpludrttjixxq.lovable.app") || ""}/?playlist=${playlist.share_token}`;
+    const shareUrl = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app") || ""}/?playlist=${playlist.share_token}`;
 
     const emailResponse = await resend.emails.send({
       from: "Music App <onboarding@resend.dev>",
