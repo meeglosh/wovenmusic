@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAddTrackToPlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
-import { Track } from "@/types/music";
+import { Track, getFileName } from "@/types/music";
 import { Search, Music, Plus } from "lucide-react";
 
 interface AddTracksModalProps {
@@ -45,7 +45,7 @@ const AddTracksModal = ({
   
   // Filter tracks based on search query
   const filteredTracks = availableTracks.filter(track => 
-    track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getFileName(track).toLowerCase().includes(searchQuery.toLowerCase()) ||
     track.artist.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -190,7 +190,7 @@ const AddTracksModal = ({
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{track.title}</p>
+                      <p className="font-medium truncate">{getFileName(track)}</p>
                       <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
                     </div>
                     
