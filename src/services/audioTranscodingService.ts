@@ -82,7 +82,7 @@ class AudioTranscodingService {
         '-i', inputFileName,
         '-acodec', outputFormat === 'mp3' ? 'libmp3lame' : 'libvorbis',
         '-ar', '44100', // Standard sample rate
-        '-b:a', '192k', // Good quality bitrate
+        '-b:a', '128k', // Lower bitrate for faster processing
         '-f', outputFormat,
         outputFileName
       ];
@@ -113,11 +113,11 @@ class AudioTranscodingService {
     };
 
     try {
-      // Apply overall timeout to the entire transcoding process
+      // Apply overall timeout to the entire transcoding process - increased timeout
       return await Promise.race([
         transcodeWithTimeout(),
         new Promise<string>((_, reject) => 
-          setTimeout(() => reject(new Error('Transcoding timeout after 60 seconds')), 60000)
+          setTimeout(() => reject(new Error('Transcoding timeout after 120 seconds')), 120000)
         )
       ]);
     } catch (error) {
