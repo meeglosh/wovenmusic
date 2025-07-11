@@ -56,6 +56,24 @@ const handler = async (req: Request): Promise<Response> => {
     await Deno.writeFile(inputPath, audioData);
     console.log('Wrote input file to:', inputPath);
 
+    // Check if FFmpeg is available
+    console.log('Checking FFmpeg availability...');
+    try {
+      const ffmpegCheck = new Deno.Command('ffmpeg', {
+        args: ['-version'],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const { code: checkCode } = await ffmpegCheck.output();
+      if (checkCode !== 0) {
+        throw new Error('FFmpeg not available');
+      }
+      console.log('FFmpeg is available');
+    } catch (error) {
+      console.error('FFmpeg not available:', error);
+      throw new Error('FFmpeg is not installed in this environment');
+    }
+
     // Run FFmpeg transcoding
     console.log('Starting FFmpeg transcoding...');
     const ffmpegProcess = new Deno.Command('ffmpeg', {
