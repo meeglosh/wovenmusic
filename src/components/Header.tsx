@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload, Users, Settings, Shield, LogOut, Palette } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
 import UploadModal from "./UploadModal";
 import MobileNav from "./MobileNav";
 import { Playlist } from "@/types/music";
@@ -20,8 +21,10 @@ interface HeaderProps {
 const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect }: HeaderProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { toggleTheme } = useTheme();
+  const { theme, setTheme, themes } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const currentThemeLabel = themes.find(t => t.value === theme)?.label || 'Theme';
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,10 +62,29 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
 
         {/* Desktop Actions */}
         <div className="hidden lg:flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={toggleTheme}>
-            <Palette className="w-4 h-4 mr-2" />
-            Theme
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Palette className="w-4 h-4 mr-2" />
+                {currentThemeLabel}
+                <ChevronDown className="w-3 h-3 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {themes.map((themeOption) => (
+                <DropdownMenuItem
+                  key={themeOption.value}
+                  onClick={() => setTheme(themeOption.value as Theme)}
+                  className={theme === themeOption.value ? "bg-accent" : ""}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{themeOption.label}</span>
+                    <span className="text-xs text-muted-foreground">{themeOption.description}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -87,9 +109,24 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
 
         {/* Mobile Actions - Icon only buttons */}
         <div className="flex lg:hidden items-center space-x-1">
-          <Button variant="ghost" size="sm" onClick={toggleTheme}>
-            <Palette className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Palette className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {themes.map((themeOption) => (
+                <DropdownMenuItem
+                  key={themeOption.value}
+                  onClick={() => setTheme(themeOption.value as Theme)}
+                  className={theme === themeOption.value ? "bg-accent" : ""}
+                >
+                  <span className="font-medium text-sm">{themeOption.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4" />
           </Button>

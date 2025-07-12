@@ -1,26 +1,35 @@
 import { useState, useEffect } from 'react';
 
+export type Theme = 'neon-garden' | 'midnight-glow' | 'royal-parchment' | 'violet-dreams';
+
+export const THEMES = [
+  { value: 'neon-garden', label: 'Neon Garden', description: 'Electric vibes with navy on bright yellow-green' },
+  { value: 'midnight-glow', label: 'Midnight Glow', description: 'Deep ocean with glowing accents' },
+  { value: 'royal-parchment', label: 'Royal Parchment', description: 'Elegant purple on cream canvas' },
+  { value: 'violet-dreams', label: 'Violet Dreams', description: 'Dreamy cream on rich violet' },
+] as const;
+
 export const useTheme = () => {
-  const [theme, setTheme] = useState<'combo-1' | 'combo-2'>('combo-2');
+  const [theme, setTheme] = useState<Theme>('midnight-glow');
 
   useEffect(() => {
     // Get saved theme from localStorage
-    const savedTheme = localStorage.getItem('theme') as 'combo-1' | 'combo-2' | null;
-    if (savedTheme) {
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    if (savedTheme && THEMES.some(t => t.value === savedTheme)) {
       setTheme(savedTheme);
     }
   }, []);
 
   useEffect(() => {
-    // Apply theme to document body
-    document.body.className = document.body.className.replace(/combo-[12]/, '') + ` ${theme}`;
+    // Remove old theme classes and apply new theme to document body
+    const bodyClasses = document.body.className.split(' ').filter(cls => 
+      !THEMES.some(t => t.value === cls)
+    );
+    document.body.className = [...bodyClasses, theme].join(' ');
+    
     // Save theme to localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'combo-1' ? 'combo-2' : 'combo-1');
-  };
-
-  return { theme, toggleTheme };
+  return { theme, setTheme, themes: THEMES };
 };

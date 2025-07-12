@@ -7,6 +7,8 @@
   :root {
     --color-1: color(display-p3 0.098 0.102 0.447);
     --color-2: color(display-p3 0.897 0.969 0.115);
+    --color-3: color(display-p3 0.214 0.176 0.399);
+    --color-4: color(display-p3 0.961 0.967 0.704);
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -39,19 +41,33 @@
     --radius: 0.75rem;
   }
 
-  /* Normal theme */
-  .combo-1 {
+  /* Neon Garden - navy text on yellow-green background */
+  .neon-garden {
     color: var(--color-1);
     background-color: var(--color-2);
+    --background: var(--color-2);
+    --foreground: var(--color-1);
+    --card: var(--color-2);
+    --card-foreground: var(--color-1);
+    --popover: var(--color-2);
+    --popover-foreground: var(--color-1);
+    --primary: var(--color-1);
+    --primary-foreground: var(--color-2);
+    --secondary: var(--color-2);
+    --secondary-foreground: var(--color-1);
+    --muted: var(--color-2);
+    --muted-foreground: var(--color-1);
+    --accent: var(--color-1);
+    --accent-foreground: var(--color-2);
+    --border: var(--color-1);
+    --input: var(--color-2);
+    --ring: var(--color-1);
   }
 
-  /* Inverse theme */
-  .combo-2 {
+  /* Midnight Glow - yellow-green text on navy background */
+  .midnight-glow {
     color: var(--color-2);
     background-color: var(--color-1);
-  }
-
-  .combo-2 {
     --background: var(--color-1);
     --foreground: var(--color-2);
     --card: var(--color-1);
@@ -69,6 +85,52 @@
     --border: var(--color-2);
     --input: var(--color-1);
     --ring: var(--color-2);
+  }
+
+  /* Royal Parchment - purple text on cream background */
+  .royal-parchment {
+    color: var(--color-3);
+    background-color: var(--color-4);
+    --background: var(--color-4);
+    --foreground: var(--color-3);
+    --card: var(--color-4);
+    --card-foreground: var(--color-3);
+    --popover: var(--color-4);
+    --popover-foreground: var(--color-3);
+    --primary: var(--color-3);
+    --primary-foreground: var(--color-4);
+    --secondary: var(--color-4);
+    --secondary-foreground: var(--color-3);
+    --muted: var(--color-4);
+    --muted-foreground: var(--color-3);
+    --accent: var(--color-3);
+    --accent-foreground: var(--color-4);
+    --border: var(--color-3);
+    --input: var(--color-4);
+    --ring: var(--color-3);
+  }
+
+  /* Violet Dreams - cream text on purple background */
+  .violet-dreams {
+    color: var(--color-4);
+    background-color: var(--color-3);
+    --background: var(--color-3);
+    --foreground: var(--color-4);
+    --card: var(--color-3);
+    --card-foreground: var(--color-4);
+    --popover: var(--color-3);
+    --popover-foreground: var(--color-4);
+    --primary: var(--color-4);
+    --primary-foreground: var(--color-3);
+    --secondary: var(--color-3);
+    --secondary-foreground: var(--color-4);
+    --muted: var(--color-3);
+    --muted-foreground: var(--color-4);
+    --accent: var(--color-4);
+    --accent-foreground: var(--color-3);
+    --border: var(--color-4);
+    --input: var(--color-3);
+    --ring: var(--color-4);
   }
 
   * {
