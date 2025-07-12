@@ -6,23 +6,52 @@ export const useComments = (trackId: string) => {
   return useQuery({
     queryKey: ["comments", trackId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get comments
+      const { data: commentsData, error: commentsError } = await supabase
         .from("comments")
         .select("*")
         .eq("track_id", trackId)
         .order("timestamp_seconds", { ascending: true });
       
-      if (error) throw error;
+      if (commentsError) throw commentsError;
+      if (!commentsData || commentsData.length === 0) return [];
+
+      // Get unique user IDs
+      const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
       
-      return data.map(comment => ({
-        id: comment.id,
-        trackId: comment.track_id,
-        userId: comment.user_id,
-        content: comment.content,
-        timestampSeconds: comment.timestamp_seconds,
-        createdAt: new Date(comment.created_at),
-        updatedAt: new Date(comment.updated_at)
-      })) as Comment[];
+      // Get user profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) {
+        console.warn("Could not fetch user profiles:", profilesError);
+        // Continue without profile data
+      }
+
+      // Create a map of user profiles
+      const profilesMap = new Map();
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+      }
+
+      return commentsData.map(comment => {
+        const profile = profilesMap.get(comment.user_id);
+        return {
+          id: comment.id,
+          trackId: comment.track_id,
+          userId: comment.user_id,
+          content: comment.content,
+          timestampSeconds: comment.timestamp_seconds,
+          createdAt: new Date(comment.created_at),
+          updatedAt: new Date(comment.updated_at),
+          userEmail: profile?.email,
+          userFullName: profile?.full_name
+        };
+      }) as Comment[];
     }
   });
 };

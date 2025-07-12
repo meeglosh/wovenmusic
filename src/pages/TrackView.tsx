@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn, Lock, Globe, Settings, Edit, Trash2, Save } from "lucide-react";
+import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn, Lock, Globe, Settings, Edit, Trash2, Save, User } from "lucide-react";
 import { useComments, useAddComment, useUpdateComment, useDeleteComment } from "@/hooks/useComments";
 import Waveform from "@/components/Waveform";
 import { useToast } from "@/hooks/use-toast";
@@ -347,15 +347,21 @@ const TrackView = () => {
                             >
                               {comment.timestampSeconds < 60 ? Math.floor(comment.timestampSeconds) : Math.floor(comment.timestampSeconds / 60)}
                             </div>
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                              <span 
-                                className="font-mono bg-muted px-2 py-1 rounded text-xs group-hover:bg-primary/10 transition-colors cursor-pointer"
-                                onClick={() => jumpToComment(comment.timestampSeconds)}
-                              >
-                                {audioPlayer.formatTime(comment.timestampSeconds)}
-                              </span>
-                              <span>•</span>
-                              <span>{comment.createdAt.toLocaleDateString()}</span>
+                            <div className="flex flex-col space-y-1">
+                              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                <span 
+                                  className="font-mono bg-muted px-2 py-1 rounded text-xs group-hover:bg-primary/10 transition-colors cursor-pointer"
+                                  onClick={() => jumpToComment(comment.timestampSeconds)}
+                                >
+                                  {audioPlayer.formatTime(comment.timestampSeconds)}
+                                </span>
+                                <span>•</span>
+                                <span>{comment.createdAt.toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                                <User className="w-3 h-3" />
+                                <span>{comment.userFullName || comment.userEmail || 'Unknown User'}</span>
+                              </div>
                             </div>
                           </div>
                           
@@ -418,7 +424,9 @@ const TrackView = () => {
                             />
                           </div>
                         ) : (
-                          <p className="text-sm leading-relaxed pl-11">{comment.content}</p>
+                          <div className="pl-11">
+                            <p className="text-sm leading-relaxed">{comment.content}</p>
+                          </div>
                         )}
                       </CardContent>
                     </Card>

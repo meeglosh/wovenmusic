@@ -46,4 +46,6 @@ export interface Comment {
   timestampSeconds: number;
   createdAt: Date;
   updatedAt: Date;
+  userEmail?: string;
+  userFullName?: string;
 }
