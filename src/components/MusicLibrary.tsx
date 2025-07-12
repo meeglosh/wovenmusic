@@ -34,12 +34,13 @@ interface MusicLibraryProps {
   onPlayTrack: (track: Track, playlist?: Track[]) => void;
   currentTrack?: Track | null;
   isPlaying?: boolean;
+  searchTerm?: string;
 }
 
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm }: MusicLibraryProps) => {
   const navigate = useNavigate();
 
   // Random title and subtitle selection
@@ -292,6 +293,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
         <div>
           <h2 className="text-3xl font-bold text-primary">{randomLibraryTitle.title}</h2>
           <p className="text-muted-foreground mt-1 font-rem font-thin">{randomLibraryTitle.subtitle}</p>
+          {searchTerm && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Showing {tracks.length} result{tracks.length !== 1 ? 's' : ''} for "{searchTerm}"
+            </p>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           {isSelectionMode && (
@@ -353,38 +359,40 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
         </div>
       </div>
 
-      {/* Collapsible Dropbox Sync Section */}
-      <Card className="overflow-hidden">
-        <div 
-          className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-          onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
-        >
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
-              <Box className="w-4 h-4 text-primary" />
+      {/* Collapsible Dropbox Sync Section - Hidden during search */}
+      {!searchTerm && (
+        <Card className="overflow-hidden">
+          <div 
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
+                <Box className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium">Dropbox Sync</h3>
+                <p className="text-sm text-muted-foreground">
+                  {isDropboxSyncExpanded ? 'Click to collapse' : 'Click to manage your Dropbox connection'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-medium">Dropbox Sync</h3>
-              <p className="text-sm text-muted-foreground">
-                {isDropboxSyncExpanded ? 'Click to collapse' : 'Click to manage your Dropbox connection'}
-              </p>
+            <Button variant="ghost" size="sm">
+              {isDropboxSyncExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          
+          {isDropboxSyncExpanded && (
+            <div className="border-t border-border">
+              <DropboxSync />
             </div>
-          </div>
-          <Button variant="ghost" size="sm">
-            {isDropboxSyncExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-        
-        {isDropboxSyncExpanded && (
-          <div className="border-t border-border">
-            <DropboxSync />
-          </div>
-        )}
-      </Card>
+          )}
+        </Card>
+      )}
 
       {/* Dropbox Sync Section */}
 
@@ -394,8 +402,17 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
             <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
               <div className="text-2xl text-primary/60">♪</div>
             </div>
-            <h3 className="text-xl font-semibold mb-2">No tracks yet</h3>
-            <p className="text-muted-foreground mb-4">Connect your Dropbox to sync your music library automatically.</p>
+            {searchTerm ? (
+              <>
+                <h3 className="text-xl font-semibold mb-2">No tracks found</h3>
+                <p className="text-muted-foreground mb-4">No tracks match your search for "{searchTerm}".</p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold mb-2">No tracks yet</h3>
+                <p className="text-muted-foreground mb-4">Connect your Dropbox to sync your music library automatically.</p>
+              </>
+            )}
           </div>
         </div>
       ) : (

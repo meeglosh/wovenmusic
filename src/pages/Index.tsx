@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
@@ -15,6 +15,7 @@ const Index = () => {
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -42,6 +43,27 @@ const Index = () => {
     formatTime
   } = useAudioPlayer();
 
+  // Search functionality
+  const filteredTracks = useMemo(() => {
+    if (!searchTerm.trim()) return tracks;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return tracks.filter(track => 
+      track.title.toLowerCase().includes(searchLower) ||
+      track.artist.toLowerCase().includes(searchLower) ||
+      (track.dropbox_path && track.dropbox_path.toLowerCase().includes(searchLower))
+    );
+  }, [tracks, searchTerm]);
+
+  const filteredPlaylists = useMemo(() => {
+    if (!searchTerm.trim()) return playlists;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return playlists.filter(playlist => 
+      playlist.name.toLowerCase().includes(searchLower)
+    );
+  }, [playlists, searchTerm]);
+
   const handlePlayTrack = (track: Track, playlist?: Track[]) => {
     if (playlist) {
       // Play as playlist starting from the selected track
@@ -52,9 +74,9 @@ const Index = () => {
       if (currentTrack?.id === track.id) {
         togglePlayPause();
       } else {
-        // If it's a different track, play it as part of the library playlist
-        const startIndex = tracks.findIndex(t => t.id === track.id);
-        playPlaylist(tracks, startIndex !== -1 ? startIndex : 0);
+        // If it's a different track, play it as part of the filtered tracks
+        const startIndex = filteredTracks.findIndex(t => t.id === track.id);
+        playPlaylist(filteredTracks, startIndex !== -1 ? startIndex : 0);
       }
     }
   };
@@ -96,17 +118,19 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <audio ref={audioRef} />
       <Header 
-        playlists={playlists}
+        playlists={filteredPlaylists}
         currentView={currentView}
         onViewChange={setCurrentView}
         onPlaylistSelect={handleViewPlaylist}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
       
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Hidden on mobile, overlay on tablet */}
         <div className="hidden md:block md:w-64 lg:w-80">
           <Sidebar 
-            playlists={playlists}
+            playlists={filteredPlaylists}
             currentView={currentView}
             onViewChange={setCurrentView}
             onPlaylistSelect={handleViewPlaylist}
@@ -116,10 +140,11 @@ const Index = () => {
         <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
             <MusicLibrary 
-              tracks={tracks} 
+              tracks={filteredTracks} 
               onPlayTrack={handlePlayTrack}
               currentTrack={currentTrack}
               isPlaying={isPlaying}
+              searchTerm={searchTerm}
             />
           ) : (
             <PlaylistView 

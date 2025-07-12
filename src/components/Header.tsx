@@ -16,9 +16,11 @@ interface HeaderProps {
   currentView?: "library" | "playlist";
   onViewChange?: (view: "library" | "playlist") => void;
   onPlaylistSelect?: (playlist: Playlist) => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
-const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect }: HeaderProps) => {
+const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect, searchTerm = "", onSearchChange }: HeaderProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, setTheme, themes } = useTheme();
@@ -56,6 +58,8 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             <Input 
               placeholder="Search tracks, playlists..." 
               className="pl-10 bg-muted/30 border border-border"
+              value={searchTerm}
+              onChange={(e) => onSearchChange?.(e.target.value)}
             />
           </div>
         </div>
