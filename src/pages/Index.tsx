@@ -52,8 +52,9 @@ const Index = () => {
       if (currentTrack?.id === track.id) {
         togglePlayPause();
       } else {
-        // If it's a different track, play the new track
-        playTrack(track);
+        // If it's a different track, play it as part of the library playlist
+        const startIndex = tracks.findIndex(t => t.id === track.id);
+        playPlaylist(tracks, startIndex !== -1 ? startIndex : 0);
       }
     }
   };
