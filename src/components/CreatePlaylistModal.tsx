@@ -116,7 +116,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
             Create Playlist
           </DialogTitle>
           <DialogDescription>
-            Create a new playlist to organize your favorite tracks.
+            Birth a capsule for the vibrations that claim you.
           </DialogDescription>
         </DialogHeader>
         
