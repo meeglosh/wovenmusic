@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -41,6 +41,41 @@ type SortDirection = 'asc' | 'desc';
 
 const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLibraryProps) => {
   const navigate = useNavigate();
+
+  // Random title and subtitle selection
+  const libraryTitles = useMemo(() => [
+    { title: "Driftspace", subtitle: "The echo vault of our collected murmurings" },
+    { title: "Memory Husk", subtitle: "Where yesterday's thoughts molt quietly" },
+    { title: "Whisper Net", subtitle: "Knotted threads of half-remembered signals" },
+    { title: "Echo Nest", subtitle: "Built from the twigs of forgotten sounds" },
+    { title: "The Pale Index", subtitle: "A ledger of things we almost knew" },
+    { title: "Dustloom", subtitle: "Woven from still-breathing artifacts" },
+    { title: "Phantom Shelf", subtitle: "Housing the silhouettes of once-held ideas" },
+    { title: "Blur Archive", subtitle: "Fragments of clarity, stored without context" },
+    { title: "Sleepstack", subtitle: "Where intentions dissolve into form" },
+    { title: "Signal Bloom", subtitle: "Archived pulses from the not-yet-now" },
+    { title: "Murmurfield", subtitle: "A soft terrain of repeating thoughts" },
+    { title: "Corefrost", subtitle: "Ideas frozen mid-thaw" },
+    { title: "Hollowgrid", subtitle: "The quiet geometry of forgotten truths" },
+    { title: "Wane Ledger", subtitle: "A record of every glow now dimmed" },
+    { title: "Vestige Cloud", subtitle: "The drift of all nearly-lost things" },
+    { title: "Nulltone", subtitle: "Filed vibrations with no source" },
+    { title: "Shedtrace", subtitle: "Remnants of what once compelled us" },
+    { title: "Veinpath", subtitle: "Where thoughts echo through silent tunnels" },
+    { title: "Sleepprint", subtitle: "The residue of mental wanderings" },
+    { title: "Fathom Nest", subtitle: "A holding cell for unsurfaced truths" },
+    { title: "Tracewell", subtitle: "The spiral where ideas loop inward" },
+    { title: "Glyph Dust", subtitle: "Unspoken marks from invisible tongues" },
+    { title: "The Neverstill", subtitle: "Where memory flickers but won't settle" },
+    { title: "Memory Wake", subtitle: "Trailing debris from departed certainties" },
+    { title: "Cradlebank", subtitle: "Where orphaned notions come to rest" }
+  ], []);
+
+  const randomLibraryTitle = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * libraryTitles.length);
+    return libraryTitles[randomIndex];
+  }, [libraryTitles]);
+
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
@@ -230,8 +265,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-primary">Driftspace</h2>
-          <p className="text-muted-foreground mt-1 font-rem font-thin">The echo vault of our collected murmurings</p>
+          <h2 className="text-3xl font-bold text-primary">{randomLibraryTitle.title}</h2>
+          <p className="text-muted-foreground mt-1 font-rem font-thin">{randomLibraryTitle.subtitle}</p>
         </div>
         <div className="flex items-center space-x-4">
           {isSelectionMode && (
