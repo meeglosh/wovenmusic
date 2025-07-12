@@ -26,7 +26,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
             onClick={() => onViewChange("library")}
           >
             <Library className="w-4 h-4 mr-3" />
-            Your Library
+            Driftspace
           </Button>
         </nav>
       </div>
