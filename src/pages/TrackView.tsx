@@ -207,7 +207,7 @@ const TrackView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-background">
       {/* Hidden audio element */}
       <audio ref={audioPlayer.audioRef} className="hidden" />
       
