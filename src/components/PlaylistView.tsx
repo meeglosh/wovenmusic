@@ -627,7 +627,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="default" onClick={() => setShowRenameDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowRenameDialog(false)}>
               Cancel
             </Button>
             <Button 

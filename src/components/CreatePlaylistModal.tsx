@@ -142,7 +142,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
           <DialogFooter>
             <Button
               type="button"
-              variant="default"
+              variant="secondary"
               onClick={handleClose}
               disabled={isLoading}
             >
