@@ -243,7 +243,7 @@ const TrackView = () => {
                   )}
                 </Button>
                 <div className="text-left">
-                  <h2 className="text-xl font-semibold">{track.title}</h2>
+                  <h2 className="text-xl font-semibold text-primary">{track.title}</h2>
                   <p className="text-primary">{track.artist}</p>
                 </div>
               </div>
@@ -484,7 +484,7 @@ const TrackView = () => {
               </Card>
 
               <div>
-                <h2 className="text-xl font-bold mb-4">Track Details</h2>
+                <h2 className="text-xl font-bold mb-4 text-primary">Track Details</h2>
                 <Card className="overflow-hidden">
                   <div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
                   <CardContent className="p-6">
