@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useBandMembers, useInvitations, useCustomRoles } from "@/hooks/useBandMembers";
+import { useBandMembers, useInvitations, useCustomRoles, useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -18,6 +18,9 @@ const Members = () => {
   const { user } = useAuth();
   const { data: members = [], isLoading, inviteUser, removeMember, updateProfile } = useBandMembers();
   const { data: invitations = [] } = useInvitations();
+  const { data: currentUserProfile } = useCurrentUserProfile();
+  
+  const isAdmin = currentUserProfile?.is_admin || false;
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
@@ -210,6 +213,11 @@ const Members = () => {
                                {role}
                              </Badge>
                            ))}
+                           {member.is_admin && (
+                             <Badge variant="default" className="bg-red-500 text-white">
+                               Admin
+                             </Badge>
+                           )}
                          </div>
                        </div>
                     </div>
@@ -227,7 +235,8 @@ const Members = () => {
                         size="sm"
                         className="h-8 w-8 p-0"
                         onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
-                        disabled={member.id === user?.id} // Can't remove yourself
+                        disabled={member.id === user?.id || (!isAdmin && member.id !== user?.id)}
+                        title={member.id === user?.id ? "Cannot delete your own profile" : !isAdmin ? "Only admins can delete other profiles" : "Delete member"}
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>

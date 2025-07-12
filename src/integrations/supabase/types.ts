@@ -251,6 +251,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_admin: boolean | null
           is_band_member: boolean | null
           role: string | null
           roles: string[] | null
@@ -263,6 +264,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
           is_band_member?: boolean | null
           role?: string | null
           roles?: string[] | null
@@ -275,6 +277,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
           is_band_member?: boolean | null
           role?: string | null
           roles?: string[] | null
@@ -331,6 +334,10 @@ export type Database = {
     Functions: {
       has_any_band_members: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_admin_safe: {
+        Args: { user_id: string }
         Returns: boolean
       }
       is_band_member_safe: {

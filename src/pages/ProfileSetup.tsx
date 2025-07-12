@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, User, ArrowLeft } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
+import { useCurrentUserProfile } from "@/hooks/useBandMembers";
+import { Switch } from "@/components/ui/switch";
 
 const ProfileSetup = () => {
   const { user } = useAuth();
@@ -23,9 +25,12 @@ const ProfileSetup = () => {
   const [profileData, setProfileData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [isAdminToggled, setIsAdminToggled] = useState(false);
   
+  const { data: currentUserProfile } = useCurrentUserProfile();
   const editingUserId = searchParams.get('userId');
   const isEditingOtherUser = editingUserId && editingUserId !== user?.id;
+  const canEditAdmin = currentUserProfile?.is_admin && isEditingOtherUser;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -49,6 +54,8 @@ const ProfileSetup = () => {
             } else if (data.role) {
               setSelectedRoles([data.role]);
             }
+            // Set admin toggle state
+            setIsAdminToggled(data.is_admin || false);
           }
         } catch (error: any) {
           toast({
@@ -103,7 +110,8 @@ const ProfileSetup = () => {
           role: selectedRoles[0], // Keep the first role for backward compatibility
           email: profileData?.email || user.email,
           avatar_url: avatarUrl,
-          is_band_member: true
+          is_band_member: true,
+          is_admin: canEditAdmin ? isAdminToggled : (profileData?.is_admin || false)
         });
 
       if (error) throw error;
@@ -237,6 +245,23 @@ const ProfileSetup = () => {
               selectedRoles={selectedRoles}
               onRolesChange={setSelectedRoles}
             />
+
+            {/* Admin Toggle - Only for admins editing other users */}
+            {canEditAdmin && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="admin">Administrator</Label>
+                  <Switch
+                    id="admin"
+                    checked={isAdminToggled}
+                    onCheckedChange={setIsAdminToggled}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Administrators can delete any profile and manage all band members.
+                </p>
+              </div>
+            )}
 
             {/* Bio */}
             <div className="space-y-2">

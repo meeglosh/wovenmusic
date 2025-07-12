@@ -10,6 +10,7 @@ export interface UserProfile {
   role: string;
   roles: string[];
   is_band_member: boolean;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -207,4 +208,23 @@ export const useCustomRoles = () => {
     createRole,
     deleteRole
   };
+};
+
+export const useCurrentUserProfile = () => {
+  return useQuery({
+    queryKey: ["current-user-profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (error) throw error;
+      return data as UserProfile;
+    }
+  });
 };
