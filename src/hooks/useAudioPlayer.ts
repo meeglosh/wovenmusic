@@ -70,8 +70,8 @@ export const useAudioPlayer = () => {
     console.log('URL:', currentTrack.fileUrl);
 
     const loadTrack = async () => {
-      if (!currentTrack?.fileUrl) {
-        console.log('No file URL for track:', currentTrack?.title);
+      if (!currentTrack?.fileUrl || currentTrack.fileUrl === "#") {
+        console.log('No valid file URL for track:', currentTrack?.title);
         return;
       }
 
@@ -300,8 +300,8 @@ export const useAudioPlayer = () => {
     console.log('Track fileUrl type:', typeof track.fileUrl);
     console.log('Is fileUrl valid?', !!track.fileUrl && track.fileUrl.length > 0);
 
-    if (!track.fileUrl) {
-      console.error('Track has no fileUrl');
+    if (!track.fileUrl || track.fileUrl === "#") {
+      console.error('Track has no valid fileUrl');
       return;
     }
 

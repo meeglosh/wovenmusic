@@ -19,7 +19,7 @@ export const useTracks = () => {
         title: track.title,
         artist: track.artist,
         duration: track.duration,
-        fileUrl: track.file_url || "#",
+        fileUrl: track.file_url || "",  // Use empty string instead of "#"
         addedAt: new Date(track.created_at),
         source_folder: track.source_folder,
         dropbox_path: track.dropbox_path,
