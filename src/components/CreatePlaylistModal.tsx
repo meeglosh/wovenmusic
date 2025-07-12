@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Music, LogIn } from "lucide-react";
+import { Rocket, LogIn } from "lucide-react";
 
 interface CreatePlaylistModalProps {
   open: boolean;
@@ -82,7 +82,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Music className="w-5 h-5 text-primary" />
+              <Rocket className="w-5 h-5 text-primary" />
               Create Playlist
             </DialogTitle>
             <DialogDescription>
@@ -112,7 +112,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Music className="w-5 h-5 text-primary" />
+            <Rocket className="w-5 h-5 text-primary" />
             Create Playlist
           </DialogTitle>
           <DialogDescription>
