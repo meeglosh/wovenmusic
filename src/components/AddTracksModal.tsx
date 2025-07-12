@@ -207,7 +207,7 @@ const AddTracksModal = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             onClick={handleClose}
             disabled={isLoading}
           >
