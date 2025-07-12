@@ -184,7 +184,7 @@ const TrackView = () => {
             </div>
             
             {/* Large Waveform */}
-            <div className="mb-8 shadow-2xl rounded-2xl overflow-hidden border-4 border-primary">
+            <div className="mb-8 shadow-2xl rounded-2xl overflow-hidden border-2 border-primary">
               <Waveform
                 audioRef={audioPlayer.audioRef}
                 currentTime={audioPlayer.currentTime}

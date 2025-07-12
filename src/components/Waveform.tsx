@@ -52,7 +52,12 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     const step = Math.ceil(data.length / width);
     const amp = height / 2;
 
-    ctx.fillStyle = 'hsl(var(--muted))';
+    // Get the primary color for the waveform
+    const computedStyle = getComputedStyle(canvas);
+    const primaryColor = computedStyle.getPropertyValue('--primary').trim();
+    const [h, s, l] = primaryColor.split(' ').map(v => v.replace('%', ''));
+    
+    ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, 0.5)`;
     for (let i = 0; i < width; i++) {
       let min = 1.0;
       let max = -1.0;
@@ -69,11 +74,6 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     // Draw progress with transparency
     const progress = duration > 0 ? currentTime / duration : 0;
     const progressX = progress * width;
-    
-    // Get the primary color and make it transparent
-    const computedStyle = getComputedStyle(canvas);
-    const primaryColor = computedStyle.getPropertyValue('--primary').trim();
-    const [h, s, l] = primaryColor.split(' ').map(v => v.replace('%', ''));
     
     // Create a semi-transparent overlay for played portion
     ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, 0.3)`;
