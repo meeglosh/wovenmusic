@@ -70,7 +70,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <ChevronDown className="w-3 h-3 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-background border border-border">
               {themes.map((themeOption) => (
                 <DropdownMenuItem
                   key={themeOption.value}
@@ -115,7 +115,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Palette className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-44 bg-background border border-border">
               {themes.map((themeOption) => (
                 <DropdownMenuItem
                   key={themeOption.value}
