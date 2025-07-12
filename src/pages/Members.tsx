@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -201,11 +202,12 @@ const Members = () => {
               <Card key={member.id} className="group hover:shadow-md transition-shadow relative">
                 <CardHeader className="pb-3">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-[70px] h-[70px] bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-medium text-xl">
+                    <Avatar className="w-[70px] h-[70px]">
+                      <AvatarImage src={member.avatar_url || ''} alt={member.full_name || member.email || 'User'} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white text-xl font-medium">
                         {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="space-y-2">
                       <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                       <div className="flex flex-wrap gap-1 justify-center">
