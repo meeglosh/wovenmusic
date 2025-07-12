@@ -145,6 +145,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
+              className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
             >
               Cancel
             </Button>
