@@ -227,9 +227,9 @@ const TrackView = () => {
       <div className="container mx-auto px-6 py-12">
         <div className="max-w-5xl mx-auto">
           {/* Hero Section with Large Waveform */}
-          <div className="text-center mb-12">
+          <div className="mb-12">
             <div className="mb-8">
-              <div className="inline-flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-6">
                 <Button
                   variant="default"
                   size="lg"
