@@ -41,14 +41,9 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             />
           )}
           
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xs sm:text-sm">W</span>
-            </div>
-            <h1 className="text-lg sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-              Wovenmusic
-            </h1>
-          </div>
+          <h1 className="text-lg sm:text-2xl font-rem font-thin text-white">
+            Wovenmusic
+          </h1>
         </div>
 
         {/* Search - Hidden on mobile, shown on larger screens */}
