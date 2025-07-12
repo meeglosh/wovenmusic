@@ -20,6 +20,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log('Starting send-invitation function...');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,22 +32,34 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
+    console.log('Supabase client created, getting user...');
+    
     // Get user from JWT token
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+      console.error('Auth error:', userError);
       throw new Error('Unauthorized');
     }
+    
+    console.log('User authenticated:', user.id);
 
     // Get inviter's profile
-    const { data: inviterProfile } = await supabaseClient
+    console.log('Getting inviter profile...');
+    const { data: inviterProfile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('full_name, email')
       .eq('id', user.id)
       .single();
+    
+    if (profileError) {
+      console.error('Profile error:', profileError);
+    }
 
     const { email, role }: InviteRequest = await req.json();
+    console.log('Parsed request:', { email, role });
 
     // Create invitation in database
+    console.log('Creating invitation in database...');
     const { data: invitation, error: inviteError } = await supabaseClient
       .from('invitations')
       .insert({
@@ -57,8 +71,11 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (inviteError) {
+      console.error('Invitation error:', inviteError);
       throw inviteError;
     }
+    
+    console.log('Invitation created:', invitation);
 
     // Generate invitation URL
     const inviteUrl = `${req.headers.get('origin') || 'https://wovenmusic.com'}/auth?token=${invitation.token}`;
