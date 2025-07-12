@@ -215,7 +215,7 @@ const TrackView = () => {
       <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="opacity-80 hover:opacity-100">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="text-primary hover:text-primary/80 hover:bg-primary/10">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -223,7 +223,7 @@ const TrackView = () => {
               <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 {track.title}
               </h1>
-              <p className="text-lg text-muted-foreground mt-1">{track.artist}</p>
+              <p className="text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mt-1">{track.artist}</p>
             </div>
             <div className="w-16" />
           </div>
@@ -251,7 +251,7 @@ const TrackView = () => {
                 </Button>
                 <div className="text-left">
                   <h2 className="text-xl font-semibold">{track.title}</h2>
-                  <p className="text-muted-foreground">{track.artist}</p>
+                  <p className="text-primary">{track.artist}</p>
                 </div>
               </div>
             </div>
@@ -318,8 +318,8 @@ const TrackView = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Comments Section */}
             <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                <MessageSquare className="w-6 h-6" />
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-primary">
+                <MessageSquare className="w-6 h-6 text-primary" />
                 Comments
                 <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
                   {comments.length}
