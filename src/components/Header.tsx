@@ -55,7 +55,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input 
               placeholder="Search tracks, playlists..." 
-              className="pl-10 bg-muted/30 border-muted"
+              className="pl-10 bg-muted/30 border border-border"
             />
           </div>
         </div>
