@@ -17,7 +17,7 @@ const Members = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: allMembers = [], isLoading, inviteUser, removeMember, updateProfile } = useBandMembers();
+  const { data: allMembers = [], isLoading, inviteUser, removeMember, updateProfile, refetch } = useBandMembers();
   const { data: invitations = [] } = useInvitations();
   const { data: currentUserProfile } = useCurrentUserProfile();
   
@@ -120,6 +120,14 @@ const Members = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => {
+              console.log('Forcing refetch...');
+              refetch();
+            }}>
+              <Settings className="w-4 h-4 mr-1 sm:mr-2 text-primary" />
+              <span className="hidden sm:inline text-primary">Refresh Data</span>
+              <span className="sm:hidden text-primary">Refresh</span>
+            </Button>
             <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => navigate("/profile-setup")}>
               <Settings className="w-4 h-4 mr-1 sm:mr-2 text-primary" />
               <span className="hidden sm:inline text-primary">Edit Profile</span>
