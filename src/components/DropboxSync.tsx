@@ -525,6 +525,31 @@ const DropboxSync = () => {
     }
   };
 
+  // Helper function to get duration from Dropbox file
+  const getDurationFromDropboxFile = async (fileUrl: string): Promise<number> => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration);
+      });
+      
+      audio.addEventListener('error', () => {
+        resolve(0); // Return 0 if we can't get duration
+      });
+      
+      audio.crossOrigin = 'anonymous';
+      audio.src = fileUrl;
+    });
+  };
+
+  const formatDuration = (seconds: number): string => {
+    if (seconds === 0) return '--:--';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   const syncFiles = async () => {
     if (!isConnected) return;
     
@@ -575,26 +600,33 @@ const DropboxSync = () => {
     
     
     try {
-      // Phase 1: Add all supported tracks immediately to the database
+      // Phase 1: Add all supported tracks with duration extraction
       const trackPromises = supportedFiles.map(async (file) => {
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
         const [title, artist] = fileName.split(' - ');
         const dropboxPath = file.path_lower;
         
-        console.log('Adding track immediately:', dropboxPath);
+        console.log('Adding track with duration extraction:', dropboxPath);
         
         // For files that need transcoding, add with a placeholder status
         const needsTranscoding = importTranscodingService.needsTranscoding(file.path_lower);
         
         let fileUrl = dropboxPath;
+        let duration = '--:--';
         
-        // For files that don't need transcoding, get the temporary URL immediately
+        // For files that don't need transcoding, get the temporary URL and extract duration
         if (!needsTranscoding) {
           try {
             fileUrl = await dropboxService.getTemporaryLink(file.path_lower);
             console.log('Got temporary URL for native file:', fileUrl);
+            
+            // Extract duration from the audio file
+            const durationSeconds = await getDurationFromDropboxFile(fileUrl);
+            duration = formatDuration(durationSeconds);
+            console.log('Extracted duration:', duration, 'for file:', file.name);
           } catch (error) {
-            console.warn('Failed to get temporary URL, using dropbox path:', error);
+            console.warn('Failed to get temporary URL or extract duration:', error);
+            fileUrl = dropboxPath;
           }
         }
         
@@ -602,7 +634,7 @@ const DropboxSync = () => {
         const track = await addTrackMutation.mutateAsync({
           title: title || fileName,
           artist: artist || 'Unknown Artist',
-          duration: needsTranscoding ? 'Transcoding...' : '--:--',
+          duration: needsTranscoding ? 'Transcoding...' : duration,
           fileUrl: fileUrl,
           source_folder: file.path_lower.split('/').slice(0, -1).join('/'),
           dropbox_path: dropboxPath
@@ -648,12 +680,22 @@ const DropboxSync = () => {
           // Transcode and store in Supabase Storage
           const transcodedUrl = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
           
-          // Update the track with transcoded URL and reset duration
+          // Extract duration from transcoded file
+          let finalDuration = '--:--';
+          try {
+            const durationSeconds = await getDurationFromDropboxFile(transcodedUrl);
+            finalDuration = formatDuration(durationSeconds);
+            console.log('Extracted duration from transcoded file:', finalDuration);
+          } catch (error) {
+            console.warn('Failed to extract duration from transcoded file:', error);
+          }
+          
+          // Update the track with transcoded URL and extracted duration
           const { error: updateError } = await supabase
             .from('tracks')
             .update({ 
               file_url: transcodedUrl,
-              duration: '--:--'  // Reset duration so it can be detected on play
+              duration: finalDuration
             })
             .eq('id', track.id);
             
