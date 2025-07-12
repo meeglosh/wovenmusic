@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send } from "lucide-react";
+import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBandMembers, useInvitations } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
@@ -112,13 +112,18 @@ const Members = () => {
             </div>
           </div>
 
-          <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-            <DialogTrigger asChild>
-              <Button>
-                <Send className="w-4 h-4 mr-2" />
-                Invite Member
-              </Button>
-            </DialogTrigger>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => navigate("/profile-setup")}>
+              <Settings className="w-4 h-4 mr-2" />
+              Edit Profile
+            </Button>
+            <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Send className="w-4 h-4 mr-2" />
+                  Invite Member
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Invite Band Member</DialogTitle>
@@ -166,7 +171,8 @@ const Members = () => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
       </div>
 

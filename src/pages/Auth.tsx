@@ -162,7 +162,7 @@ const Auth = () => {
             Welcome to Wovenmusic
           </CardTitle>
           <CardDescription>
-            Sync, organize, and share music with your band
+            Converge in resonance. Sculpt time from tone. Scatter rhythm into the communal void.
           </CardDescription>
         </CardHeader>
         

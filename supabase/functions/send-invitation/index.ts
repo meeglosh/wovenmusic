@@ -91,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
               <strong>${inviterName}</strong> has invited you to join their band on Wovenmusic as a <strong>${role}</strong>.
             </p>
             <p style="color: #6b7280;">
-              Wovenmusic is a collaborative platform where you can sync, organize, and share music with your bandmates.
+              Converge in resonance. Sculpt time from tone. Scatter rhythm into the communal void.
             </p>
           </div>
           
