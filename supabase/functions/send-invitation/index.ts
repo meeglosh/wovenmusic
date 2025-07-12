@@ -22,15 +22,35 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log('Starting send-invitation function...');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+    
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasResendKey: !!resendKey
+    });
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+    
+    if (!resendKey) {
+      throw new Error('Missing Resend API key');
+    }
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase client created');
     
-    const { email, role, userId }: InviteRequest = await req.json();
+    const requestBody = await req.text();
+    console.log('Raw request body:', requestBody);
+    
+    const { email, role, userId }: InviteRequest = JSON.parse(requestBody);
     console.log('Parsed request:', { email, role, userId });
 
     // Get inviter's profile
