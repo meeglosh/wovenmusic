@@ -5,35 +5,50 @@
 
 @layer base {
   :root {
-    --background: 252 75% 39%;
-    --foreground: 210 75% 98%;
+    --color-1: color(display-p3 0.35 0.099 0.689);
+    --color-2: color(display-p3 0.956 0.981 0.996);
+    
+    --background: var(--color-1);
+    --foreground: var(--color-2);
 
-    --card: 252 70% 35%;
-    --card-foreground: 210 75% 98%;
+    --card: var(--color-1);
+    --card-foreground: var(--color-2);
 
-    --popover: 252 75% 39%;
-    --popover-foreground: 210 75% 98%;
+    --popover: var(--color-1);
+    --popover-foreground: var(--color-2);
 
-    --primary: 270 80% 60%;
-    --primary-foreground: 210 75% 98%;
+    --primary: var(--color-2);
+    --primary-foreground: var(--color-1);
 
-    --secondary: 252 50% 45%;
-    --secondary-foreground: 210 75% 98%;
+    --secondary: var(--color-1);
+    --secondary-foreground: var(--color-2);
 
-    --muted: 252 40% 50%;
-    --muted-foreground: 210 50% 85%;
+    --muted: var(--color-1);
+    --muted-foreground: var(--color-2);
 
-    --accent: 270 70% 55%;
-    --accent-foreground: 210 75% 98%;
+    --accent: var(--color-2);
+    --accent-foreground: var(--color-1);
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 75% 98%;
+    --destructive: color(display-p3 0.8 0.2 0.2);
+    --destructive-foreground: var(--color-2);
 
-    --border: 252 30% 55%;
-    --input: 252 30% 55%;
-    --ring: 270 80% 60%;
+    --border: var(--color-2);
+    --input: var(--color-1);
+    --ring: var(--color-2);
 
     --radius: 0.75rem;
+  }
+
+  /* Normal theme */
+  .combo-1 {
+    color: var(--color-1);
+    background-color: var(--color-2);
+  }
+
+  /* Inverse theme */
+  .combo-2 {
+    color: var(--color-2);
+    background-color: var(--color-1);
   }
 
   * {
