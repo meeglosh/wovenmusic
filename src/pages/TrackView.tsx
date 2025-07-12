@@ -265,8 +265,8 @@ const TrackView = () => {
             {/* Time Display */}
             <div className="flex justify-center items-center space-x-6 text-lg">
               <span className="font-mono text-primary">{audioPlayer.formatTime(audioPlayer.currentTime)}</span>
-              <div className="w-24 h-1 bg-muted rounded-full overflow-hidden">
-                <div 
+              <div className="w-24 h-1 bg-muted rounded-full overflow-hidden border border-border">
+                <div
                   className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300"
                   style={{ width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` }}
                 />
