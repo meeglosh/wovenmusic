@@ -137,7 +137,7 @@ const Members = () => {
               <DialogHeader>
                 <DialogTitle>Invite Band Member</DialogTitle>
                 <DialogDescription>
-                  Send an invitation to join your band. They'll receive an email with a link to create their account.
+                  Invite a new node into your sonic mesh. They'll receive coordinates to shape their vessel.
                 </DialogDescription>
               </DialogHeader>
               
@@ -156,7 +156,7 @@ const Members = () => {
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={newInvitation.role} onValueChange={(value) => setNewInvitation(prev => ({ ...prev, role: value }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-2 text-primary [&>svg]:text-primary">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -172,7 +172,7 @@ const Members = () => {
               </div>
               
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowInviteModal(false)}>
+                <Button variant="outline" className="text-primary" onClick={() => setShowInviteModal(false)}>
                   Cancel
                 </Button>
                 <Button onClick={handleInviteUser} disabled={inviteUser.isPending}>
