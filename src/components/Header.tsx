@@ -79,7 +79,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <DropdownMenuItem
                   key={themeOption.value}
                   onClick={() => setTheme(themeOption.value as Theme)}
-                  className={theme === themeOption.value ? "bg-accent" : ""}
+                  className={theme === themeOption.value ? "bg-primary/50" : ""}
                 >
                   <div className="flex flex-col">
                     <span className="font-medium text-primary">{themeOption.label}</span>
@@ -132,7 +132,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <DropdownMenuItem
                   key={themeOption.value}
                   onClick={() => setTheme(themeOption.value as Theme)}
-                  className={theme === themeOption.value ? "bg-accent" : ""}
+                  className={theme === themeOption.value ? "bg-primary/50" : ""}
                 >
                   <span className="font-medium text-sm text-primary">{themeOption.label}</span>
                 </DropdownMenuItem>
