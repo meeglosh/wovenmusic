@@ -3,11 +3,14 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image, Lock, Globe } from "lucide-react";
 import { Track, Playlist, getFileName } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
+import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -30,7 +33,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -201,6 +203,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
   const updatePlaylistMutation = useUpdatePlaylist();
+  const updatePlaylistVisibility = useUpdatePlaylistVisibility();
   const deletePlaylistMutation = useDeletePlaylist();
   const uploadImageMutation = useUploadPlaylistImage();
   const { toast } = useToast();
@@ -358,6 +361,26 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handlePrivacyChange = async (isPublic: boolean) => {
+    try {
+      await updatePlaylistVisibility.mutateAsync({
+        playlistId: playlist.id,
+        isPublic
+      });
+      
+      toast({
+        title: "Privacy updated",
+        description: `Playlist is now ${isPublic ? 'public' : 'private'}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update playlist privacy",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <Button
@@ -400,6 +423,13 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
             <Badge variant="secondary">Playlist</Badge>
+            <Badge variant={playlist.isPublic ? "default" : "secondary"} className="text-xs">
+              {playlist.isPublic ? (
+                <><Globe className="h-3 w-3 mr-1" />Public</>
+              ) : (
+                <><Lock className="h-3 w-3 mr-1" />Private</>
+              )}
+            </Badge>
             {playlist.sharedWith.length > 0 && (
               <Badge variant="outline" className="flex items-center space-x-1">
                 <Users className="w-3 h-3" />
@@ -420,6 +450,31 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <span>Shared with {playlist.sharedWith.length} member{playlist.sharedWith.length !== 1 ? 's' : ''}</span>
               </>
             )}
+          </div>
+
+          {/* Privacy Controls */}
+          <div className="mb-6">
+            <Card className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="playlist-privacy" className="text-sm font-medium">
+                    Make playlist public
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {playlist.isPublic 
+                      ? "Anyone can discover and listen to this playlist" 
+                      : "Only you and shared members can access this playlist"
+                    }
+                  </p>
+                </div>
+                <Switch
+                  id="playlist-privacy"
+                  checked={playlist.isPublic || false}
+                  onCheckedChange={handlePrivacyChange}
+                  disabled={updatePlaylistVisibility.isPending}
+                />
+              </div>
+            </Card>
           </div>
 
           <div className="flex items-center space-x-3">

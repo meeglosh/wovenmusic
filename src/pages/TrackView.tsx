@@ -1,11 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useTracks } from "@/hooks/useTracks";
+import { useTracks, useUpdateTrack } from "@/hooks/useTracks";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn, Lock, Globe, Settings } from "lucide-react";
 import { useComments, useAddComment } from "@/hooks/useComments";
 import Waveform from "@/components/Waveform";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +22,7 @@ const TrackView = () => {
   const audioPlayer = useAudioPlayer();
   const { toast } = useToast();
   const { user } = useAuth();
+  const updateTrackMutation = useUpdateTrack();
   
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentTime, setCommentTime] = useState(0);
@@ -81,6 +85,26 @@ const TrackView = () => {
 
   const jumpToComment = (timestamp: number) => {
     audioPlayer.seekTo(timestamp);
+  };
+
+  const handlePrivacyChange = async (isPublic: boolean) => {
+    try {
+      await updateTrackMutation.mutateAsync({
+        id: track!.id,
+        updates: { is_public: isPublic }
+      });
+      
+      toast({
+        title: "Privacy updated",
+        description: `Track is now ${isPublic ? 'public' : 'private'}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update track privacy",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -277,6 +301,46 @@ const TrackView = () => {
             
             {/* Sidebar with Track Info */}
             <div className="space-y-6">
+              {/* Privacy Settings */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    {track.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    Privacy Settings
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="track-privacy" className="text-sm font-medium">
+                          Make track public
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {track.is_public 
+                            ? "Anyone can discover and listen to this track" 
+                            : "Only you can access this track"
+                          }
+                        </p>
+                      </div>
+                      <Switch
+                        id="track-privacy"
+                        checked={track.is_public || false}
+                        onCheckedChange={handlePrivacyChange}
+                        disabled={updateTrackMutation.isPending}
+                      />
+                    </div>
+                    <div className="pt-2">
+                      <Badge variant={track.is_public ? "default" : "secondary"} className="text-xs">
+                        {track.is_public ? (
+                          <><Globe className="h-3 w-3 mr-1" />Public</>
+                        ) : (
+                          <><Lock className="h-3 w-3 mr-1" />Private</>
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div>
                 <h2 className="text-xl font-bold mb-4">Track Details</h2>
                 <Card className="overflow-hidden">
