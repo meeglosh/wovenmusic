@@ -408,7 +408,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-all hover:border hover:border-primary rounded-full"
                       onClick={() => onPlayTrack(track)}
                       title="Pause track"
                     >
@@ -418,7 +418,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                      className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-all hover:border hover:border-primary rounded-full ${
                         track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
                       }`}
                       onClick={() => onPlayTrack(track)}

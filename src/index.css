@@ -5,18 +5,18 @@
 
 @layer base {
   :root {
-    --color-1: color(display-p3 0.098 0.102 0.447);
-    --color-2: color(display-p3 0.897 0.969 0.115);
-    --color-3: color(display-p3 0.214 0.176 0.399);
-    --color-4: color(display-p3 0.961 0.967 0.704);
-    --color-5: color(display-p3 0.186 0.3 0.562);
-    --color-6: hsl(190 80% 100%);
-    --color-7: color(display-p3 0.038 0.072 0.535);
-    --color-8: color(display-p3 0.983 0.932 0.627);
-    --color-9: color(display-p3 0.269 0.271 0.4);
-    --color-10: color(display-p3 0.997 0.985 0.935);
-    --color-11: color(display-p3 0.48 0.043 0.267);
-    --color-12: color(display-p3 0.978 0.999 0.583);
+    --color-1: 231 89% 27%;
+    --color-2: 78 86% 54%;
+    --color-3: 259 39% 29%;
+    --color-4: 57 90% 83%;
+    --color-5: 217 67% 37%;
+    --color-6: 190 80% 100%;
+    --color-7: 230 87% 29%;
+    --color-8: 44 91% 80%;
+    --color-9: 235 20% 33%;
+    --color-10: 35 78% 96%;
+    --color-11: 313 84% 26%;
+    --color-12: 64 94% 78%;
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -39,7 +39,7 @@
     --accent: var(--color-1);
     --accent-foreground: var(--color-2);
 
-    --destructive: color(display-p3 0.8 0.2 0.2);
+    --destructive: 0 80% 50%;
     --destructive-foreground: var(--color-2);
 
     --border: var(--color-1);
