@@ -54,3 +54,50 @@ export const useAddComment = () => {
     }
   });
 };
+
+export const useUpdateComment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ commentId, content, trackId }: { commentId: string; content: string; trackId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("comments")
+        .update({ content })
+        .eq("id", commentId)
+        .eq("user_id", user.id) // Ensure user can only update their own comments
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["comments", variables.trackId] });
+    }
+  });
+};
+
+export const useDeleteComment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ commentId, trackId }: { commentId: string; trackId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user.id); // Ensure user can only delete their own comments
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["comments", variables.trackId] });
+    }
+  });
+};

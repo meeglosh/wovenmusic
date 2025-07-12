@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn, Lock, Globe, Settings } from "lucide-react";
-import { useComments, useAddComment } from "@/hooks/useComments";
+import { X, Play, Pause, MessageSquare, Send, ArrowLeft, LogIn, Lock, Globe, Settings, Edit, Trash2, Save } from "lucide-react";
+import { useComments, useAddComment, useUpdateComment, useDeleteComment } from "@/hooks/useComments";
 import Waveform from "@/components/Waveform";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { Comment } from "@/types/music";
 
 const TrackView = () => {
   const { trackId } = useParams<{ trackId: string }>();
@@ -27,10 +28,14 @@ const TrackView = () => {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentTime, setCommentTime] = useState(0);
   const [commentContent, setCommentContent] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const track = tracks?.find(t => t.id === trackId);
   const { data: comments = [] } = useComments(track?.id || "");
   const addCommentMutation = useAddComment();
+  const updateCommentMutation = useUpdateComment();
+  const deleteCommentMutation = useDeleteComment();
 
   // Auto-play the track when the component mounts
   useEffect(() => {
@@ -85,6 +90,61 @@ const TrackView = () => {
 
   const jumpToComment = (timestamp: number) => {
     audioPlayer.seekTo(timestamp);
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+  };
+
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editingContent.trim()) return;
+
+    try {
+      await updateCommentMutation.mutateAsync({
+        commentId,
+        content: editingContent.trim(),
+        trackId: track!.id
+      });
+      
+      setEditingCommentId(null);
+      setEditingContent("");
+      toast({
+        title: "Comment updated",
+        description: "Your comment has been updated successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update comment. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await deleteCommentMutation.mutateAsync({
+        commentId,
+        trackId: track!.id
+      });
+      
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been deleted successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete comment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePrivacyChange = async (isPublic: boolean) => {
@@ -277,21 +337,89 @@ const TrackView = () => {
               ) : (
                 <div className="space-y-4">
                   {comments.map((comment) => (
-                    <Card key={comment.id} className="cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-200 group">
-                      <CardContent className="p-5" onClick={() => jumpToComment(comment.timestampSeconds)}>
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xs font-bold">
-                            {comment.timestampSeconds < 60 ? Math.floor(comment.timestampSeconds) : Math.floor(comment.timestampSeconds / 60)}
+                    <Card key={comment.id} className={`transition-all duration-200 group ${editingCommentId === comment.id ? 'border-primary' : 'hover:shadow-md hover:border-primary/20'}`}>
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div 
+                              className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:scale-105 transition-transform"
+                              onClick={() => jumpToComment(comment.timestampSeconds)}
+                            >
+                              {comment.timestampSeconds < 60 ? Math.floor(comment.timestampSeconds) : Math.floor(comment.timestampSeconds / 60)}
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <span 
+                                className="font-mono bg-muted px-2 py-1 rounded text-xs group-hover:bg-primary/10 transition-colors cursor-pointer"
+                                onClick={() => jumpToComment(comment.timestampSeconds)}
+                              >
+                                {audioPlayer.formatTime(comment.timestampSeconds)}
+                              </span>
+                              <span>•</span>
+                              <span>{comment.createdAt.toLocaleDateString()}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <span className="font-mono bg-muted px-2 py-1 rounded text-xs group-hover:bg-primary/10 transition-colors">
-                              {audioPlayer.formatTime(comment.timestampSeconds)}
-                            </span>
-                            <span>•</span>
-                            <span>{comment.createdAt.toLocaleDateString()}</span>
-                          </div>
+                          
+                          {/* Edit/Delete buttons - only show for user's own comments */}
+                          {user && comment.userId === user.id && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+                              {editingCommentId === comment.id ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleSaveEdit(comment.id)}
+                                    disabled={updateCommentMutation.isPending}
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleCancelEdit}
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditComment(comment)}
+                                    className="h-8 w-8 p-0 text-primary hover:text-primary/80"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    disabled={deleteCommentMutation.isPending}
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm leading-relaxed pl-11">{comment.content}</p>
+                        
+                        {editingCommentId === comment.id ? (
+                          <div className="pl-11">
+                            <Textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              rows={3}
+                              className="resize-none text-sm"
+                              placeholder="Edit your comment..."
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed pl-11">{comment.content}</p>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
