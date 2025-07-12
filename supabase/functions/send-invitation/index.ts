@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,6 @@ const corsHeaders = {
 interface InviteRequest {
   email: string;
   role: string;
-  inviterName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -36,7 +36,14 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Unauthorized');
     }
 
-    const { email, role, inviterName }: InviteRequest = await req.json();
+    // Get inviter's profile
+    const { data: inviterProfile } = await supabaseClient
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single();
+
+    const { email, role }: InviteRequest = await req.json();
 
     // Create invitation in database
     const { data: invitation, error: inviteError } = await supabaseClient
@@ -53,20 +60,62 @@ const handler = async (req: Request): Promise<Response> => {
       throw inviteError;
     }
 
-    // For now, we'll just return success without sending email
-    // TODO: Add Resend integration when RESEND_API_KEY is provided
-    console.log(`Invitation created for ${email} with token ${invitation.token}`);
-    
     // Generate invitation URL
-    const inviteUrl = `${req.headers.get('origin') || 'http://localhost:3000'}/auth?token=${invitation.token}`;
+    const inviteUrl = `${req.headers.get('origin') || 'https://wovenmusic.com'}/auth?token=${invitation.token}`;
     
-    console.log(`Invitation URL: ${inviteUrl}`);
+    // Send email using Resend
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    
+    const inviterName = inviterProfile?.full_name || inviterProfile?.email || 'A band member';
+    
+    const emailResponse = await resend.emails.send({
+      from: "Wovenmusic <onboarding@resend.dev>",
+      to: [email],
+      subject: `You're invited to join Wovenmusic as a ${role}!`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+              <span style="color: white; font-weight: bold; font-size: 24px;">W</span>
+            </div>
+            <h1 style="color: #1f2937; margin: 0;">Welcome to Wovenmusic!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+            <h2 style="color: #374151; margin-top: 0;">You've been invited!</h2>
+            <p style="color: #6b7280; margin-bottom: 16px;">
+              <strong>${inviterName}</strong> has invited you to join their band on Wovenmusic as a <strong>${role}</strong>.
+            </p>
+            <p style="color: #6b7280;">
+              Wovenmusic is a collaborative platform where you can sync, organize, and share music with your bandmates.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              Accept Invitation
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
+            <p>This invitation will expire in 7 days.</p>
+            <p>If you can't click the button above, copy and paste this URL into your browser:</p>
+            <p style="word-break: break-all; background: #f3f4f6; padding: 8px; border-radius: 4px; font-family: monospace;">
+              ${inviteUrl}
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log("Invitation email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify({ 
       success: true, 
       invitation,
       inviteUrl,
-      message: 'Invitation created successfully. Email sending will be available once RESEND_API_KEY is configured.'
+      emailResponse,
+      message: 'Invitation sent successfully!'
     }), {
       status: 200,
       headers: {
