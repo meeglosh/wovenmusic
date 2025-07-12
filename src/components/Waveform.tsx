@@ -57,10 +57,17 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     const primaryColor = computedStyle.getPropertyValue('--primary').trim();
     console.log('Primary color value:', primaryColor);
     
-    // Use the primary color with 50% opacity - try different approaches
-    const primaryColorWithOpacity = `hsl(${primaryColor} / 0.5)`;
-    console.log('Primary color with opacity:', primaryColorWithOpacity);
-    ctx.fillStyle = primaryColorWithOpacity;
+    // Convert display-p3 to a usable format or use fallback
+    let fillColor;
+    if (primaryColor.startsWith('color(display-p3')) {
+      // For display-p3 colors, use CSS color-mix for opacity
+      fillColor = `color-mix(in srgb, ${primaryColor} 50%, transparent)`;
+    } else {
+      // For HSL colors, use the slash syntax
+      fillColor = `hsl(${primaryColor} / 0.5)`;
+    }
+    console.log('Fill color:', fillColor);
+    ctx.fillStyle = fillColor;
     for (let i = 0; i < width; i++) {
       let min = 1.0;
       let max = -1.0;
@@ -79,14 +86,24 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     const progressX = progress * width;
     
     // Create a semi-transparent overlay for played portion
-    const playedColorWithOpacity = `hsl(${primaryColor} / 0.3)`;
-    console.log('Played color with opacity:', playedColorWithOpacity);
-    ctx.fillStyle = playedColorWithOpacity;
+    let playedColor;
+    if (primaryColor.startsWith('color(display-p3')) {
+      playedColor = `color-mix(in srgb, ${primaryColor} 30%, transparent)`;
+    } else {
+      playedColor = `hsl(${primaryColor} / 0.3)`;
+    }
+    console.log('Played color with opacity:', playedColor);
+    ctx.fillStyle = playedColor;
     ctx.fillRect(0, 0, progressX, height);
     ctx.globalCompositeOperation = 'source-atop';
     
     // Draw the waveform data in the progress area with the primary color but more transparent
-    const playedWaveformColor = `hsl(${primaryColor} / 0.6)`;
+    let playedWaveformColor;
+    if (primaryColor.startsWith('color(display-p3')) {
+      playedWaveformColor = `color-mix(in srgb, ${primaryColor} 60%, transparent)`;
+    } else {
+      playedWaveformColor = `hsl(${primaryColor} / 0.6)`;
+    }
     console.log('Played waveform color:', playedWaveformColor);
     ctx.fillStyle = playedWaveformColor;
     for (let i = 0; i < progressX; i++) {
