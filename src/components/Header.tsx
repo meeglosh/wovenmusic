@@ -1,11 +1,14 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Upload, Users, Settings, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import UploadModal from "./UploadModal";
 
 const Header = () => {
   const navigate = useNavigate();
+  const [showUploadModal, setShowUploadModal] = useState(false);
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-4">
@@ -31,7 +34,7 @@ const Header = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Upload
           </Button>
@@ -49,6 +52,8 @@ const Header = () => {
           </Button>
         </div>
       </div>
+      
+      <UploadModal open={showUploadModal} onOpenChange={setShowUploadModal} />
     </header>
   );
 };
