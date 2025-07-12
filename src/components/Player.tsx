@@ -53,11 +53,11 @@ const Player = ({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
-      <div className="flex items-center justify-between max-w-screen-xl mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm p-3 sm:p-4 shadow-lg">
+      <div className="flex flex-col sm:flex-row items-center justify-between max-w-screen-xl mx-auto space-y-3 sm:space-y-0">
         {/* Track Info */}
-        <div className="flex items-center space-x-4 flex-1">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
+        <div className="flex items-center space-x-3 sm:space-x-4 flex-1 w-full sm:w-auto">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
             <div className="flex space-x-px">
               {[...Array(5)].map((_, i) => (
                 <div
@@ -69,19 +69,21 @@ const Player = ({
               ))}
             </div>
           </div>
-          <div>
-            <p className="font-medium">{getFileName(track)}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm sm:text-base truncate">{getFileName(track)}</p>
           </div>
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col items-center space-y-2 flex-1">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col items-center space-y-2 flex-1 w-full sm:w-auto">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Hide shuffle/repeat on mobile to save space */}
             <Button 
               variant={isShuffleMode ? "default" : "ghost"} 
               size="sm"
               onClick={onShuffle}
               disabled={!onShuffle}
+              className="hidden sm:flex"
             >
               <Shuffle className="w-4 h-4" />
             </Button>
@@ -113,16 +115,18 @@ const Player = ({
             >
               <SkipForward className="w-4 h-4" />
             </Button>
+            {/* Hide repeat/fullscreen on mobile to save space */}
             <Button 
               variant={isRepeatMode ? "default" : "ghost"} 
               size="sm"
               onClick={onRepeat}
               disabled={!onRepeat}
+              className="hidden sm:flex"
             >
               <Repeat className="w-4 h-4" />
             </Button>
             {onFullScreen && (
-              <Button variant="ghost" size="sm" onClick={onFullScreen}>
+              <Button variant="ghost" size="sm" onClick={onFullScreen} className="hidden sm:flex">
                 <Maximize2 className="w-4 h-4" />
               </Button>
             )}
@@ -141,8 +145,8 @@ const Player = ({
           </div>
         </div>
 
-        {/* Volume */}
-        <div className="flex items-center space-x-2 flex-1 justify-end">
+        {/* Volume - Hidden on mobile */}
+        <div className="hidden sm:flex items-center space-x-2 flex-1 justify-end">
           <Volume2 className="w-4 h-4" />
           <Slider
             value={[volume * 100]}

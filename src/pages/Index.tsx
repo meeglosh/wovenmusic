@@ -95,17 +95,25 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <audio ref={audioRef} />
-      <Header />
+      <Header 
+        playlists={playlists}
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onPlaylistSelect={handleViewPlaylist}
+      />
       
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar 
-          playlists={playlists}
-          currentView={currentView}
-          onViewChange={setCurrentView}
-          onPlaylistSelect={handleViewPlaylist}
-        />
+        {/* Sidebar - Hidden on mobile, overlay on tablet */}
+        <div className="hidden md:block md:w-64 lg:w-80">
+          <Sidebar 
+            playlists={playlists}
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            onPlaylistSelect={handleViewPlaylist}
+          />
+        </div>
         
-        <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-24' : ''}`}>
+        <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
             <MusicLibrary 
               tracks={tracks} 

@@ -6,8 +6,17 @@ import { Search, Upload, Users, Settings, Shield, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import UploadModal from "./UploadModal";
+import MobileNav from "./MobileNav";
+import { Playlist } from "@/types/music";
 
-const Header = () => {
+interface HeaderProps {
+  playlists?: Playlist[];
+  currentView?: "library" | "playlist";
+  onViewChange?: (view: "library" | "playlist") => void;
+  onPlaylistSelect?: (playlist: Playlist) => void;
+}
+
+const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect }: HeaderProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -18,20 +27,31 @@ const Header = () => {
   };
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Mobile Navigation */}
+          {onViewChange && onPlaylistSelect && (
+            <MobileNav 
+              playlists={playlists}
+              currentView={currentView}
+              onViewChange={onViewChange}
+              onPlaylistSelect={onPlaylistSelect}
+            />
+          )}
+          
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">W</span>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs sm:text-sm">W</span>
             </div>
-            <h1 className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-lg sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
               Wovenmusic
             </h1>
           </div>
         </div>
 
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
+        {/* Search - Hidden on mobile, shown on larger screens */}
+        <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input 
               placeholder="Search tracks, playlists..." 
@@ -40,7 +60,8 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* Desktop Actions */}
+        <div className="hidden lg:flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -60,6 +81,22 @@ const Header = () => {
           <Button variant="outline" size="sm" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
+          </Button>
+        </div>
+
+        {/* Mobile Actions - Icon only buttons */}
+        <div className="flex lg:hidden items-center space-x-1">
+          <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)}>
+            <Upload className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/members")}>
+            <Users className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/privacy-settings")}>
+            <Shield className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <LogOut className="w-4 h-4" />
           </Button>
         </div>
       </div>

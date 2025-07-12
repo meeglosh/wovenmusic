@@ -153,15 +153,15 @@ const Auth = () => {
         <ArrowLeft className="h-5 w-5" />
       </Button>
       
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-sm sm:max-w-md">
         <CardHeader className="text-center">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-lg">W</span>
           </div>
-          <CardTitle className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+          <CardTitle className="text-xl sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
             Welcome to Wovenmusic
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             Converge in resonance. Sculpt time from tone. Scatter rhythm into the communal void.
           </CardDescription>
         </CardHeader>

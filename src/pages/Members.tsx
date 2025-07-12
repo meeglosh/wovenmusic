@@ -103,31 +103,33 @@ const Members = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
             <div>
-              <h1 className="text-2xl font-semibold">Band Members</h1>
-              <p className="text-sm text-muted-foreground">Manage your band's collaborators</p>
+              <h1 className="text-xl sm:text-2xl font-semibold">Band Members</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Manage your band's collaborators</p>
             </div>
           </div>
 
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => navigate("/profile-setup")}>
-              <Settings className="w-4 h-4 mr-2" />
-              Edit Profile
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => navigate("/profile-setup")}>
+              <Settings className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Edit Profile</span>
+              <span className="sm:hidden">Edit</span>
             </Button>
             <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
               <DialogTrigger asChild>
-                <Button>
-                  <Send className="w-4 h-4 mr-2" />
-                  Invite Member
+                <Button size="sm" className="text-xs sm:text-sm">
+                  <Send className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Invite Member</span>
+                  <span className="sm:hidden">Invite</span>
                 </Button>
               </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="mx-4 w-[calc(100vw-2rem)] sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Invite Band Member</DialogTitle>
                 <DialogDescription>
@@ -180,21 +182,21 @@ const Members = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
         {members.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
-              <UserCheck className="w-8 h-8 text-muted-foreground" />
+          <div className="text-center py-8 sm:py-12 px-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
+              <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium mb-2">No band members yet</h3>
-            <p className="text-muted-foreground mb-6">Invite your first band member to start collaborating</p>
-            <Button onClick={() => setShowInviteModal(true)}>
+            <h3 className="text-base sm:text-lg font-medium mb-2">No band members yet</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Invite your first band member to start collaborating</p>
+            <Button onClick={() => setShowInviteModal(true)} size="sm" className="text-sm">
               <Send className="w-4 h-4 mr-2" />
               Send First Invitation
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {members.map((member) => (
               <Card key={member.id} className="group hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">

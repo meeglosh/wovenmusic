@@ -63,16 +63,17 @@ export const MultiRoleSelector = ({ selectedRoles, onRolesChange }: MultiRoleSel
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label>Roles *</Label>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+        <Label className="text-sm sm:text-base">Roles *</Label>
         <Dialog open={showCreateRole} onOpenChange={setShowCreateRole}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Custom Role
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add Custom Role</span>
+              <span className="sm:hidden">Add Role</span>
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="mx-4 w-[calc(100vw-2rem)] sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Create Custom Role</DialogTitle>
               <DialogDescription>
@@ -104,7 +105,7 @@ export const MultiRoleSelector = ({ selectedRoles, onRolesChange }: MultiRoleSel
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {allRoles.map((role) => (
           <Button
             key={role}
@@ -112,7 +113,7 @@ export const MultiRoleSelector = ({ selectedRoles, onRolesChange }: MultiRoleSel
             variant={selectedRoles.includes(role) ? "default" : "outline"}
             size="sm"
             onClick={() => handleRoleToggle(role)}
-            className="justify-start"
+            className="justify-start text-xs sm:text-sm h-8 sm:h-9"
           >
             {role}
           </Button>

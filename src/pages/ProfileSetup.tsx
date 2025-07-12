@@ -185,15 +185,15 @@ const ProfileSetup = () => {
       )}
       
       <div className="flex items-center justify-center p-4 min-h-screen">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-sm sm:max-w-md">
           <CardHeader className="text-center">
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
               <span className="text-white font-bold text-lg">W</span>
             </div>
-            <CardTitle className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+            <CardTitle className="text-xl sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
               {isEditing ? "Edit Profile" : "Complete Your Profile"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm sm:text-base">
               {isEditing ? "Update your profile information" : "Tell us a bit about yourself to get started"}
             </CardDescription>
           </CardHeader>
