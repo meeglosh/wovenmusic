@@ -210,6 +210,7 @@ const AddTracksModal = ({
             variant="outline"
             onClick={handleClose}
             disabled={isLoading}
+            className="text-primary border-primary hover:bg-primary/35"
           >
             Cancel
           </Button>
