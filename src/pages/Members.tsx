@@ -25,7 +25,13 @@ const Members = () => {
   
   // Debug: Let's see what the data looks like
   console.log('All members:', allMembers);
-  console.log('Members with is_admin:', allMembers.map(m => ({ id: m.id, name: m.full_name, is_admin: m.is_admin })));
+  console.log('Members with is_admin:', allMembers.map(m => ({ 
+    id: m.id, 
+    name: m.full_name, 
+    is_admin: m.is_admin, 
+    is_admin_type: typeof m.is_admin,
+    is_admin_strict: m.is_admin === true
+  })));
   
   // Filter out admin members from the display
   const members = allMembers.filter(member => member.is_admin !== true);
