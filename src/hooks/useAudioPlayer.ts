@@ -81,13 +81,27 @@ export const useAudioPlayer = () => {
         
         let audioUrl = currentTrack.fileUrl;
         
-        // Check if this is already a processed URL (Supabase Storage or external URL)
-        if (audioUrl.startsWith('http')) {
-          console.log('Using direct URL (already transcoded or external):', audioUrl);
-          // No need to process, use directly
-        } 
-        // Handle Dropbox paths that need temporary link generation
-        else if (audioUrl.includes('dropboxusercontent.com') || audioUrl.startsWith('/')) {
+        // Check if this is a Dropbox temporary URL that might have expired
+        if (audioUrl.includes('dropboxusercontent.com')) {
+          console.log('Detected Dropbox temporary URL, checking if it needs refresh...');
+          
+          // First check if we have a stored dropbox_path for this track
+          if (currentTrack.dropbox_path) {
+            console.log('Using stored dropbox_path to get fresh URL:', currentTrack.dropbox_path);
+            try {
+              audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
+              console.log('SUCCESS! Got fresh temporary URL from stored path');
+            } catch (error) {
+              console.error('Stored path failed:', error.message);
+              throw new Error(`Cannot access stored file path: ${currentTrack.dropbox_path}`);
+            }
+          } else {
+            console.log('No stored dropbox_path available, will try fallback methods');
+            throw new Error('No stored Dropbox path available for this track');
+          }
+        }
+        // Handle direct paths that need temporary link generation
+        else if (audioUrl.startsWith('/')) {
           console.log('Getting fresh Dropbox temporary link...');
           
           // First check if we have a stored dropbox_path for this track
