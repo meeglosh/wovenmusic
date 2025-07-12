@@ -27,12 +27,16 @@ export const useTheme = () => {
       try {
         const savedTheme = localStorage.getItem('wovenmusic-theme') as Theme | null;
         
+        console.log('Loading theme from localStorage:', savedTheme);
+        
         // Validate that the saved theme exists in our theme list
         if (savedTheme && THEMES.some(t => t.value === savedTheme)) {
+          console.log('Setting valid saved theme:', savedTheme);
           setTheme(savedTheme);
           // Apply theme immediately to prevent flash
           applyThemeToBody(savedTheme);
         } else {
+          console.log('No valid saved theme, setting default');
           // Set default theme if no valid saved theme
           setTheme('midnight-glow');
           applyThemeToBody('midnight-glow');
