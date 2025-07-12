@@ -180,10 +180,14 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
 
   const handleDeleteTrack = async (track: Track) => {
     try {
-      await deleteTrackMutation.mutateAsync(track.id);
+      const result = await deleteTrackMutation.mutateAsync(track.id);
+      const isUploadedFile = result.hadFileUrl;
+      
       toast({
         title: "Track removed",
-        description: `"${track.title}" has been removed from your library. The file remains in your Dropbox.`,
+        description: isUploadedFile 
+          ? `"${track.title}" has been permanently deleted.`
+          : `"${track.title}" has been removed from your library. The file remains in your Dropbox.`,
       });
     } catch (error) {
       toast({
@@ -197,11 +201,22 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
   const handleBulkDelete = async () => {
     const selectedIds = Array.from(selectedTrackIds);
     try {
-      await bulkDeleteMutation.mutateAsync(selectedIds);
+      const result = await bulkDeleteMutation.mutateAsync(selectedIds);
       setSelectedTrackIds(new Set());
+      
+      // Create appropriate message based on what was deleted
+      let description = "";
+      if (result.uploadedCount > 0 && result.dropboxCount > 0) {
+        description = `${result.uploadedCount} uploaded file(s) permanently deleted, ${result.dropboxCount} Dropbox file(s) removed from library.`;
+      } else if (result.uploadedCount > 0) {
+        description = `${result.uploadedCount} uploaded file(s) permanently deleted.`;
+      } else {
+        description = `${result.dropboxCount} file(s) removed from library. The files remain in your Dropbox.`;
+      }
+      
       toast({
         title: "Tracks removed",
-        description: `${selectedIds.length} tracks have been removed from your library. The files remain in your Dropbox.`,
+        description,
       });
     } catch (error) {
       toast({
@@ -243,10 +258,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''} from your library? 
-                      The files will remain in your Dropbox.
-                    </AlertDialogDescription>
+                     <AlertDialogDescription>
+                       Are you sure you want to remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''} from your library?
+                       Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
+                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -494,8 +509,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove "{getFileName(track)}" from your library? 
-                              The file will remain in your Dropbox.
+                              Are you sure you want to remove "{getFileName(track)}" from your library?
+                              {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
