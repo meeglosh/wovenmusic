@@ -150,8 +150,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
   const uploadFile = async (uploadFile: UploadFile, index: number) => {
     const { file } = uploadFile;
-    const fileExtension = '.' + file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+    const fileName = file.name;
     
     try {
       // Update status to uploading
