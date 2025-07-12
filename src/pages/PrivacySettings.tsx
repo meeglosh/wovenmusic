@@ -86,7 +86,7 @@ export default function PrivacySettings() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-primary">Privacy Settings</h1>
-          <p className="text-muted-foreground">Manage the privacy of your tracks and playlists</p>
+          <p className="text-muted-foreground">Seal the vault or crack it to the stars.</p>
         </div>
       </div>
 
