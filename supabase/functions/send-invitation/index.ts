@@ -70,10 +70,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email using Resend
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      console.error('RESEND_API_KEY not found in environment');
+      throw new Error('Email service not configured');
+    }
+    
     const inviterName = inviterProfile?.full_name || inviterProfile?.email || 'A band member';
     
+    console.log('Attempting to send email...');
+    
     const emailResponse = await resend.emails.send({
-      from: "Wovenmusic <onboarding@resend.dev>",
+      from: "Wovenmusic <noreply@resend.dev>",
       to: [email],
       subject: `You're invited to join Wovenmusic as a ${role}!`,
       html: `
@@ -111,6 +118,11 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
       `,
     });
+
+    if (emailResponse.error) {
+      console.error('Resend API error:', emailResponse.error);
+      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+    }
 
     console.log("Invitation email sent successfully:", emailResponse);
 
