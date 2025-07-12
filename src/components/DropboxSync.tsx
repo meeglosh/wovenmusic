@@ -889,10 +889,6 @@ const DropboxSync = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowDetailedDebug(!showDetailedDebug)}>
-            <Info className="w-4 h-4 mr-2" />
-            Debug
-          </Button>
           <Button variant="outline" size="sm" onClick={handleDisconnect}>
             Disconnect
           </Button>
