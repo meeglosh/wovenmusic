@@ -147,7 +147,7 @@ const Auth = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-4 left-4 z-10 text-primary hover:text-primary/80"
+        className="absolute top-4 left-4 z-10"
         onClick={() => navigate('/')}
       >
         <ArrowLeft className="h-5 w-5" />
@@ -164,13 +164,6 @@ const Auth = () => {
           <CardDescription className="text-sm sm:text-base">
             Converge in resonance. Sculpt time from tone. Scatter rhythm into the communal void.
           </CardDescription>
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg text-center">
-            <p className="text-xs text-muted-foreground">
-              <strong>New user?</strong> Use the Sign Up tab to create your account.<br />
-              <strong>Returning user?</strong> Use the Sign In tab with your existing credentials.<br />
-              <strong>Invited to join?</strong> Your invitation link will show a special form to get started.
-            </p>
-          </div>
         </CardHeader>
         
         <CardContent>
