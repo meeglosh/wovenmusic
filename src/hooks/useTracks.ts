@@ -23,7 +23,8 @@ export const useTracks = () => {
         addedAt: new Date(track.created_at),
         source_folder: track.source_folder,
         dropbox_path: track.dropbox_path,
-        is_public: track.is_public
+        is_public: track.is_public,
+        play_count: track.play_count || 0
       })) as Track[];
     }
   });
@@ -60,7 +61,7 @@ export const useUpdateTrack = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string; is_public: boolean }> }) => {
+    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string; is_public: boolean; play_count: number }> }) => {
       const { data, error } = await supabase
         .from("tracks")
         .update(updates)
@@ -70,6 +71,37 @@ export const useUpdateTrack = () => {
       
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+    }
+  });
+};
+
+export const useIncrementPlayCount = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (trackId: string) => {
+      const { data, error } = await supabase
+        .from("tracks")
+        .select("play_count")
+        .eq("id", trackId)
+        .single();
+      
+      if (error) throw error;
+      
+      const newPlayCount = (data.play_count || 0) + 1;
+      
+      const { data: updatedData, error: updateError } = await supabase
+        .from("tracks")
+        .update({ play_count: newPlayCount })
+        .eq("id", trackId)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      return updatedData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tracks"] });

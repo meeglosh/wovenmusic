@@ -295,6 +295,7 @@ export type Database = {
           file_url: string | null
           id: string
           is_public: boolean
+          play_count: number
           source_folder: string | null
           title: string
           updated_at: string
@@ -308,6 +309,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_public?: boolean
+          play_count?: number
           source_folder?: string | null
           title: string
           updated_at?: string
@@ -321,6 +323,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_public?: boolean
+          play_count?: number
           source_folder?: string | null
           title?: string
           updated_at?: string

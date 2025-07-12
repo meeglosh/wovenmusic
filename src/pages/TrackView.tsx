@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useTracks, useUpdateTrack } from "@/hooks/useTracks";
+import { useTracks, useUpdateTrack, useIncrementPlayCount } from "@/hooks/useTracks";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,7 @@ const TrackView = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const updateTrackMutation = useUpdateTrack();
+  const incrementPlayCountMutation = useIncrementPlayCount();
   
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentTime, setCommentTime] = useState(0);
@@ -43,6 +44,18 @@ const TrackView = () => {
       audioPlayer.playTrack(track);
     }
   }, [track, audioPlayer]);
+
+  // Track play count - increment when track starts playing
+  useEffect(() => {
+    if (audioPlayer.isPlaying && track && audioPlayer.currentTrack?.id === track.id) {
+      // Only increment once per track load
+      const hasTrackedPlay = sessionStorage.getItem(`tracked-${track.id}`);
+      if (!hasTrackedPlay) {
+        incrementPlayCountMutation.mutate(track.id);
+        sessionStorage.setItem(`tracked-${track.id}`, 'true');
+      }
+    }
+  }, [audioPlayer.isPlaying, track, audioPlayer.currentTrack, incrementPlayCountMutation]);
 
   const handleAddComment = (timestampSeconds: number) => {
     if (!user) {
@@ -503,6 +516,10 @@ const TrackView = () => {
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4">Statistics</h3>
                   <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Plays</span>
+                      <span className="font-medium">{track.play_count || 0}</span>
+                    </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Comments</span>
                       <span className="font-medium">{comments.length}</span>
