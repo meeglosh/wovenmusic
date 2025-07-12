@@ -215,7 +215,7 @@ const BulkAddToPlaylistModal = ({
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="font-medium">{playlist.name}</h3>
+                              <h3 className="font-medium text-primary">{playlist.name}</h3>
                               <p className="text-sm text-muted-foreground">
                                 {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
                               </p>

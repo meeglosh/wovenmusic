@@ -378,7 +378,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 <Box className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h3 className="font-medium">Dropbox Sync</h3>
+                <h3 className="font-medium text-primary">Dropbox Sync</h3>
                 <p className="text-sm text-muted-foreground">
                   {isDropboxSyncExpanded ? 'Click to collapse' : 'Click to manage your Dropbox connection'}
                 </p>
@@ -411,12 +411,12 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             </div>
             {searchTerm ? (
               <>
-                <h3 className="text-xl font-semibold mb-2">No tracks found</h3>
+                <h3 className="text-xl font-semibold mb-2 text-primary">No tracks found</h3>
                 <p className="text-muted-foreground mb-4">No tracks match your search for "{searchTerm}".</p>
               </>
             ) : (
               <>
-                <h3 className="text-xl font-semibold mb-2">No tracks yet</h3>
+                <h3 className="text-xl font-semibold mb-2 text-primary">No tracks yet</h3>
                 <p className="text-muted-foreground mb-4">Connect your Dropbox to sync your music library automatically.</p>
               </>
             )}

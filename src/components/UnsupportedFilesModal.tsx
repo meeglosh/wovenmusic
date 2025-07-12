@@ -49,7 +49,7 @@ export const UnsupportedFilesModal = ({
             )}
             
             <div>
-              <h4 className="font-medium mb-2">Supported formats:</h4>
+              <h4 className="font-medium mb-2 text-primary">Supported formats:</h4>
               <div className="flex flex-wrap gap-1">
                 {['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg'].map(format => (
                   <Badge key={format} variant="secondary" className="text-xs">
@@ -70,7 +70,7 @@ export const UnsupportedFilesModal = ({
             
             {unsupportedFiles.length <= 5 && (
               <div>
-                <h4 className="font-medium mb-2">Unsupported files:</h4>
+                <h4 className="font-medium mb-2 text-primary">Unsupported files:</h4>
                 <div className="max-h-32 overflow-y-auto space-y-1">
                   {unsupportedFiles.map((filename, index) => (
                     <div key={index} className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">

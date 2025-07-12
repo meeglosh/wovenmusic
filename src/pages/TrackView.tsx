@@ -195,7 +195,7 @@ const TrackView = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Track not found</h1>
+          <h1 className="text-2xl font-bold mb-2 text-primary">Track not found</h1>
           <p className="text-muted-foreground mb-4">The track you're looking for doesn't exist.</p>
           <Button onClick={() => navigate('/')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -325,7 +325,7 @@ const TrackView = () => {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                       <MessageSquare className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <h3 className="font-semibold mb-2">Start the conversation</h3>
+                    <h3 className="font-semibold mb-2 text-primary">Start the conversation</h3>
                     <p className="text-muted-foreground mb-4">
                       {user 
                         ? "Be the first to comment on this track. Shift+click on the waveform to add a comment at any moment!" 
@@ -446,7 +446,7 @@ const TrackView = () => {
               {/* Privacy Settings */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
                     {track.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     Privacy Settings
                   </h3>
@@ -490,7 +490,7 @@ const TrackView = () => {
                   <CardContent className="p-6">
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-bold text-lg">{track.title}</h3>
+                        <h3 className="font-bold text-lg text-primary">{track.title}</h3>
                         <p className="text-muted-foreground">{track.artist}</p>
                       </div>
                       <div className="pt-4 border-t">
@@ -507,7 +507,7 @@ const TrackView = () => {
               {/* Statistics */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4">Statistics</h3>
+                  <h3 className="font-semibold mb-4 text-primary">Statistics</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Plays</span>

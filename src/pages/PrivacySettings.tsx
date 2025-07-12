@@ -84,7 +84,7 @@ export default function PrivacySettings() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Privacy Settings</h1>
+          <h1 className="text-3xl font-bold text-primary">Privacy Settings</h1>
           <p className="text-muted-foreground">Manage the privacy of your tracks and playlists</p>
         </div>
       </div>

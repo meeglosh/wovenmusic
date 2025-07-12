@@ -321,7 +321,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
             {uploadFiles.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Files to Upload ({uploadFiles.length})</h3>
+                  <h3 className="font-medium text-primary">Files to Upload ({uploadFiles.length})</h3>
                   {!isUploading && uploadFiles.some(f => f.status === 'pending') && (
                     <Button onClick={startUpload} size="sm">
                       Start Upload

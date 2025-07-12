@@ -110,7 +110,7 @@ const Members = () => {
               <span className="hidden sm:inline">Back</span>
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-semibold">Band Members</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-primary">Band Members</h1>
               <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Manage your band's collaborators</p>
             </div>
           </div>
@@ -188,7 +188,7 @@ const Members = () => {
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-base sm:text-lg font-medium mb-2">No band members yet</h3>
+            <h3 className="text-base sm:text-lg font-medium mb-2 text-primary">No band members yet</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Invite your first band member to start collaborating</p>
             <Button onClick={() => setShowInviteModal(true)} size="sm" className="text-sm">
               <Send className="w-4 h-4 mr-2" />

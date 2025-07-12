@@ -81,7 +81,7 @@ const FullScreenPlayer = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">{track.title}</h1>
+            <h1 className="text-2xl font-bold text-primary">{track.title}</h1>
             <p className="text-muted-foreground">{track.artist}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -158,7 +158,7 @@ const FullScreenPlayer = ({
 
           {/* Comments Sidebar */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Comments</h2>
+            <h2 className="text-lg font-semibold text-primary">Comments</h2>
             
             {isLoading ? (
               <div className="text-sm text-muted-foreground">Loading comments...</div>

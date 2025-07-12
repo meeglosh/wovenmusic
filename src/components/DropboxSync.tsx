@@ -762,7 +762,7 @@ const DropboxSync = () => {
         <div className="w-20 h-20 border-2 border-primary rounded-lg flex items-center justify-center mx-auto mb-4">
           <DropboxIcon className="text-primary" size={48} />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Connect to Dropbox</h3>
+        <h3 className="text-lg font-semibold mb-2 text-primary">Connect to Dropbox</h3>
         <p className="text-muted-foreground mb-4">
           Sync your music library with a specific Dropbox folder to automatically import tracks.
         </p>
@@ -871,7 +871,7 @@ const DropboxSync = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <DropboxIcon className="text-primary" size={20} />
-          <h3 className="text-lg font-semibold">Dropbox Sync</h3>
+          <h3 className="text-lg font-semibold text-primary">Dropbox Sync</h3>
           <Badge variant="secondary">Connected</Badge>
           {selectedFolder && (
             <Badge variant="outline" className="max-w-xs truncate">
@@ -967,7 +967,7 @@ const DropboxSync = () => {
       {/* Account Info Display */}
       {accountInfo && showDetailedDebug && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-sm font-medium mb-2">Account Information:</h4>
+          <h4 className="text-sm font-medium mb-2 text-primary">Account Information:</h4>
           <div className="text-xs text-blue-800 space-y-1">
             <p><strong>Name:</strong> {accountInfo.name?.display_name || 'Unknown'}</p>
             <p><strong>Email:</strong> {accountInfo.email || 'Unknown'}</p>
@@ -1003,7 +1003,7 @@ const DropboxSync = () => {
 
       {debugInfo && showDetailedDebug && (
         <div className="mb-4 p-3 bg-muted rounded-lg">
-          <h4 className="text-sm font-medium mb-2">Enhanced Debug Information:</h4>
+          <h4 className="text-sm font-medium mb-2 text-primary">Enhanced Debug Information:</h4>
           <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">{debugInfo}</pre>
         </div>
       )}
@@ -1018,7 +1018,7 @@ const DropboxSync = () => {
           ) : viewMode === "folder-select" ? (
             <div className="p-2">
               <div className="mb-4">
-                <h4 className="text-sm font-medium mb-2">Choose a folder to sync:</h4>
+                <h4 className="text-sm font-medium mb-2 text-primary">Choose a folder to sync:</h4>
                 {currentPath && (
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
                     <span>Current path: /{currentPath.replace(/^\//, '')}</span>
