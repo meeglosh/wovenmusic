@@ -156,14 +156,14 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
               <div className="space-y-2">
                 {playlist.sharedWith.map((sharedEmail) => (
                   <div key={sharedEmail} className="flex items-center justify-between p-2 border rounded">
-                    <span className="text-sm">{sharedEmail}</span>
+                    <span className="text-sm text-primary">{sharedEmail}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveShare(sharedEmail)}
                       disabled={removeShareMutation.isPending}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 ))}
