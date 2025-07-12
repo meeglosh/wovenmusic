@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Attempting to send email...');
     
     const emailResponse = await resend.emails.send({
-      from: "Wovenmusic <noreply@resend.dev>",
+      from: "Wovenmusic <onboarding@resend.dev>",
       to: [email],
       subject: `You're invited to join Wovenmusic as a ${role}!`,
       html: `
