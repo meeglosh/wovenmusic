@@ -869,7 +869,7 @@ const DropboxSync = () => {
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <Cloud className="w-5 h-5 text-blue-600" />
+          <Cloud className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">Dropbox Sync</h3>
           <Badge variant="secondary">Connected</Badge>
           {selectedFolder && (
