@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -89,22 +89,30 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             <Upload className="w-4 h-4 mr-2" />
             Upload
           </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("/members")}>
-            <Users className="w-4 h-4 mr-2" />
-            Members
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("/privacy-settings")}>
-            <Shield className="w-4 h-4 mr-2" />
-            Privacy
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+                <ChevronDown className="w-3 h-3 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40 bg-card border-2 border-border shadow-lg backdrop-blur-none" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+              <DropdownMenuItem onClick={() => navigate("/members")}>
+                <Users className="w-4 h-4 mr-2" />
+                Members
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/privacy-settings")}>
+                <Shield className="w-4 h-4 mr-2" />
+                Privacy
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Mobile Actions - Icon only buttons */}
@@ -130,15 +138,28 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
           <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/members")}>
-            <Users className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/privacy-settings")}>
-            <Shield className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Settings className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 bg-card border-2 border-border shadow-lg backdrop-blur-none" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+              <DropdownMenuItem onClick={() => navigate("/members")}>
+                <Users className="w-4 h-4 mr-2" />
+                <span className="text-sm">Members</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/privacy-settings")}>
+                <Shield className="w-4 h-4 mr-2" />
+                <span className="text-sm">Privacy</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                <span className="text-sm">Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       
