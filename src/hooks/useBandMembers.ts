@@ -43,23 +43,17 @@ export const useBandMembers = () => {
 
   const inviteUser = useMutation({
     mutationFn: async (invitation: { email: string; role: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from("invitations")
-        .insert({
-          ...invitation,
-          invited_by: user.id
-        })
-        .select()
-        .single();
+      // Call the edge function to create invitation and send email
+      const { data, error } = await supabase.functions.invoke('send-invitation', {
+        body: invitation
+      });
       
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["band-members"] });
     }
   });
 
