@@ -13,9 +13,10 @@ interface SidebarProps {
   onViewChange: (view: "library" | "playlist") => void;
   onPlaylistSelect: (playlist: Playlist) => void;
   libraryTitle?: string;
+  selectedPlaylist?: Playlist | null;
 }
 
-const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace" }: SidebarProps) => {
+const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist }: SidebarProps) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   return (
     <aside className="w-64 bg-card/30 border-r border-border flex flex-col">
@@ -23,7 +24,10 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
         <nav className="space-y-2">
           <Button
             variant={currentView === "library" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className={cn(
+              "w-full justify-start",
+              currentView === "library" && "bg-primary/50"
+            )}
             onClick={() => onViewChange("library")}
           >
             <Library className="w-4 h-4 mr-3 text-primary" />
@@ -56,14 +60,17 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                 <p className="text-xs text-muted-foreground mt-1">Create your first playlist</p>
               </div>
             ) : (
-              playlists.map((playlist) => (
-                <Button
-                  key={playlist.id}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start h-auto p-3 text-left",
-                    "hover:bg-primary/50 transition-colors"
-                  )}
+              playlists.map((playlist) => {
+                const isSelected = currentView === "playlist" && selectedPlaylist?.id === playlist.id;
+                return (
+                  <Button
+                    key={playlist.id}
+                    variant={isSelected ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start h-auto p-3 text-left",
+                      "hover:bg-primary/50 transition-colors",
+                      isSelected && "bg-primary/50"
+                    )}
                   onClick={() => onPlaylistSelect(playlist)}
                 >
                   <div className="flex items-center space-x-3">
@@ -87,7 +94,8 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                     </div>
                   </div>
                 </Button>
-              ))
+                );
+              })
             )}
           </div>
         </ScrollArea>

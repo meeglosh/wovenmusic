@@ -121,7 +121,10 @@ const Index = () => {
       <Header 
         playlists={filteredPlaylists}
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={(view) => {
+          setCurrentView(view);
+          if (view === "library") setSelectedPlaylist(null);
+        }}
         onPlaylistSelect={handleViewPlaylist}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -133,9 +136,13 @@ const Index = () => {
           <Sidebar 
             playlists={filteredPlaylists}
             currentView={currentView}
-            onViewChange={setCurrentView}
+            onViewChange={(view) => {
+              setCurrentView(view);
+              if (view === "library") setSelectedPlaylist(null);
+            }}
             onPlaylistSelect={handleViewPlaylist}
             libraryTitle={currentLibraryTitle}
+            selectedPlaylist={selectedPlaylist}
           />
         </div>
         
@@ -153,7 +160,10 @@ const Index = () => {
             <PlaylistView 
               playlistId={selectedPlaylist?.id || ""}
               onPlayTrack={handlePlayTrack}
-              onBack={() => setCurrentView("library")}
+              onBack={() => {
+                setCurrentView("library");
+                setSelectedPlaylist(null);
+              }}
             />
           )}
         </main>
