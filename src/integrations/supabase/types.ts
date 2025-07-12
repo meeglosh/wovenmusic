@@ -302,7 +302,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_any_band_members: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_band_member_safe: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
