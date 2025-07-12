@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
     const shareUrl = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app") || ""}/?playlist=${playlist.share_token}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Music App <onboarding@resend.dev>",
+      from: "Wovenmusic <onboarding@resend.dev>",
       to: [email],
       subject: `${inviterName || "Someone"} shared a playlist with you: ${playlistName}`,
       html: `
