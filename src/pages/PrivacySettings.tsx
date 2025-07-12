@@ -186,7 +186,7 @@ export default function PrivacySettings() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`track-${track.id}`} className="text-sm">
-                        Public
+                        {track.is_public ? "Public" : "Private"}
                       </Label>
                       <Switch
                         id={`track-${track.id}`}
@@ -240,7 +240,7 @@ export default function PrivacySettings() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`playlist-${playlist.id}`} className="text-sm">
-                        Public
+                        {playlist.isPublic ? "Public" : "Private"}
                       </Label>
                       <Switch
                         id={`playlist-${playlist.id}`}
