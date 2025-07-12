@@ -290,7 +290,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload Audio Files</DialogTitle>
+            <DialogTitle className="text-primary">Upload Audio Files</DialogTitle>
             <DialogDescription>
               Upload audio files to your library. Supports MP3, WAV, M4A, AAC, OGG, and FLAC formats.
             </DialogDescription>
@@ -363,7 +363,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
             {/* Action Buttons */}
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setUploadFiles([])}>
-                Clear All
+                <span className="text-primary">Clear All</span>
               </Button>
               <div className="space-x-2">
                 {allComplete && hasSuccessful && (
@@ -372,7 +372,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                   </Button>
                 )}
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  {allComplete ? 'Close' : 'Cancel'}
+                  <span className="text-primary">{allComplete ? 'Close' : 'Cancel'}</span>
                 </Button>
               </div>
             </div>
