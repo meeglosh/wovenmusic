@@ -19,6 +19,8 @@
     --color-12: 64 94% 78%;
     --color-13: 30 11% 4%;
     --color-14: 60 9% 98%;
+    --color-15: 252 66% 20%;
+    --color-16: 58 92% 52%;
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -371,6 +373,52 @@
     --border: var(--color-14);
     --input: var(--color-13);
     --ring: var(--color-14);
+  }
+
+  /* Psychedelic Membrane - dark indigo text on electric yellow background */
+  .psychedelic-membrane {
+    color: var(--color-15);
+    background-color: var(--color-16);
+    --background: var(--color-16);
+    --foreground: var(--color-15);
+    --card: var(--color-16);
+    --card-foreground: var(--color-15);
+    --popover: var(--color-16);
+    --popover-foreground: var(--color-15);
+    --primary: var(--color-15);
+    --primary-foreground: var(--color-16);
+    --secondary: var(--color-16);
+    --secondary-foreground: var(--color-15);
+    --muted: var(--color-16);
+    --muted-foreground: var(--color-15);
+    --accent: var(--color-15);
+    --accent-foreground: var(--color-16);
+    --border: var(--color-15);
+    --input: var(--color-16);
+    --ring: var(--color-15);
+  }
+
+  /* Voltaic Sublimation - electric yellow text on dark indigo background */
+  .voltaic-sublimation {
+    color: var(--color-16);
+    background-color: var(--color-15);
+    --background: var(--color-15);
+    --foreground: var(--color-16);
+    --card: var(--color-15);
+    --card-foreground: var(--color-16);
+    --popover: var(--color-15);
+    --popover-foreground: var(--color-16);
+    --primary: var(--color-16);
+    --primary-foreground: var(--color-15);
+    --secondary: var(--color-15);
+    --secondary-foreground: var(--color-16);
+    --muted: var(--color-15);
+    --muted-foreground: var(--color-16);
+    --accent: var(--color-16);
+    --accent-foreground: var(--color-15);
+    --border: var(--color-16);
+    --input: var(--color-15);
+    --ring: var(--color-16);
   }
 
   * {
