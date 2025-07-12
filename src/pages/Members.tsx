@@ -219,11 +219,6 @@ const Members = () => {
                             {role}
                           </Badge>
                         ))}
-                        {member.is_admin && (
-                          <Badge variant="default" className="bg-red-500 text-white pointer-events-none">
-                            Admin
-                          </Badge>
-                        )}
                       </div>
                     </div>
                   </div>
