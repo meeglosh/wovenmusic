@@ -560,7 +560,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </div>
           <h3 className="text-xl font-semibold mb-2 text-primary">This playlist is empty</h3>
           <p className="text-muted-foreground mb-4">Seed the silence with fragments of sound.</p>
-          <Button variant="outline" onClick={() => setShowAddTracksModal(true)}>
+          <Button variant="outline" className="border-2" onClick={() => setShowAddTracksModal(true)}>
             <Plus className="w-4 h-4 mr-2 text-primary" />
             <span className="text-primary">Add Tracks</span>
           </Button>
