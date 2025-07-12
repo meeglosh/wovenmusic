@@ -23,11 +23,13 @@ const Members = () => {
   
   const isAdmin = currentUserProfile?.is_admin || false;
   
-  // Debug: Log all member data including admin status
-  console.log('Raw allMembers data:', JSON.stringify(allMembers, null, 2));
   
-  // Filter out admin members from the display
-  const members = allMembers;
+  // Filter out admin members and users with Admin role from the display
+  const members = allMembers.filter(member => 
+    !member.is_admin && 
+    member.role !== "Admin" && 
+    !member.roles?.includes("Admin")
+  );
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
