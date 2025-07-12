@@ -68,7 +68,32 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
     { title: "Glyph Dust", subtitle: "Unspoken marks from invisible tongues" },
     { title: "The Neverstill", subtitle: "Where memory flickers but won't settle" },
     { title: "Memory Wake", subtitle: "Trailing debris from departed certainties" },
-    { title: "Cradlebank", subtitle: "Where orphaned notions come to rest" }
+    { title: "Cradlebank", subtitle: "Where orphaned notions come to rest" },
+    { title: "Thoughtloom", subtitle: "Where forgotten threads weave themselves again" },
+    { title: "The Quiet Fold", subtitle: "A pocket of nearly-said things" },
+    { title: "Glintstack", subtitle: "Collected flashes from the mind's recess" },
+    { title: "Mist Ledger", subtitle: "Soft recordings of dissolved certainties" },
+    { title: "The Still Circuit", subtitle: "Where paused ideas hum quietly" },
+    { title: "Obscurial", subtitle: "The resting place of half-born patterns" },
+    { title: "The Hushed Array", subtitle: "Arranged silences waiting for meaning" },
+    { title: "Fogcoil", subtitle: "Memories that loop and never resolve" },
+    { title: "Wispbank", subtitle: "Where notions exhale and wait" },
+    { title: "The Sleep Spindle", subtitle: "Twisting fragments of once-urgent dreams" },
+    { title: "Quasireel", subtitle: "Footage from timelines that never stabilized" },
+    { title: "The Murkstack", subtitle: "A layered archive of ambient intentions" },
+    { title: "Chronodrift", subtitle: "Collected pieces of time that never fit" },
+    { title: "The Shiverhold", subtitle: "Where impulses tremble into form" },
+    { title: "Glowchamber", subtitle: "Dim pulses of long-dormant thoughts" },
+    { title: "Echoveil", subtitle: "A sheer curtain of recurring murmurs" },
+    { title: "Tracewell", subtitle: "A well that fills only with reflections" },
+    { title: "Reverie Sink", subtitle: "Where ideas disappear gently, on purpose" },
+    { title: "Null Cache", subtitle: "Stored meaning without memory" },
+    { title: "The Lattice Fade", subtitle: "Where connections dissolve into silence" },
+    { title: "Subthought Vault", subtitle: "Layers beneath the first idea" },
+    { title: "The Pale Relay", subtitle: "A signal endlessly handed to no one" },
+    { title: "Dust Memory", subtitle: "Imprints that resisted being known" },
+    { title: "Neural Flume", subtitle: "Where cognition spirals, unclaimed" },
+    { title: "The Untether", subtitle: "Collected floatings never pinned down" }
   ], []);
 
   const randomLibraryTitle = useMemo(() => {
