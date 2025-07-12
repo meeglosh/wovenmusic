@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronDown } from "lucide-react";
+import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { useAddTrack } from "@/hooks/useTracks";
@@ -759,7 +760,7 @@ const DropboxSync = () => {
     return (
       <Card className="p-6 text-center">
         <div className="w-20 h-20 border-2 border-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-          <Cloud className="w-12 h-12 text-primary" />
+          <DropboxIcon className="text-primary" size={48} />
         </div>
         <h3 className="text-lg font-semibold mb-2">Connect to Dropbox</h3>
         <p className="text-muted-foreground mb-4">
