@@ -142,10 +142,9 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={handleClose}
               disabled={isLoading}
-              className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
             >
               Cancel
             </Button>

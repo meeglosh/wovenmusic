@@ -262,7 +262,7 @@ const BulkAddToPlaylistModal = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             onClick={handleClose}
             disabled={isLoading}
           >

@@ -94,7 +94,7 @@ export const MultiRoleSelector = ({ selectedRoles, onRolesChange }: MultiRoleSel
             </div>
             
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateRole(false)}>
+              <Button variant="default" onClick={() => setShowCreateRole(false)}>
                 Cancel
               </Button>
               <Button onClick={handleCreateRole} disabled={createRole.isPending}>

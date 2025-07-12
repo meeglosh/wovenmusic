@@ -207,10 +207,9 @@ const AddTracksModal = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             onClick={handleClose}
             disabled={isLoading}
-            className="text-primary border-primary hover:bg-primary/35"
           >
             Cancel
           </Button>
