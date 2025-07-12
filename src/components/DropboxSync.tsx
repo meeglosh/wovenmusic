@@ -793,7 +793,7 @@ const DropboxSync = () => {
 
         <div className="space-y-3">
           <Button onClick={handleConnect} disabled={isConnecting} className="w-full max-w-[343px]">
-            <Cloud className="w-4 h-4 mr-2" />
+            <DropboxIcon className="mr-2" size={16} />
             {isConnecting ? 'Connecting...' : 'Connect Dropbox'}
           </Button>
 
@@ -870,7 +870,7 @@ const DropboxSync = () => {
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <Cloud className="w-5 h-5 text-primary" />
+          <DropboxIcon className="text-primary" size={20} />
           <h3 className="text-lg font-semibold">Dropbox Sync</h3>
           <Badge variant="secondary">Connected</Badge>
           {selectedFolder && (
