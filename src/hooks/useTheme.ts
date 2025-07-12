@@ -3,14 +3,14 @@ import { useState, useEffect } from 'react';
 export type Theme = 'neon-garden' | 'midnight-glow' | 'royal-parchment' | 'violet-dreams';
 
 export const THEMES = [
-  { value: 'neon-garden', label: 'Xerophyte Resonance', description: 'Electric frequencies on luminous void' },
   { value: 'midnight-glow', label: 'Abyssal Phosphene', description: 'Bioluminescent signals in deep current' },
+  { value: 'neon-garden', label: 'Xerophyte Resonance', description: 'Electric frequencies on luminous void' },
   { value: 'royal-parchment', label: 'Vellum Transcendence', description: 'Ancient wisdom on ethereal substrate' },
   { value: 'violet-dreams', label: 'Oneiric Spectrum', description: 'Dream particles in chromatic suspension' },
 ] as const;
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState<Theme>('neon-garden');
+  const [theme, setTheme] = useState<Theme>('midnight-glow');
 
   useEffect(() => {
     // Get saved theme from localStorage
