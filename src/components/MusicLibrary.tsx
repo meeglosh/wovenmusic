@@ -4,12 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
+import { useUpdateTrack } from "@/hooks/useTracks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,20 +36,125 @@ interface MusicLibraryProps {
   isPlaying?: boolean;
 }
 
+type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
+type SortDirection = 'asc' | 'desc';
+
 const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLibraryProps) => {
   const navigate = useNavigate();
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('addedAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [calculatingDurations, setCalculatingDurations] = useState<Set<string>>(new Set());
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
+  const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
 
-  const selectedTracks = tracks.filter(track => selectedTrackIds.has(track.id));
+  // Sort tracks based on current sort settings
+  const sortedTracks = [...tracks].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortField) {
+      case 'title':
+        comparison = getFileName(a).localeCompare(getFileName(b));
+        break;
+      case 'artist':
+        comparison = a.artist.localeCompare(b.artist);
+        break;
+      case 'duration':
+        // Handle duration sorting (put --:-- at the end)
+        if (a.duration === '--:--' && b.duration !== '--:--') return 1;
+        if (b.duration === '--:--' && a.duration !== '--:--') return -1;
+        if (a.duration === '--:--' && b.duration === '--:--') return 0;
+        
+        // Convert duration to seconds for comparison
+        const aDuration = a.duration.split(':').reduce((acc, time) => (60 * acc) + +time, 0);
+        const bDuration = b.duration.split(':').reduce((acc, time) => (60 * acc) + +time, 0);
+        comparison = aDuration - bDuration;
+        break;
+      case 'addedAt':
+        comparison = a.addedAt.getTime() - b.addedAt.getTime();
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const selectedTracks = sortedTracks.filter(track => selectedTrackIds.has(track.id));
 
   const isSelectionMode = selectedTrackIds.size > 0;
   const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
   const someTracksSelected = selectedTrackIds.size > 0 && selectedTrackIds.size < tracks.length;
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
+
+  const calculateDuration = async (track: Track) => {
+    if (!track.fileUrl || track.fileUrl === '#' || calculatingDurations.has(track.id)) return;
+    
+    setCalculatingDurations(prev => new Set([...prev, track.id]));
+    
+    try {
+      const audio = new Audio();
+      const promise = new Promise<number>((resolve, reject) => {
+        audio.addEventListener('loadedmetadata', () => {
+          resolve(audio.duration);
+        });
+        audio.addEventListener('error', reject);
+      });
+      
+      audio.src = track.fileUrl;
+      const duration = await promise;
+      
+      if (duration && !isNaN(duration)) {
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        await updateTrackMutation.mutateAsync({
+          id: track.id,
+          updates: { duration: formattedDuration }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to calculate duration for track:', track.title, error);
+    } finally {
+      setCalculatingDurations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(track.id);
+        return newSet;
+      });
+    }
+  };
+
+  // Auto-calculate durations for tracks with --:-- duration
+  useEffect(() => {
+    const tracksNeedingDuration = tracks.filter(track => 
+      track.duration === '--:--' && 
+      track.fileUrl && 
+      track.fileUrl !== '#' &&
+      !calculatingDurations.has(track.id)
+    );
+    
+    // Calculate durations one at a time to avoid overwhelming the browser
+    if (tracksNeedingDuration.length > 0) {
+      const track = tracksNeedingDuration[0];
+      calculateDuration(track);
+    }
+  }, [tracks, calculatingDurations]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -226,16 +332,42 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
               />
             </div>
             <div className="w-12"></div>
-            <div>Title</div>
-            <div className="flex items-center space-x-1">
-              <Clock className="w-4 h-4" />
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSort('title')}
+                className="h-auto p-0 font-medium text-muted-foreground hover:text-foreground"
+              >
+                Title {getSortIcon('title')}
+              </Button>
             </div>
-            <div>Added</div>
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSort('duration')}
+                className="h-auto p-0 font-medium text-muted-foreground hover:text-foreground"
+              >
+                <Clock className="w-4 h-4 mr-1" />
+                {getSortIcon('duration')}
+              </Button>
+            </div>
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSort('addedAt')}
+                className="h-auto p-0 font-medium text-muted-foreground hover:text-foreground"
+              >
+                Added {getSortIcon('addedAt')}
+              </Button>
+            </div>
             <div className="w-12"></div>
           </div>
 
           <div className="divide-y divide-border">
-            {tracks.map((track, index) => (
+            {sortedTracks.map((track, index) => (
               <div
                 key={track.id}
                 className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
@@ -315,6 +447,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                     </div>
                   ) : track.duration === 'Failed' ? (
                     <span className="text-destructive text-sm">Failed</span>
+                  ) : calculatingDurations.has(track.id) ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Calculating...</span>
+                    </div>
                   ) : (
                     track.duration
                   )}
