@@ -230,7 +230,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Driftspace</h2>
+          <h2 className="text-3xl font-bold text-primary">Driftspace</h2>
           <p className="text-muted-foreground mt-1 font-rem font-thin">The echo vault of our collected murmurings</p>
         </div>
         <div className="flex items-center space-x-4">

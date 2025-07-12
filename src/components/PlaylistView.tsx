@@ -438,7 +438,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             )}
           </div>
           
-          <h1 className="text-5xl font-bold mb-4">{playlist.name}</h1>
+          <h1 className="text-5xl font-bold mb-4 text-primary">{playlist.name}</h1>
           
           <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-6">
             <span>{playlistTracks.length} track{playlistTracks.length !== 1 ? 's' : ''}</span>
