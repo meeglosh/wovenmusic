@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const emailResponse = await resend.emails.send({
       from: "Wovenmusic <onboarding@resend.dev>",
-      to: [email],
+      to: [email], // Change this to [inviterProfile?.email || "meeglosh@gmail.com"] for testing
       subject: `You're invited to join Wovenmusic as a ${role}!`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
