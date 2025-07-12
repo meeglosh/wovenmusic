@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithProvider: (provider: 'google' | 'github' | 'twitter') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  acceptInvitation: (token: string, password: string, fullName: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +87,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  const acceptInvitation = async (token: string, password: string, fullName: string) => {
+    // First get the invitation details
+    const { data: invitation, error: inviteError } = await supabase
+      .from('invitations')
+      .select('email, role')
+      .eq('token', token)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (inviteError || !invitation) {
+      return { error: { message: 'Invalid or expired invitation' } };
+    }
+
+    // Sign up the user
+    const { error } = await supabase.auth.signUp({
+      email: invitation.email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+
+    return { error };
+  };
+
   const value = {
     user,
     session,
@@ -94,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signInWithProvider,
     signOut,
+    acceptInvitation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

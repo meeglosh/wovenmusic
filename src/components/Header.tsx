@@ -2,13 +2,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload, Users, Settings, Shield } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import UploadModal from "./UploadModal";
 
 const Header = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-4">
@@ -49,6 +56,10 @@ const Header = () => {
           <Button variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-2" />
             Settings
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
           </Button>
         </div>
       </div>

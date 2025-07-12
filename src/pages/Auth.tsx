@@ -11,9 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Github, Mail, X, ArrowLeft } from "lucide-react";
 
 const Auth = () => {
-  const { user, signIn, signUp, signInWithProvider, loading } = useAuth();
+  const { user, signIn, signUp, signInWithProvider, acceptInvitation, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const inviteToken = searchParams.get('token');
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if user is already authenticated
@@ -67,6 +69,42 @@ const Auth = () => {
     } else {
       toast({
         title: "Account created!",
+        description: "Please check your email to verify your account.",
+      });
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleAcceptInvitation = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const password = formData.get('password') as string;
+    const fullName = formData.get('fullName') as string;
+    
+    if (!inviteToken) {
+      toast({
+        title: "Error",
+        description: "Invalid invitation token",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await acceptInvitation(inviteToken, password, fullName);
+    
+    if (error) {
+      toast({
+        title: "Error accepting invitation",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Welcome to the band!",
         description: "Please check your email to verify your account.",
       });
     }
@@ -129,11 +167,13 @@ const Auth = () => {
         </CardHeader>
         
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue={inviteToken ? "invite" : "signin"} className="w-full">
+            {!inviteToken && (
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+            )}
             
             <TabsContent value="signin" className="space-y-4">
               <form onSubmit={handleEmailSignIn} className="space-y-4">
@@ -265,6 +305,36 @@ const Auth = () => {
                 </Button>
               </div>
             </TabsContent>
+
+            {inviteToken && (
+              <TabsContent value="invite" className="space-y-4">
+                <form onSubmit={handleAcceptInvitation} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Create a password"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Joining band..." : "Accept Invitation"}
+                  </Button>
+                </form>
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

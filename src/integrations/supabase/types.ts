@@ -79,6 +79,39 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          role: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       playlist_shares: {
         Row: {
           created_at: string
@@ -154,6 +187,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          created_by_user: string | null
           id: string
           image_url: string | null
           is_public: boolean
@@ -164,6 +198,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          created_by_user?: string | null
           id?: string
           image_url?: string | null
           is_public?: boolean
@@ -174,6 +209,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          created_by_user?: string | null
           id?: string
           image_url?: string | null
           is_public?: boolean
@@ -186,26 +222,35 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          is_band_member: boolean | null
+          role: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
+          is_band_member?: boolean | null
+          role?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          is_band_member?: boolean | null
+          role?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -214,6 +259,7 @@ export type Database = {
         Row: {
           artist: string
           created_at: string
+          created_by: string | null
           dropbox_path: string | null
           duration: string
           file_url: string | null
@@ -226,6 +272,7 @@ export type Database = {
         Insert: {
           artist: string
           created_at?: string
+          created_by?: string | null
           dropbox_path?: string | null
           duration: string
           file_url?: string | null
@@ -238,6 +285,7 @@ export type Database = {
         Update: {
           artist?: string
           created_at?: string
+          created_by?: string | null
           dropbox_path?: string | null
           duration?: string
           file_url?: string | null

@@ -1,13 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export interface BandMember {
+export interface UserProfile {
   id: string;
-  name: string;
-  email: string;
+  email: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
   role: string;
+  is_band_member: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  invited_by: string | null;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
 }
 
 export const useBandMembers = () => {
@@ -17,20 +31,21 @@ export const useBandMembers = () => {
     queryKey: ["band-members"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("band_members")
+        .from("profiles")
         .select("*")
+        .eq("is_band_member", true)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as BandMember[];
+      return data as UserProfile[];
     }
   });
 
-  const addMember = useMutation({
-    mutationFn: async (member: { name: string; email: string; role: string }) => {
+  const inviteUser = useMutation({
+    mutationFn: async (invitation: { email: string; role: string }) => {
       const { data, error } = await supabase
-        .from("band_members")
-        .insert(member)
+        .from("invitations")
+        .insert(invitation)
         .select()
         .single();
       
@@ -38,14 +53,14 @@ export const useBandMembers = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["band-members"] });
+      queryClient.invalidateQueries({ queryKey: ["invitations"] });
     }
   });
 
-  const updateMember = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<{ name: string; email: string; role: string }> }) => {
+  const updateProfile = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<{ full_name: string; bio: string; role: string; is_band_member: boolean }> }) => {
       const { data, error } = await supabase
-        .from("band_members")
+        .from("profiles")
         .update(updates)
         .eq("id", id)
         .select()
@@ -59,11 +74,11 @@ export const useBandMembers = () => {
     }
   });
 
-  const deleteMember = useMutation({
+  const removeMember = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("band_members")
-        .delete()
+        .from("profiles")
+        .update({ is_band_member: false })
         .eq("id", id);
       
       if (error) throw error;
@@ -75,8 +90,45 @@ export const useBandMembers = () => {
 
   return {
     ...query,
-    addMember,
-    updateMember,
-    deleteMember
+    inviteUser,
+    updateProfile,
+    removeMember
+  };
+};
+
+export const useInvitations = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["invitations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invitations")
+        .select("*")
+        .is("used_at", null)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as Invitation[];
+    }
+  });
+
+  const deleteInvitation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("invitations")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+    }
+  });
+
+  return {
+    ...query,
+    deleteInvitation
   };
 };

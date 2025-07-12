@@ -12,6 +12,7 @@ import DropboxCallback from "./pages/DropboxCallback";
 import NotFound from "./pages/NotFound";
 import TrackView from "./pages/TrackView";
 import PrivacySettings from "./pages/PrivacySettings";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -24,11 +25,11 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/members" element={<Members />} />
+            <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
             <Route path="/dropbox-callback" element={<DropboxCallback />} />
-            <Route path="/track/:trackId" element={<TrackView />} />
-            <Route path="/privacy-settings" element={<PrivacySettings />} />
-            <Route path="/" element={<Index />} />
+            <Route path="/track/:trackId" element={<ProtectedRoute><TrackView /></ProtectedRoute>} />
+            <Route path="/privacy-settings" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

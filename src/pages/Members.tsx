@@ -6,25 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Mail, UserCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useBandMembers } from "@/hooks/useBandMembers";
+import { useBandMembers, useInvitations } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Members = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: members = [], isLoading, addMember, deleteMember, updateMember } = useBandMembers();
+  const { user } = useAuth();
+  const { data: members = [], isLoading, inviteUser, removeMember, updateProfile } = useBandMembers();
+  const { data: invitations = [] } = useInvitations();
   
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newMember, setNewMember] = useState({
-    name: "",
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newInvitation, setNewInvitation] = useState({
     email: "",
     role: ""
   });
 
-  const handleAddMember = async () => {
-    if (!newMember.name || !newMember.email || !newMember.role) {
+  const handleInviteUser = async () => {
+    if (!newInvitation.email || !newInvitation.role) {
       toast({
         title: "Missing information",
         description: "Please fill in all fields",
@@ -34,25 +36,25 @@ const Members = () => {
     }
 
     try {
-      await addMember.mutateAsync(newMember);
-      setNewMember({ name: "", email: "", role: "" });
-      setShowAddModal(false);
+      await inviteUser.mutateAsync(newInvitation);
+      setNewInvitation({ email: "", role: "" });
+      setShowInviteModal(false);
       toast({
-        title: "Member added",
-        description: `${newMember.name} has been added to the band`
+        title: "Invitation sent",
+        description: `Invitation sent to ${newInvitation.email}`
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add member",
+        description: "Failed to send invitation",
         variant: "destructive"
       });
     }
   };
 
-  const handleDeleteMember = async (memberId: string, memberName: string) => {
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
     try {
-      await deleteMember.mutateAsync(memberId);
+      await removeMember.mutateAsync(memberId);
       toast({
         title: "Member removed",
         description: `${memberName} has been removed from the band`
@@ -110,46 +112,36 @@ const Members = () => {
             </div>
           </div>
 
-          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+          <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Member
+                <Send className="w-4 h-4 mr-2" />
+                Invite Member
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Band Member</DialogTitle>
+                <DialogTitle>Invite Band Member</DialogTitle>
                 <DialogDescription>
-                  Add a new member to your band. They'll be able to collaborate on tracks and playlists.
+                  Send an invitation to join your band. They'll receive an email with a link to create their account.
                 </DialogDescription>
               </DialogHeader>
               
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter member's name"
-                    value={newMember.name}
-                    onChange={(e) => setNewMember(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="Enter member's email"
-                    value={newMember.email}
-                    onChange={(e) => setNewMember(prev => ({ ...prev, email: e.target.value }))}
+                    value={newInvitation.email}
+                    onChange={(e) => setNewInvitation(prev => ({ ...prev, email: e.target.value }))}
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select value={newMember.role} onValueChange={(value) => setNewMember(prev => ({ ...prev, role: value }))}>
+                  <Select value={newInvitation.role} onValueChange={(value) => setNewInvitation(prev => ({ ...prev, role: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
@@ -166,11 +158,11 @@ const Members = () => {
               </div>
               
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                <Button variant="outline" onClick={() => setShowInviteModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddMember} disabled={addMember.isPending}>
-                  {addMember.isPending ? "Adding..." : "Add Member"}
+                <Button onClick={handleInviteUser} disabled={inviteUser.isPending}>
+                  {inviteUser.isPending ? "Sending..." : "Send Invitation"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -186,10 +178,10 @@ const Members = () => {
               <UserCheck className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-medium mb-2">No band members yet</h3>
-            <p className="text-muted-foreground mb-6">Add your first band member to start collaborating</p>
-            <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Member
+            <p className="text-muted-foreground mb-6">Invite your first band member to start collaborating</p>
+            <Button onClick={() => setShowInviteModal(true)}>
+              <Send className="w-4 h-4 mr-2" />
+              Send First Invitation
             </Button>
           </div>
         ) : (
@@ -201,11 +193,11 @@ const Members = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-medium text-sm">
-                          {member.name.charAt(0).toUpperCase()}
+                          {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <CardTitle className="text-base">{member.name}</CardTitle>
+                        <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                         <Badge variant="secondary" className={getRoleColor(member.role)}>
                           {member.role}
                         </Badge>
@@ -215,7 +207,8 @@ const Members = () => {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleDeleteMember(member.id, member.name)}
+                      onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
+                      disabled={member.id === user?.id} // Can't remove yourself
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
@@ -229,7 +222,7 @@ const Members = () => {
                   </div>
                   
                   <div className="mt-4 text-xs text-muted-foreground">
-                    Added {new Date(member.created_at).toLocaleDateString()}
+                    Member since {new Date(member.created_at).toLocaleDateString()}
                   </div>
                 </CardContent>
               </Card>
