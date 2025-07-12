@@ -64,7 +64,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
         <div className="hidden lg:flex items-center space-x-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="text-primary">
                 <Palette className="w-4 h-4 mr-2" />
                 {currentThemeLabel}
                 <ChevronDown className="w-3 h-3 ml-2" />
@@ -78,20 +78,20 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                   className={theme === themeOption.value ? "bg-accent" : ""}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium">{themeOption.label}</span>
+                    <span className="font-medium text-primary">{themeOption.label}</span>
                     <span className="text-xs text-muted-foreground">{themeOption.description}</span>
                   </div>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)}>
+          <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)} className="text-primary">
             <Upload className="w-4 h-4 mr-2" />
             Upload
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="text-primary">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
                 <ChevronDown className="w-3 h-3 ml-2" />
@@ -130,7 +130,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                   onClick={() => setTheme(themeOption.value as Theme)}
                   className={theme === themeOption.value ? "bg-accent" : ""}
                 >
-                  <span className="font-medium text-sm">{themeOption.label}</span>
+                  <span className="font-medium text-sm text-primary">{themeOption.label}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
