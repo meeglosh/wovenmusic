@@ -492,22 +492,22 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               size="lg"
               onClick={() => setShowAddTracksModal(true)}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Tracks
+              <Plus className="w-4 h-4 mr-2 text-primary" />
+              <span className="text-primary">Add Tracks</span>
             </Button>
             <Button 
               variant="outline" 
               size="lg"
               onClick={() => setShowShareModal(true)}
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
+              <Share2 className="w-4 h-4 mr-2 text-primary" />
+              <span className="text-primary">Share</span>
             </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="lg">
-                  <MoreHorizontal className="w-5 h-5" />
+                  <MoreHorizontal className="w-5 h-5 text-primary" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -561,8 +561,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           <h3 className="text-xl font-semibold mb-2">This playlist is empty</h3>
           <p className="text-muted-foreground mb-4">Add some tracks to get started.</p>
           <Button variant="outline" onClick={() => setShowAddTracksModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Tracks
+            <Plus className="w-4 h-4 mr-2 text-primary" />
+            <span className="text-primary">Add Tracks</span>
           </Button>
         </div>
       ) : (
