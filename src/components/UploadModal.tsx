@@ -348,7 +348,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFile(index)}
-                            className="text-muted-foreground hover:text-destructive"
+                            className="text-primary hover:text-destructive"
                           >
                             <X className="h-4 w-4" />
                           </Button>
