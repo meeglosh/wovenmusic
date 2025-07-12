@@ -246,7 +246,7 @@ const Members = () => {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-0 text-center">
+                <CardContent className="pt-0 text-center pb-16">
                   <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                     <Mail className="w-4 h-4" />
                     <a 
