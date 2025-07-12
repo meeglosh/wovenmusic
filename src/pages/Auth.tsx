@@ -147,7 +147,7 @@ const Auth = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-4 left-4 z-10"
+        className="absolute top-4 left-4 z-10 text-primary hover:text-primary/80"
         onClick={() => navigate('/')}
       >
         <ArrowLeft className="h-5 w-5" />
