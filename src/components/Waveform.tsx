@@ -55,9 +55,9 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     // Get the primary color for the waveform
     const computedStyle = getComputedStyle(canvas);
     const primaryColor = computedStyle.getPropertyValue('--primary').trim();
-    const [h, s, l] = primaryColor.split(' ').map(v => v.replace('%', ''));
     
-    ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, 0.5)`;
+    // Use the primary color with 50% opacity
+    ctx.fillStyle = `hsl(${primaryColor} / 0.5)`;
     for (let i = 0; i < width; i++) {
       let min = 1.0;
       let max = -1.0;
@@ -76,12 +76,12 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     const progressX = progress * width;
     
     // Create a semi-transparent overlay for played portion
-    ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, 0.3)`;
+    ctx.fillStyle = `hsl(${primaryColor} / 0.3)`;
     ctx.fillRect(0, 0, progressX, height);
     ctx.globalCompositeOperation = 'source-atop';
     
     // Draw the waveform data in the progress area with the primary color but more transparent
-    ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, 0.6)`;
+    ctx.fillStyle = `hsl(${primaryColor} / 0.6)`;
     for (let i = 0; i < progressX; i++) {
       let min = 1.0;
       let max = -1.0;
