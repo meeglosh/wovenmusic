@@ -38,7 +38,7 @@ const Header = () => {
             <Upload className="w-4 h-4 mr-2" />
             Upload
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => navigate("/members")}>
             <Users className="w-4 h-4 mr-2" />
             Members
           </Button>

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Members from "./pages/Members";
 import DropboxCallback from "./pages/DropboxCallback";
 import NotFound from "./pages/NotFound";
 import TrackView from "./pages/TrackView";
@@ -23,6 +24,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/members" element={<Members />} />
             <Route path="/dropbox-callback" element={<DropboxCallback />} />
             <Route path="/track/:trackId" element={<TrackView />} />
             <Route path="/privacy-settings" element={<PrivacySettings />} />

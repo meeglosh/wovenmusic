@@ -1,41 +1,36 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BandMember } from "@/types/music";
+
+export interface BandMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useBandMembers = () => {
-  return useQuery({
-    queryKey: ["bandMembers"],
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["band-members"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("band_members")
         .select("*")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false });
       
       if (error) throw error;
-      
-      return data.map(member => ({
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        role: member.role
-      })) as BandMember[];
+      return data as BandMember[];
     }
   });
-};
 
-export const useAddBandMember = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (member: Omit<BandMember, "id">) => {
+  const addMember = useMutation({
+    mutationFn: async (member: { name: string; email: string; role: string }) => {
       const { data, error } = await supabase
         .from("band_members")
-        .insert({
-          name: member.name,
-          email: member.email,
-          role: member.role
-        })
+        .insert(member)
         .select()
         .single();
       
@@ -43,7 +38,45 @@ export const useAddBandMember = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bandMembers"] });
+      queryClient.invalidateQueries({ queryKey: ["band-members"] });
     }
   });
+
+  const updateMember = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<{ name: string; email: string; role: string }> }) => {
+      const { data, error } = await supabase
+        .from("band_members")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["band-members"] });
+    }
+  });
+
+  const deleteMember = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("band_members")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["band-members"] });
+    }
+  });
+
+  return {
+    ...query,
+    addMember,
+    updateMember,
+    deleteMember
+  };
 };
