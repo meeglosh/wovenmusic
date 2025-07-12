@@ -106,8 +106,8 @@ const Members = () => {
         <div className="flex items-center justify-between px-4 sm:px-6 py-4">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-              <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Back</span>
+              <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2 text-primary" />
+              <span className="hidden sm:inline text-primary">Back</span>
             </Button>
             <div>
               <h1 className="text-xl sm:text-2xl font-semibold text-primary">Band Members</h1>
@@ -117,9 +117,9 @@ const Members = () => {
 
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => navigate("/profile-setup")}>
-              <Settings className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Edit Profile</span>
-              <span className="sm:hidden">Edit</span>
+              <Settings className="w-4 h-4 mr-1 sm:mr-2 text-primary" />
+              <span className="hidden sm:inline text-primary">Edit Profile</span>
+              <span className="sm:hidden text-primary">Edit</span>
             </Button>
             <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
               <DialogTrigger asChild>
