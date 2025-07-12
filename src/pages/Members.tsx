@@ -210,12 +210,12 @@ const Members = () => {
                       <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                       <div className="flex flex-wrap gap-1 justify-center">
                         {(member.roles && member.roles.length > 0 ? member.roles : [member.role]).filter(Boolean).map((role) => (
-                          <Badge key={role} variant="secondary" className={`${getRoleColor(role)} hover:bg-secondary hover:text-secondary-foreground`}>
+                          <Badge key={role} variant="secondary" className={`${getRoleColor(role)} pointer-events-none`}>
                             {role}
                           </Badge>
                         ))}
                         {member.is_admin && (
-                          <Badge variant="default" className="bg-red-500 text-white hover:bg-red-500 hover:text-white">
+                          <Badge variant="default" className="bg-red-500 text-white pointer-events-none">
                             Admin
                           </Badge>
                         )}
