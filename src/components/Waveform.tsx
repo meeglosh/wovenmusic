@@ -24,11 +24,25 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
       try {
         const audioContext = new AudioContext();
         const response = await fetch(audioRef.current.src);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const arrayBuffer = await response.arrayBuffer();
+        
+        if (arrayBuffer.byteLength === 0) {
+          throw new Error('Empty audio file');
+        }
+        
+        console.log('Attempting to decode audio data, buffer size:', arrayBuffer.byteLength);
         const buffer = await audioContext.decodeAudioData(arrayBuffer);
+        console.log('Audio buffer decoded successfully:', buffer);
         setAudioBuffer(buffer);
       } catch (error) {
         console.error('Failed to load audio buffer:', error);
+        // Set audioBuffer to null to trigger fallback waveform
+        setAudioBuffer(null);
       } finally {
         setIsLoading(false);
       }
@@ -39,7 +53,7 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !audioBuffer) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -47,15 +61,9 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
-    // Draw waveform
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
-
     // Get the primary color for the waveform
     const computedStyle = getComputedStyle(canvas);
     const primaryColor = computedStyle.getPropertyValue('--primary').trim();
-    console.log('Primary color value:', primaryColor);
     
     // Convert display-p3 to a usable format or use fallback
     let fillColor;
@@ -66,19 +74,40 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
       // For HSL colors, use the slash syntax
       fillColor = `hsl(${primaryColor} / 0.5)`;
     }
-    console.log('Fill color:', fillColor);
-    ctx.fillStyle = fillColor;
-    for (let i = 0; i < width; i++) {
-      let min = 1.0;
-      let max = -1.0;
-      
-      for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j];
-        if (datum < min) min = datum;
-        if (datum > max) max = datum;
+
+    if (audioBuffer) {
+      // Draw actual waveform data
+      const data = audioBuffer.getChannelData(0);
+      const step = Math.ceil(data.length / width);
+      const amp = height / 2;
+
+      ctx.fillStyle = fillColor;
+      for (let i = 0; i < width; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        
+        for (let j = 0; j < step; j++) {
+          const datum = data[(i * step) + j];
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+        
+        ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
       }
+    } else {
+      // Draw fallback waveform (placeholder bars)
+      const amp = height / 2;
+      const barWidth = 2;
+      const barSpacing = 4;
+      const numBars = Math.floor(width / barSpacing);
       
-      ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+      ctx.fillStyle = fillColor;
+      for (let i = 0; i < numBars; i++) {
+        const x = i * barSpacing;
+        // Create pseudo-random heights for visual appeal
+        const barHeight = (Math.sin(i * 0.1) * 0.3 + Math.cos(i * 0.05) * 0.2 + 0.5) * amp;
+        ctx.fillRect(x, amp - barHeight / 2, barWidth, barHeight);
+      }
     }
 
     // Draw progress with transparency
@@ -92,7 +121,6 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     } else {
       playedColor = `hsl(${primaryColor} / 0.3)`;
     }
-    console.log('Played color with opacity:', playedColor);
     ctx.fillStyle = playedColor;
     ctx.fillRect(0, 0, progressX, height);
     ctx.globalCompositeOperation = 'source-atop';
@@ -104,19 +132,35 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
     } else {
       playedWaveformColor = `hsl(${primaryColor} / 0.6)`;
     }
-    console.log('Played waveform color:', playedWaveformColor);
     ctx.fillStyle = playedWaveformColor;
-    for (let i = 0; i < progressX; i++) {
-      let min = 1.0;
-      let max = -1.0;
+    
+    if (audioBuffer) {
+      const data = audioBuffer.getChannelData(0);
+      const step = Math.ceil(data.length / width);
+      const amp = height / 2;
       
-      for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j];
-        if (datum < min) min = datum;
-        if (datum > max) max = datum;
+      for (let i = 0; i < progressX; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        
+        for (let j = 0; j < step; j++) {
+          const datum = data[(i * step) + j];
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+        
+        ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
       }
+    } else {
+      // Draw fallback progress bars
+      const amp = height / 2;
+      const barWidth = 2;
+      const barSpacing = 4;
       
-      ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+      for (let i = 0; i < progressX; i += barSpacing) {
+        const barHeight = (Math.sin(i * 0.1) * 0.3 + Math.cos(i * 0.05) * 0.2 + 0.5) * amp;
+        ctx.fillRect(i, amp - barHeight / 2, barWidth, barHeight);
+      }
     }
     
     ctx.globalCompositeOperation = 'source-over';
@@ -185,6 +229,11 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
       <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
         Click to seek • {isAuthenticated ? "Shift+click to add comment" : "Login to add comments"}
       </div>
+      {!audioBuffer && !isLoading && (
+        <div className="absolute top-3 left-3 text-xs text-muted-foreground bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
+          Placeholder waveform • Audio format may not be supported for visualization
+        </div>
+      )}
     </div>
   );
 };
