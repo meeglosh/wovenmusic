@@ -78,10 +78,11 @@ export default function PrivacySettings() {
   const privatePlaylists = playlists.filter(playlist => !playlist.isPublic);
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 text-primary" />
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-primary">Privacy Settings</h1>
@@ -254,6 +255,7 @@ export default function PrivacySettings() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
