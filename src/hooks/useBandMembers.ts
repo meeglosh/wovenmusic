@@ -43,9 +43,16 @@ export const useBandMembers = () => {
 
   const inviteUser = useMutation({
     mutationFn: async (invitation: { email: string; role: string }) => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      
       // Call the edge function to create invitation and send email
       const { data, error } = await supabase.functions.invoke('send-invitation', {
-        body: invitation
+        body: { 
+          ...invitation,
+          userId: user.id 
+        }
       });
       
       if (error) throw error;

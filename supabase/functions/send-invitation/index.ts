@@ -11,6 +11,7 @@ const corsHeaders = {
 interface InviteRequest {
   email: string;
   role: string;
+  userId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -24,39 +25,25 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Supabase client created, getting user...');
+    console.log('Supabase client created');
     
-    // Get user from JWT token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      throw new Error('Unauthorized');
-    }
-    
-    console.log('User authenticated:', user.id);
+    const { email, role, userId }: InviteRequest = await req.json();
+    console.log('Parsed request:', { email, role, userId });
 
     // Get inviter's profile
     console.log('Getting inviter profile...');
     const { data: inviterProfile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('full_name, email')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
     
     if (profileError) {
       console.error('Profile error:', profileError);
     }
-
-    const { email, role }: InviteRequest = await req.json();
-    console.log('Parsed request:', { email, role });
 
     // Create invitation in database
     console.log('Creating invitation in database...');
@@ -65,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         email,
         role,
-        invited_by: user.id
+        invited_by: userId
       })
       .select()
       .single();
