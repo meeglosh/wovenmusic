@@ -66,11 +66,12 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
       ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
     }
 
-    // Draw progress
+    // Draw progress with transparency
     const progress = duration > 0 ? currentTime / duration : 0;
     const progressX = progress * width;
     
-    ctx.fillStyle = 'hsl(var(--primary))';
+    // Create a semi-transparent overlay for played portion
+    ctx.fillStyle = 'hsla(var(--primary), 0.3)';
     ctx.fillRect(0, 0, progressX, height);
     ctx.globalCompositeOperation = 'source-atop';
     
@@ -142,15 +143,15 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
   }
 
   return (
-    <div className="relative bg-muted rounded-lg p-4">
+    <div className="relative bg-gradient-to-br from-muted/50 to-muted rounded-2xl p-6 shadow-inner">
       <canvas
         ref={canvasRef}
         width={1200}
         height={200}
-        className="w-full h-32 lg:h-48 bg-muted-foreground/10 rounded cursor-pointer"
+        className="w-full h-40 lg:h-56 bg-background/30 rounded-xl cursor-pointer hover:bg-background/40 transition-colors duration-200"
         onClick={handleClick}
       />
-      <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+      <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
         Click to seek • {isAuthenticated ? "Shift+click to add comment" : "Login to add comments"}
       </div>
     </div>

@@ -110,64 +110,77 @@ const TrackView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       {/* Hidden audio element */}
       <audio ref={audioPlayer.audioRef} className="hidden" />
       
-      {/* Header */}
-      <div className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-6 py-4">
+      {/* Header with SoundCloud-style gradient */}
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="opacity-80 hover:opacity-100">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Library
+              Back
             </Button>
-            <div className="text-center">
-              <h1 className="text-xl font-bold">{track.title}</h1>
-              <p className="text-sm text-muted-foreground">{track.artist}</p>
+            <div className="text-center flex-1">
+              <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                {track.title}
+              </h1>
+              <p className="text-lg text-muted-foreground mt-1">{track.artist}</p>
             </div>
-            <div className="w-24" /> {/* Spacer for centering */}
+            <div className="w-16" />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Large Waveform - SoundCloud Style */}
-          <div className="mb-8">
-            <Waveform
-              audioRef={audioPlayer.audioRef}
-              currentTime={audioPlayer.currentTime}
-              duration={audioPlayer.duration}
-              onSeek={audioPlayer.seekTo}
-              comments={comments}
-              onAddComment={handleAddComment}
-              isAuthenticated={!!user}
-            />
-          </div>
+      {/* Main Content with SoundCloud-inspired layout */}
+      <div className="container mx-auto px-6 py-12">
+        <div className="max-w-5xl mx-auto">
+          {/* Hero Section with Large Waveform */}
+          <div className="text-center mb-12">
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-4 mb-6">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="w-20 h-20 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  onClick={audioPlayer.togglePlayPause}
+                >
+                  {audioPlayer.isPlaying ? (
+                    <Pause className="w-10 h-10 fill-current" />
+                  ) : (
+                    <Play className="w-10 h-10 fill-current ml-1" />
+                  )}
+                </Button>
+                <div className="text-left">
+                  <h2 className="text-xl font-semibold">{track.title}</h2>
+                  <p className="text-muted-foreground">{track.artist}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Large Waveform */}
+            <div className="mb-8 shadow-2xl rounded-2xl overflow-hidden">
+              <Waveform
+                audioRef={audioPlayer.audioRef}
+                currentTime={audioPlayer.currentTime}
+                duration={audioPlayer.duration}
+                onSeek={audioPlayer.seekTo}
+                comments={comments}
+                onAddComment={handleAddComment}
+                isAuthenticated={!!user}
+              />
+            </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-center mb-6">
-            <Button
-              variant="default"
-              size="lg"
-              className="w-16 h-16 rounded-full"
-              onClick={audioPlayer.togglePlayPause}
-            >
-              {audioPlayer.isPlaying ? (
-                <Pause className="w-8 h-8 fill-current" />
-              ) : (
-                <Play className="w-8 h-8 fill-current ml-1" />
-              )}
-            </Button>
-          </div>
-
-          {/* Time Display */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center space-x-4 text-sm">
-              <span className="font-mono">{audioPlayer.formatTime(audioPlayer.currentTime)}</span>
-              <span className="text-muted-foreground">/</span>
+            {/* Time Display */}
+            <div className="flex justify-center items-center space-x-6 text-lg">
+              <span className="font-mono text-primary">{audioPlayer.formatTime(audioPlayer.currentTime)}</span>
+              <div className="w-24 h-1 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300"
+                  style={{ width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` }}
+                />
+              </div>
               <span className="font-mono text-muted-foreground">{audioPlayer.formatTime(audioPlayer.duration)}</span>
             </div>
           </div>
@@ -204,23 +217,33 @@ const TrackView = () => {
             </Card>
           )}
 
-          {/* Comments */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Comments ({comments.length})</h2>
+          {/* Content Grid - SoundCloud Style */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Comments Section */}
+            <div className="lg:col-span-2">
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                <MessageSquare className="w-6 h-6" />
+                Comments
+                <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                  {comments.length}
+                </span>
+              </h2>
               
               {comments.length === 0 ? (
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
+                <Card className="border-dashed border-2">
+                  <CardContent className="p-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <MessageSquare className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Start the conversation</h3>
+                    <p className="text-muted-foreground mb-4">
                       {user 
-                        ? "No comments yet. Shift+click on the waveform to add the first one!" 
-                        : "No comments yet. Log in to add comments!"
+                        ? "Be the first to comment on this track. Shift+click on the waveform to add a comment at any moment!" 
+                        : "Join the conversation by logging in and adding your thoughts!"
                       }
                     </p>
                     {!user && (
-                      <Button className="mt-4" onClick={() => navigate('/auth')}>
+                      <Button className="mt-2" onClick={() => navigate('/auth')}>
                         <LogIn className="w-4 h-4 mr-2" />
                         Login to Comment
                       </Button>
@@ -228,16 +251,23 @@ const TrackView = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {comments.map((comment) => (
-                    <Card key={comment.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
-                      <CardContent className="p-4" onClick={() => jumpToComment(comment.timestampSeconds)}>
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
-                          <span className="font-mono">{audioPlayer.formatTime(comment.timestampSeconds)}</span>
-                          <span>•</span>
-                          <span>{comment.createdAt.toLocaleDateString()}</span>
+                    <Card key={comment.id} className="cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-200 group">
+                      <CardContent className="p-5" onClick={() => jumpToComment(comment.timestampSeconds)}>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xs font-bold">
+                            {comment.timestampSeconds < 60 ? Math.floor(comment.timestampSeconds) : Math.floor(comment.timestampSeconds / 60)}
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <span className="font-mono bg-muted px-2 py-1 rounded text-xs group-hover:bg-primary/10 transition-colors">
+                              {audioPlayer.formatTime(comment.timestampSeconds)}
+                            </span>
+                            <span>•</span>
+                            <span>{comment.createdAt.toLocaleDateString()}</span>
+                          </div>
                         </div>
-                        <p className="text-sm leading-relaxed">{comment.content}</p>
+                        <p className="text-sm leading-relaxed pl-11">{comment.content}</p>
                       </CardContent>
                     </Card>
                   ))}
@@ -245,18 +275,41 @@ const TrackView = () => {
               )}
             </div>
             
-            {/* Track Info */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Track Info</h2>
+            {/* Sidebar with Track Info */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold mb-4">Track Details</h2>
+                <Card className="overflow-hidden">
+                  <div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-bold text-lg">{track.title}</h3>
+                        <p className="text-muted-foreground">{track.artist}</p>
+                      </div>
+                      <div className="pt-4 border-t">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Duration</span>
+                          <span className="font-mono">{track.duration}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Statistics */}
               <Card>
                 <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-medium mb-1">{track.title}</h3>
-                      <p className="text-sm text-muted-foreground">{track.artist}</p>
+                  <h3 className="font-semibold mb-4">Statistics</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Comments</span>
+                      <span className="font-medium">{comments.length}</span>
                     </div>
-                    <div className="text-sm">
-                      <p><span className="font-medium">Duration:</span> {track.duration}</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Added</span>
+                      <span className="font-medium">{track.addedAt.toLocaleDateString()}</span>
                     </div>
                   </div>
                 </CardContent>
