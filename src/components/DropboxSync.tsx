@@ -1166,7 +1166,7 @@ const DropboxSync = () => {
               ) : (
                 <div>
                    <div className="flex items-center justify-between mb-4">
-                     <div className="flex items-center space-x-4">
+                     <div className="space-y-2">
                        <p className="text-sm text-muted-foreground">
                          Found {files.length} music file{files.length !== 1 ? 's' : ''} in selected folder
                          {selectedFiles.size > 0 && ` (${selectedFiles.size} selected)`}
