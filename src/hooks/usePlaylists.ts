@@ -31,7 +31,9 @@ export const usePlaylists = () => {
           .sort((a, b) => a.position - b.position)
           .map(pt => pt.track_id),
         createdAt: new Date(playlist.created_at),
-        sharedWith: playlist.playlist_shares?.map(share => share.email) || []
+        sharedWith: playlist.playlist_shares?.map(share => share.email) || [],
+        isPublic: playlist.is_public,
+        shareToken: playlist.share_token
       })) as Playlist[];
     }
   });
