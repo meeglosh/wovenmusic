@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Grid3x3, List, Check, ChevronDown } from "lucide-react";
+import { Cloud, Download, RefreshCw, AlertCircle, Folder, ChevronRight, ArrowLeft, Shield, ExternalLink, Info, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronDown } from "lucide-react";
 import { dropboxService } from "@/services/dropboxService";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { useAddTrack } from "@/hooks/useTracks";
@@ -59,8 +59,6 @@ const DropboxSync = () => {
   const [showDetailedDebug, setShowDetailedDebug] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'modified'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [browsingMode, setBrowsingMode] = useState<'list' | 'columns'>('list');
-  const [lastSelectedBrowsingMode, setLastSelectedBrowsingMode] = useState<'list' | 'columns'>('list');
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -392,8 +390,6 @@ const DropboxSync = () => {
     setFolders([]);
     setFolderHistory([]);
     setSelectedFiles(new Set());
-    // Restore the last selected browsing mode
-    setBrowsingMode(lastSelectedBrowsingMode);
   };
 
   const navigateToFolder = (folderPath: string) => {
@@ -922,31 +918,6 @@ const DropboxSync = () => {
                 {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
               </Button>
             </div>
-            {viewMode === "folder-select" && (
-              <div className="flex items-center space-x-2">
-                <Label className="text-sm">View:</Label>
-                <Button
-                  variant={browsingMode === 'list' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setBrowsingMode('list');
-                    setLastSelectedBrowsingMode('list');
-                  }}
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={browsingMode === 'columns' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setBrowsingMode('columns');
-                    setLastSelectedBrowsingMode('columns');
-                  }}
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
           </div>
           {viewMode === "file-view" && files.length > 0 && (
             <div className="flex items-center space-x-2">
@@ -1077,53 +1048,6 @@ const DropboxSync = () => {
                     </Button>
                   )}
                 </div>
-              ) : browsingMode === 'columns' ? (
-                <div className="grid grid-cols-2 gap-4 h-full">
-                  <div className="border-r pr-4">
-                    <h5 className="text-sm font-medium mb-2">Folders</h5>
-                    <div className="space-y-1 max-h-96 overflow-y-auto">
-                      {currentPath && (
-                        <div 
-                          className="flex items-center p-2 rounded cursor-pointer hover:bg-muted/50 text-sm"
-                          onClick={() => {
-                            const parentPath = currentPath.split('/').slice(0, -1).join('/');
-                            loadFolders(parentPath);
-                          }}
-                        >
-                          <Folder className="w-4 h-4 mr-2" />
-                          <span>.. (Go back)</span>
-                        </div>
-                      )}
-                      {folders.map((folder) => (
-                        <div 
-                          key={folder.path_lower} 
-                          className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
-                          onClick={() => handleFolderClick(folder.path_lower)}
-                        >
-                           <div className="flex items-center space-x-2">
-                             <Folder className="w-4 h-4" />
-                             <span 
-                               className="truncate cursor-pointer hover:text-primary"
-                               onDoubleClick={() => handleFolderSelect(folder.path_lower)}
-                             >
-                               {folder.name}
-                             </span>
-                           </div>
-                          <Button size="sm" variant="ghost" onClick={(e) => {
-                            e.stopPropagation();
-                            handleFolderSelect(folder.path_lower);
-                          }}>
-                            Select
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="pl-4">
-                    <h5 className="text-sm font-medium mb-2">Preview</h5>
-                    <p className="text-xs text-muted-foreground">Click on a folder to preview its contents</p>
-                  </div>
-                </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {currentPath && (
@@ -1159,7 +1083,7 @@ const DropboxSync = () => {
                            <Folder className="w-4 h-4" />
                            <span 
                              className="font-medium text-sm cursor-pointer hover:text-primary"
-                             onDoubleClick={() => handleFolderSelect(folder.path_lower)}
+                             onClick={() => handleFolderSelect(folder.path_lower)}
                            >
                              {folder.name}
                            </span>
@@ -1168,8 +1092,31 @@ const DropboxSync = () => {
                           <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
                             Browse
                           </Button>
-                          <Button size="sm" onClick={() => handleFolderSelect(folder.path_lower)}>
-                            Select All
+                          <Button size="sm" onClick={async () => {
+                            // Load folder contents if not already loaded
+                            if (!folderContents.has(folder.path_lower)) {
+                              await loadFolderContents(folder.path_lower);
+                            }
+                            // Get all files from this folder
+                            const files = folderContents.get(folder.path_lower) || [];
+                            if (files.length > 0) {
+                              // Auto-import all files from this folder
+                              const filesToSync = files;
+                              // Set selected files temporarily for syncFiles to work
+                              const fileSelection = new Map();
+                              files.forEach(file => fileSelection.set(file.path_lower, file));
+                              setGlobalFileSelection(fileSelection);
+                              // Trigger sync immediately
+                              await syncFiles();
+                            } else {
+                              toast({
+                                title: "No Files",
+                                description: "No audio files found in this folder.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}>
+                            Import All
                           </Button>
                         </div>
                       </div>
