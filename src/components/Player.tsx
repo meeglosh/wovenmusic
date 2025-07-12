@@ -53,7 +53,7 @@ const Player = ({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm p-3 sm:p-4 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md p-3 sm:p-4 shadow-lg">
       <div className="flex flex-col sm:flex-row items-center justify-between max-w-screen-xl mx-auto space-y-3 sm:space-y-0">
         {/* Track Info */}
         <div className="flex items-center space-x-3 sm:space-x-4 flex-1 w-full sm:w-auto">
