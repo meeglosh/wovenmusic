@@ -16,6 +16,7 @@ const Index = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -134,6 +135,7 @@ const Index = () => {
             currentView={currentView}
             onViewChange={setCurrentView}
             onPlaylistSelect={handleViewPlaylist}
+            libraryTitle={currentLibraryTitle}
           />
         </div>
         
@@ -145,6 +147,7 @@ const Index = () => {
               currentTrack={currentTrack}
               isPlaying={isPlaying}
               searchTerm={searchTerm}
+              onTitleChange={setCurrentLibraryTitle}
             />
           ) : (
             <PlaylistView 

@@ -35,12 +35,13 @@ interface MusicLibraryProps {
   currentTrack?: Track | null;
   isPlaying?: boolean;
   searchTerm?: string;
+  onTitleChange?: (title: string) => void;
 }
 
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange }: MusicLibraryProps) => {
   const navigate = useNavigate();
 
   // Random title and subtitle selection
@@ -101,6 +102,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     const randomIndex = Math.floor(Math.random() * libraryTitles.length);
     return libraryTitles[randomIndex];
   }, [libraryTitles]);
+
+  // Notify parent component when title changes
+  useEffect(() => {
+    onTitleChange?.(randomLibraryTitle.title);
+  }, [randomLibraryTitle.title, onTitleChange]);
 
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);

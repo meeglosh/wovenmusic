@@ -12,9 +12,10 @@ interface SidebarProps {
   currentView: "library" | "playlist";
   onViewChange: (view: "library" | "playlist") => void;
   onPlaylistSelect: (playlist: Playlist) => void;
+  libraryTitle?: string;
 }
 
-const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: SidebarProps) => {
+const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace" }: SidebarProps) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   return (
     <aside className="w-64 bg-card/30 border-r border-border flex flex-col">
@@ -26,7 +27,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
             onClick={() => onViewChange("library")}
           >
             <Library className="w-4 h-4 mr-3 text-primary" />
-            <span className="text-primary">Driftspace</span>
+            <span className="text-primary">{libraryTitle}</span>
           </Button>
         </nav>
       </div>
