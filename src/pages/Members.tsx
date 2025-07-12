@@ -111,7 +111,7 @@ const Members = () => {
             </Button>
             <div>
               <h1 className="text-xl sm:text-2xl font-semibold text-primary">Band Members</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Manage your band's collaborators</p>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Shape the hive of your collective resonance.</p>
             </div>
           </div>
 
