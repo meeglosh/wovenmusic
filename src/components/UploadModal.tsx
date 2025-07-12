@@ -150,7 +150,8 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
   const uploadFile = async (uploadFile: UploadFile, index: number) => {
     const { file } = uploadFile;
-    const fileName = file.name;
+    // Replace spaces with underscores to avoid URL encoding issues
+    const fileName = file.name.replace(/\s+/g, '_');
     
     try {
       // Update status to uploading
