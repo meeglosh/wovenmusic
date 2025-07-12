@@ -62,7 +62,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                   variant="ghost"
                   className={cn(
                     "w-full justify-start h-auto p-3 text-left",
-                    "hover:bg-primary/10 hover:text-primary transition-colors"
+                    "hover:bg-primary/50 transition-colors"
                   )}
                   onClick={() => onPlaylistSelect(playlist)}
                 >
