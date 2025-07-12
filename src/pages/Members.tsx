@@ -24,7 +24,7 @@ const Members = () => {
   const isAdmin = currentUserProfile?.is_admin || false;
   
   // Filter out admin members from the display
-  const members = allMembers.filter(member => !member.is_admin);
+  const members = allMembers.filter(member => !member.is_admin && member.id !== user?.id);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
