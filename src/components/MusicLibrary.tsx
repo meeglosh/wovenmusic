@@ -229,7 +229,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Driftspace</h2>
+        <div>
+          <h2 className="text-3xl font-bold">Driftspace</h2>
+          <p className="text-muted-foreground mt-1">The echo vault of your collected murmurings</p>
+        </div>
         <div className="flex items-center space-x-4">
           {isSelectionMode && (
             <div className="flex items-center space-x-2">
