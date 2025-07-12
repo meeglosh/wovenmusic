@@ -80,7 +80,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect }: M
                           onClick={() => handlePlaylistSelect(playlist)}
                         >
                           <ListMusic className="w-4 h-4 mr-3 flex-shrink-0" />
-                          <span className="truncate">{playlist.name}</span>
+                          <span className="truncate text-primary">{playlist.name}</span>
                         </Button>
                       ))}
                     </div>

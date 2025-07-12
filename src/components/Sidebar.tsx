@@ -40,7 +40,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
             className="h-8 w-8 p-0"
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-primary" />
           </Button>
         </div>
         
@@ -71,7 +71,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <p className="font-medium truncate">{playlist.name}</p>
+                        <p className="font-medium truncate text-primary">{playlist.name}</p>
                         <div title={playlist.isPublic ? "Public playlist" : "Private playlist"}>
                           {playlist.isPublic ? (
                             <Globe className="h-3 w-3 text-green-600" />

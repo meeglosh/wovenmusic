@@ -98,16 +98,16 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
-              <DropdownMenuItem onClick={() => navigate("/members")}>
+              <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 Members
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/privacy-settings")}>
+              <DropdownMenuItem onClick={() => navigate("/privacy-settings")} className="text-primary">
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
               </DropdownMenuItem>
@@ -145,16 +145,16 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
-              <DropdownMenuItem onClick={() => navigate("/members")}>
+              <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 <span className="text-sm">Members</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/privacy-settings")}>
+              <DropdownMenuItem onClick={() => navigate("/privacy-settings")} className="text-primary">
                 <Shield className="w-4 h-4 mr-2" />
                 <span className="text-sm">Privacy</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
                 <span className="text-sm">Sign Out</span>
               </DropdownMenuItem>
