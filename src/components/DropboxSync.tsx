@@ -758,8 +758,8 @@ const DropboxSync = () => {
   if (!isConnected) {
     return (
       <Card className="p-6 text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-          <Cloud className="w-8 h-8 text-blue-600" />
+        <div className="w-20 h-20 border-2 border-primary rounded-lg flex items-center justify-center mx-auto mb-4">
+          <Cloud className="w-12 h-12 text-primary" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Connect to Dropbox</h3>
         <p className="text-muted-foreground mb-4">
