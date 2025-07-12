@@ -156,7 +156,7 @@ const Members = () => {
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={newInvitation.role} onValueChange={(value) => setNewInvitation(prev => ({ ...prev, role: value }))}>
-                    <SelectTrigger className="border-2 text-primary [&>svg]:text-primary">
+                    <SelectTrigger className="border-2 border-border text-primary [&>svg]:text-primary">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
