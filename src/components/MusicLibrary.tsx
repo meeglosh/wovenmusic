@@ -354,7 +354,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 size="sm"
                 onClick={handleClearSelection}
               >
-                <X className="w-4 h-4 mr-2" />
+                <X className="w-4 h-4 mr-2 text-primary" />
                 Clear Selection
               </Button>
             </div>
