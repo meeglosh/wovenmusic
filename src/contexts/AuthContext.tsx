@@ -102,16 +102,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Sign up the user
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error } = await supabase.auth.signUp({
       email: invitation.email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
         data: {
           full_name: fullName,
+          invitation_role: invitation.role,
+          invitation_token: token
         }
       }
     });
+
+    // If signup was successful, mark invitation as used
+    if (!error && authData.user) {
+      await supabase
+        .from('invitations')
+        .update({ used_at: new Date().toISOString() })
+        .eq('token', token);
+    }
 
     return { error };
   };
