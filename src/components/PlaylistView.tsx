@@ -388,8 +388,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         className="mb-6"
         onClick={onBack}
       >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Library
+        <ArrowLeft className="w-4 h-4 mr-2 text-primary" />
+        <span className="text-primary">Back to Library</span>
       </Button>
 
       <div className="flex items-start space-x-6 mb-8">
