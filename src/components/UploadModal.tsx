@@ -371,7 +371,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
                     Done
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-primary">
                   {allComplete ? 'Close' : 'Cancel'}
                 </Button>
               </div>

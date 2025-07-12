@@ -210,6 +210,7 @@ const AddTracksModal = ({
             variant="ghost"
             onClick={handleClose}
             disabled={isLoading}
+            className="text-primary"
           >
             Cancel
           </Button>

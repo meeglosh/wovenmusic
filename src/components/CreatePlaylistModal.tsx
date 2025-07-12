@@ -145,6 +145,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
               variant="ghost"
               onClick={handleClose}
               disabled={isLoading}
+              className="text-primary"
             >
               Cancel
             </Button>

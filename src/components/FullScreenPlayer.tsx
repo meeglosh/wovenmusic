@@ -146,7 +146,7 @@ const FullScreenPlayer = ({
                         <Send className="w-4 h-4 mr-2" />
                         Add Comment
                       </Button>
-                      <Button variant="ghost" onClick={() => setShowCommentForm(false)}>
+                      <Button variant="ghost" onClick={() => setShowCommentForm(false)} className="text-primary">
                         Cancel
                       </Button>
                     </div>
