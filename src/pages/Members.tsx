@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useBandMembers, useInvitations } from "@/hooks/useBandMembers";
+import { useBandMembers, useInvitations, useCustomRoles } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -202,12 +202,16 @@ const Members = () => {
                           {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
-                        <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
-                        <Badge variant="secondary" className={getRoleColor(member.role)}>
-                          {member.role}
-                        </Badge>
-                      </div>
+                       <div>
+                         <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
+                         <div className="flex flex-wrap gap-1 mt-1">
+                           {(member.roles && member.roles.length > 0 ? member.roles : [member.role]).filter(Boolean).map((role) => (
+                             <Badge key={role} variant="secondary" className={getRoleColor(role)}>
+                               {role}
+                             </Badge>
+                           ))}
+                         </div>
+                       </div>
                     </div>
                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button

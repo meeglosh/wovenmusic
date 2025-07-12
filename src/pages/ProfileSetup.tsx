@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, User, ArrowLeft } from "lucide-react";
+import { MultiRoleSelector } from "@/components/MultiRoleSelector";
 
 const ProfileSetup = () => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ const ProfileSetup = () => {
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.user_metadata?.avatar_url || "");
   const [profileData, setProfileData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   
   const editingUserId = searchParams.get('userId');
   const isEditingOtherUser = editingUserId && editingUserId !== user?.id;
@@ -41,6 +43,12 @@ const ProfileSetup = () => {
           if (data) {
             setProfileData(data);
             setAvatarUrl(data.avatar_url || "");
+            // Set selected roles from existing data
+            if (data.roles && data.roles.length > 0) {
+              setSelectedRoles(data.roles);
+            } else if (data.role) {
+              setSelectedRoles([data.role]);
+            }
           }
         } catch (error: any) {
           toast({
@@ -49,11 +57,17 @@ const ProfileSetup = () => {
             variant: "destructive",
           });
         }
+      } else {
+        // For new profiles, set default from invitation if available
+        const invitationRole = user?.user_metadata?.invitation_role;
+        if (invitationRole) {
+          setSelectedRoles([invitationRole]);
+        }
       }
     };
 
     loadProfile();
-  }, [editingUserId, toast]);
+  }, [editingUserId, toast, user?.user_metadata?.invitation_role]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,7 +78,16 @@ const ProfileSetup = () => {
     const formData = new FormData(e.currentTarget);
     const fullName = formData.get('fullName') as string;
     const bio = formData.get('bio') as string;
-    const role = formData.get('role') as string;
+
+    if (selectedRoles.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one role",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const targetUserId = editingUserId || user.id;
@@ -76,7 +99,8 @@ const ProfileSetup = () => {
           id: targetUserId,
           full_name: fullName,
           bio: bio,
-          role: role,
+          roles: selectedRoles,
+          role: selectedRoles[0], // Keep the first role for backward compatibility
           email: profileData?.email || user.email,
           avatar_url: avatarUrl,
           is_band_member: true
@@ -208,26 +232,11 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Role */}
-            <div className="space-y-2">
-              <Label htmlFor="role">Your Role *</Label>
-              <Select name="role" defaultValue={profileData?.role || user?.user_metadata?.invitation_role || ""} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role in the band" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Vocalist">Vocalist</SelectItem>
-                  <SelectItem value="Guitarist">Guitarist</SelectItem>
-                  <SelectItem value="Bassist">Bassist</SelectItem>
-                  <SelectItem value="Drummer">Drummer</SelectItem>
-                  <SelectItem value="Keyboardist">Keyboardist</SelectItem>
-                  <SelectItem value="Producer">Producer</SelectItem>
-                  <SelectItem value="Sound Engineer">Sound Engineer</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Roles */}
+            <MultiRoleSelector 
+              selectedRoles={selectedRoles}
+              onRolesChange={setSelectedRoles}
+            />
 
             {/* Bio */}
             <div className="space-y-2">

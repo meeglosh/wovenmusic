@@ -79,6 +79,30 @@ export type Database = {
           },
         ]
       }
+      custom_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           created_at: string
@@ -229,6 +253,7 @@ export type Database = {
           id: string
           is_band_member: boolean | null
           role: string | null
+          roles: string[] | null
           updated_at: string
         }
         Insert: {
@@ -240,6 +265,7 @@ export type Database = {
           id: string
           is_band_member?: boolean | null
           role?: string | null
+          roles?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -251,6 +277,7 @@ export type Database = {
           id?: string
           is_band_member?: boolean | null
           role?: string | null
+          roles?: string[] | null
           updated_at?: string
         }
         Relationships: []

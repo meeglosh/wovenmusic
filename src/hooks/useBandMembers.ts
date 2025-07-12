@@ -8,7 +8,16 @@ export interface UserProfile {
   avatar_url: string | null;
   bio: string | null;
   role: string;
+  roles: string[];
   is_band_member: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomRole {
+  id: string;
+  name: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +74,7 @@ export const useBandMembers = () => {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<{ full_name: string; bio: string; role: string; is_band_member: boolean }> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<{ full_name: string; bio: string; role: string; roles: string[]; is_band_member: boolean }> }) => {
       const { data, error } = await supabase
         .from("profiles")
         .update(updates)
@@ -83,9 +92,10 @@ export const useBandMembers = () => {
 
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
+      // Actually delete the profile completely
       const { error } = await supabase
         .from("profiles")
-        .update({ is_band_member: false })
+        .delete()
         .eq("id", id);
       
       if (error) throw error;
@@ -137,5 +147,64 @@ export const useInvitations = () => {
   return {
     ...query,
     deleteInvitation
+  };
+};
+
+export const useCustomRoles = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["custom-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_roles")
+        .select("*")
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data as CustomRole[];
+    }
+  });
+
+  const createRole = useMutation({
+    mutationFn: async (name: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from("custom_roles")
+        .insert({
+          name,
+          created_by: user.id
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
+    }
+  });
+
+  const deleteRole = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("custom_roles")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
+    }
+  });
+
+  return {
+    ...query,
+    createRole,
+    deleteRole
   };
 };
