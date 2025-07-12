@@ -340,7 +340,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
         </div>
       ) : (
         <Card className="overflow-hidden">
-          <div className="grid grid-cols-[auto,auto,1fr,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
+          <div className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
             <div className="w-8">
               <Checkbox
                 checked={allTracksSelected}
@@ -381,6 +381,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                 Added {getSortIcon('addedAt')}
               </Button>
             </div>
+            <div className="w-8"></div>
             <div className="w-12"></div>
           </div>
 
@@ -388,7 +389,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
             {sortedTracks.map((track, index) => (
               <div
                 key={track.id}
-                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
+                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
               >
@@ -457,13 +458,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                       </button>
                       <p className="text-sm text-muted-foreground">{track.artist}</p>
                     </div>
-                    <div title={track.is_public ? "Public track" : "Private track"}>
-                      {track.is_public ? (
-                        <Globe className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Lock className="h-3 w-3 text-muted-foreground" />
-                      )}
-                    </div>
                   </div>
                 </div>
 
@@ -487,6 +481,14 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
 
                 <div className="flex items-center text-sm text-muted-foreground">
                   {track.addedAt.toLocaleDateString()}
+                </div>
+
+                <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
+                  {track.is_public ? (
+                    <Globe className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
                 </div>
 
                 <div className="w-12 flex items-center">
