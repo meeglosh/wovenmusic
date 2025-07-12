@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type Theme = 'midnight-glow' | 'neon-garden' | 'royal-parchment' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'aureate-membrane' | 'liminal-aureole' | 'umbral-manuscript' | 'spectral-palimpsest' | 'chromatic-nexus' | 'magenta-oscillation';
+export type Theme = 'midnight-glow' | 'neon-garden' | 'royal-parchment' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'aureate-membrane' | 'liminal-aureole' | 'umbral-manuscript' | 'spectral-palimpsest' | 'chromatic-nexus' | 'magenta-oscillation' | 'silurian-threshold' | 'cambrian-resonance';
 
 export const THEMES = [
   { value: 'midnight-glow', label: 'Abyssal Phosphene', description: 'Bioluminescent signals in deep current' },
@@ -15,6 +15,8 @@ export const THEMES = [
   { value: 'spectral-palimpsest', label: 'Umbral Manuscript', description: 'Overwritten shadows in phantom ink' },
   { value: 'chromatic-nexus', label: 'Synaptic Magenta', description: 'Neural pathways in violet discharge' },
   { value: 'magenta-oscillation', label: 'Chromatic Nexus', description: 'Color intersections in frequency space' },
+  { value: 'silurian-threshold', label: 'Paleozoic Stratum', description: 'Ancient sediments in temporal layers' },
+  { value: 'cambrian-resonance', label: 'Primordial Echo', description: 'Fossil vibrations in stone matrix' },
 ] as const;
 
 export const useTheme = () => {

@@ -17,6 +17,8 @@
     --color-10: 35 78% 96%;
     --color-11: 313 84% 26%;
     --color-12: 64 94% 78%;
+    --color-13: 30 11% 4%;
+    --color-14: 60 9% 98%;
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -323,6 +325,52 @@
     --border: var(--color-12);
     --input: var(--color-11);
     --ring: var(--color-12);
+  }
+
+  /* Silurian Threshold - dark stone text on light stone background */
+  .silurian-threshold {
+    color: var(--color-13);
+    background-color: var(--color-14);
+    --background: var(--color-14);
+    --foreground: var(--color-13);
+    --card: var(--color-14);
+    --card-foreground: var(--color-13);
+    --popover: var(--color-14);
+    --popover-foreground: var(--color-13);
+    --primary: var(--color-13);
+    --primary-foreground: var(--color-14);
+    --secondary: var(--color-14);
+    --secondary-foreground: var(--color-13);
+    --muted: var(--color-14);
+    --muted-foreground: var(--color-13);
+    --accent: var(--color-13);
+    --accent-foreground: var(--color-14);
+    --border: var(--color-13);
+    --input: var(--color-14);
+    --ring: var(--color-13);
+  }
+
+  /* Cambrian Resonance - light stone text on dark stone background */
+  .cambrian-resonance {
+    color: var(--color-14);
+    background-color: var(--color-13);
+    --background: var(--color-13);
+    --foreground: var(--color-14);
+    --card: var(--color-13);
+    --card-foreground: var(--color-14);
+    --popover: var(--color-13);
+    --popover-foreground: var(--color-14);
+    --primary: var(--color-14);
+    --primary-foreground: var(--color-13);
+    --secondary: var(--color-13);
+    --secondary-foreground: var(--color-14);
+    --muted: var(--color-13);
+    --muted-foreground: var(--color-14);
+    --accent: var(--color-14);
+    --accent-foreground: var(--color-13);
+    --border: var(--color-14);
+    --input: var(--color-13);
+    --ring: var(--color-14);
   }
 
   * {
