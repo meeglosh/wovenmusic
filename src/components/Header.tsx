@@ -44,7 +44,11 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             />
           )}
           
-          <h1 className="text-lg sm:text-2xl font-rem font-thin text-white">
+          <h1 className={`text-lg sm:text-2xl font-rem font-thin ${
+            ['neon-garden', 'royal-parchment', 'glacial-syntax', 'aureate-membrane', 'umbral-manuscript', 'chromatic-nexus'].includes(theme) 
+              ? 'text-black' 
+              : 'text-white'
+          }`}>
             Wovenmusic
           </h1>
         </div>
