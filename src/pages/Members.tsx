@@ -17,11 +17,14 @@ const Members = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: members = [], isLoading, inviteUser, removeMember, updateProfile } = useBandMembers();
+  const { data: allMembers = [], isLoading, inviteUser, removeMember, updateProfile } = useBandMembers();
   const { data: invitations = [] } = useInvitations();
   const { data: currentUserProfile } = useCurrentUserProfile();
   
   const isAdmin = currentUserProfile?.is_admin || false;
+  
+  // Filter out admin members from the display
+  const members = allMembers.filter(member => !member.is_admin);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
