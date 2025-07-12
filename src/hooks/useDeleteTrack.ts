@@ -6,17 +6,18 @@ export const useDeleteTrack = () => {
   
   return useMutation({
     mutationFn: async (trackId: string) => {
-      // First get the track to check if it has a file_url (uploaded file)
+      // First get the track to check if it has a file_url (uploaded file) vs dropbox_path (Dropbox file)
       const { data: track, error: fetchError } = await supabase
         .from("tracks")
-        .select("file_url")
+        .select("file_url, dropbox_path")
         .eq("id", trackId)
         .single();
       
       if (fetchError) throw fetchError;
       
-      // If the track has a file_url, it's an uploaded file - delete from storage
-      if (track?.file_url) {
+      // If the track has a file_url and no dropbox_path, it's an uploaded file - delete from storage
+      const isUploadedFile = track?.file_url && !track?.dropbox_path;
+      if (isUploadedFile) {
         const fileName = track.file_url.split('/').pop();
         if (fileName) {
           const { error: storageError } = await supabase.storage
@@ -36,7 +37,7 @@ export const useDeleteTrack = () => {
         .eq("id", trackId);
       
       if (error) throw error;
-      return { trackId, hadFileUrl: !!track?.file_url };
+      return { trackId, isUploadedFile };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
@@ -49,16 +50,16 @@ export const useBulkDeleteTracks = () => {
   
   return useMutation({
     mutationFn: async (trackIds: string[]) => {
-      // First get all tracks to check which have file_urls (uploaded files)
+      // First get all tracks to check which have file_urls (uploaded files) vs dropbox_path (Dropbox files)
       const { data: tracks, error: fetchError } = await supabase
         .from("tracks")
-        .select("id, file_url")
+        .select("id, file_url, dropbox_path")
         .in("id", trackIds);
       
       if (fetchError) throw fetchError;
       
-      // Delete uploaded files from storage
-      const uploadedFiles = tracks?.filter(track => track.file_url) || [];
+      // Delete uploaded files from storage (files with file_url but no dropbox_path)
+      const uploadedFiles = tracks?.filter(track => track.file_url && !track.dropbox_path) || [];
       if (uploadedFiles.length > 0) {
         const fileNames = uploadedFiles
           .map(track => track.file_url?.split('/').pop())

@@ -181,7 +181,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
   const handleDeleteTrack = async (track: Track) => {
     try {
       const result = await deleteTrackMutation.mutateAsync(track.id);
-      const isUploadedFile = result.hadFileUrl;
+      const isUploadedFile = result.isUploadedFile;
       
       toast({
         title: "Track removed",
