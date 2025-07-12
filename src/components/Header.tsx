@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload, Users, Settings, Shield, LogOut } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/hooks/useTheme";
 import UploadModal from "./UploadModal";
 import MobileNav from "./MobileNav";
 import { Playlist } from "@/types/music";
@@ -19,6 +20,7 @@ interface HeaderProps {
 const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect }: HeaderProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { toggleTheme } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handleSignOut = async () => {
@@ -62,6 +64,10 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
 
         {/* Desktop Actions */}
         <div className="hidden lg:flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={toggleTheme}>
+            <Palette className="w-4 h-4 mr-2" />
+            Theme
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -86,6 +92,9 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
 
         {/* Mobile Actions - Icon only buttons */}
         <div className="flex lg:hidden items-center space-x-1">
+          <Button variant="ghost" size="sm" onClick={toggleTheme}>
+            <Palette className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4" />
           </Button>
