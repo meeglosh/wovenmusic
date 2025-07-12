@@ -18,26 +18,68 @@ export const THEMES = [
 ] as const;
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState<Theme>('midnight-glow');
+  // Initialize with null to avoid overriding localStorage value
+  const [theme, setTheme] = useState<Theme | null>(null);
 
+  // Load theme from localStorage on mount
   useEffect(() => {
-    // Get saved theme from localStorage
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme && THEMES.some(t => t.value === savedTheme)) {
-      setTheme(savedTheme);
-    }
+    const loadTheme = () => {
+      try {
+        const savedTheme = localStorage.getItem('wovenmusic-theme') as Theme | null;
+        
+        // Validate that the saved theme exists in our theme list
+        if (savedTheme && THEMES.some(t => t.value === savedTheme)) {
+          setTheme(savedTheme);
+          // Apply theme immediately to prevent flash
+          applyThemeToBody(savedTheme);
+        } else {
+          // Set default theme if no valid saved theme
+          setTheme('midnight-glow');
+          applyThemeToBody('midnight-glow');
+        }
+      } catch (error) {
+        console.warn('Failed to load theme from localStorage:', error);
+        setTheme('midnight-glow');
+        applyThemeToBody('midnight-glow');
+      }
+    };
+
+    loadTheme();
   }, []);
 
+  // Apply theme to body and save to localStorage when theme changes
   useEffect(() => {
-    // Remove old theme classes and apply new theme to document body
+    if (theme) {
+      applyThemeToBody(theme);
+      
+      // Save theme to localStorage with error handling
+      try {
+        localStorage.setItem('wovenmusic-theme', theme);
+      } catch (error) {
+        console.warn('Failed to save theme to localStorage:', error);
+      }
+    }
+  }, [theme]);
+
+  const applyThemeToBody = (selectedTheme: Theme) => {
+    // Remove all existing theme classes
     const bodyClasses = document.body.className.split(' ').filter(cls => 
       !THEMES.some(t => t.value === cls)
     );
-    document.body.className = [...bodyClasses, theme].join(' ');
     
-    // Save theme to localStorage
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    // Add the selected theme class
+    document.body.className = [...bodyClasses, selectedTheme].join(' ').trim();
+  };
 
-  return { theme, setTheme, themes: THEMES };
+  const changeTheme = (newTheme: Theme) => {
+    setTheme(newTheme);
+  };
+
+  // Return null theme until loaded to prevent flash
+  return { 
+    theme: theme || 'midnight-glow', 
+    setTheme: changeTheme, 
+    themes: THEMES,
+    isThemeLoaded: theme !== null
+  };
 };
