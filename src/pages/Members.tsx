@@ -201,13 +201,13 @@ const Members = () => {
               <Card key={member.id} className="group hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-medium text-sm">
                           {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
                         </span>
                       </div>
-                       <div>
+                       <div className="flex-1 min-w-0">
                          <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                          <div className="flex flex-wrap gap-1 mt-1">
                            {(member.roles && member.roles.length > 0 ? member.roles : [member.role]).filter(Boolean).map((role) => (
