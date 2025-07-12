@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
@@ -300,8 +300,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
           onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
         >
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <div className="text-blue-600 text-sm">☁</div>
+            <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
+              <Box className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h3 className="font-medium">Dropbox Sync</h3>
