@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
 import DropboxSync from "./DropboxSync";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
@@ -426,16 +426,26 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying }: MusicLib
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <button 
-                      className={`text-left font-medium hover:text-primary transition-colors cursor-pointer ${
-                        track.duration === 'Transcoding...' ? 'opacity-50' : ''
-                      }`}
-                      onClick={() => navigate(`/track/${track.id}`)}
-                      title="Open track view with comments"
-                    >
-                      {getFileName(track)}
-                    </button>
+                  <div className="flex items-center space-x-2">
+                    <div>
+                      <button 
+                        className={`text-left font-medium hover:text-primary transition-colors cursor-pointer ${
+                          track.duration === 'Transcoding...' ? 'opacity-50' : ''
+                        }`}
+                        onClick={() => navigate(`/track/${track.id}`)}
+                        title="Open track view with comments"
+                      >
+                        {getFileName(track)}
+                      </button>
+                      <p className="text-sm text-muted-foreground">{track.artist}</p>
+                    </div>
+                    <div title={track.is_public ? "Public track" : "Private track"}>
+                      {track.is_public ? (
+                        <Globe className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </div>
                   </div>
                 </div>
 

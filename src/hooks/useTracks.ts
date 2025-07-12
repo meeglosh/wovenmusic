@@ -22,7 +22,8 @@ export const useTracks = () => {
         fileUrl: track.file_url || "#",
         addedAt: new Date(track.created_at),
         source_folder: track.source_folder,
-        dropbox_path: track.dropbox_path
+        dropbox_path: track.dropbox_path,
+        is_public: track.is_public
       })) as Track[];
     }
   });
@@ -59,7 +60,7 @@ export const useUpdateTrack = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string }> }) => {
+    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string; is_public: boolean }> }) => {
       const { data, error } = await supabase
         .from("tracks")
         .update(updates)

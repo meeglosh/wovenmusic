@@ -1,9 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload, Users, Settings } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-4">
@@ -36,6 +38,10 @@ const Header = () => {
           <Button variant="outline" size="sm">
             <Users className="w-4 h-4 mr-2" />
             Members
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/privacy-settings")}>
+            <Shield className="w-4 h-4 mr-2" />
+            Privacy
           </Button>
           <Button variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-2" />

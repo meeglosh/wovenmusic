@@ -8,6 +8,7 @@ export interface Track {
   addedAt: Date;
   source_folder?: string;
   dropbox_path?: string;
+  is_public?: boolean;
 }
 
 // Utility function to get the full filename from a track

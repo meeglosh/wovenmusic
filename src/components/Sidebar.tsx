@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music, Plus, Library, List } from "lucide-react";
+import { Music, Plus, Library, List, Lock, Globe } from "lucide-react";
 import { Playlist } from "@/types/music";
 import { cn } from "@/lib/utils";
 import CreatePlaylistModal from "./CreatePlaylistModal";
@@ -70,7 +70,16 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect }: Sid
                       <List className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{playlist.name}</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="font-medium truncate">{playlist.name}</p>
+                        <div title={playlist.isPublic ? "Public playlist" : "Private playlist"}>
+                          {playlist.isPublic ? (
+                            <Globe className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
                       </p>
