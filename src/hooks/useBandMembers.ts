@@ -44,7 +44,7 @@ export const useBandMembers = () => {
         .from("profiles")
         .select("*")
         .eq("is_band_member", true)
-        .or("is_admin.is.null,is_admin.eq.false")
+        .neq("is_admin", true)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
