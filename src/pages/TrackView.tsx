@@ -219,13 +219,6 @@ const TrackView = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <div className="text-center flex-1">
-              <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {track.title}
-              </h1>
-              <p className="text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mt-1">{track.artist}</p>
-            </div>
-            <div className="w-16" />
           </div>
         </div>
       </div>
