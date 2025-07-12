@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState<'combo-1' | 'combo-2'>('combo-1');
+  const [theme, setTheme] = useState<'combo-1' | 'combo-2'>('combo-2');
 
   useEffect(() => {
     // Get saved theme from localStorage
