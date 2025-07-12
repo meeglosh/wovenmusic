@@ -558,7 +558,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
             <div className="text-2xl text-primary/60">♪</div>
           </div>
-          <h3 className="text-xl font-semibold mb-2">This playlist is empty</h3>
+          <h3 className="text-xl font-semibold mb-2 text-primary">This playlist is empty</h3>
           <p className="text-muted-foreground mb-4">Add some tracks to get started.</p>
           <Button variant="outline" onClick={() => setShowAddTracksModal(true)}>
             <Plus className="w-4 h-4 mr-2 text-primary" />
