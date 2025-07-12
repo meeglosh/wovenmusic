@@ -23,8 +23,12 @@ const Members = () => {
   
   const isAdmin = currentUserProfile?.is_admin || false;
   
+  // Debug: Let's see what the data looks like
+  console.log('All members:', allMembers);
+  console.log('Members with is_admin:', allMembers.map(m => ({ id: m.id, name: m.full_name, is_admin: m.is_admin })));
+  
   // Filter out admin members from the display
-  const members = allMembers.filter(member => !member.is_admin);
+  const members = allMembers.filter(member => member.is_admin !== true);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
