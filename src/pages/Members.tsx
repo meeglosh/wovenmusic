@@ -249,11 +249,14 @@ const Members = () => {
                 <CardContent className="pt-0 text-center">
                   <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                     <Mail className="w-4 h-4" />
-                    <span className="truncate">{member.email}</span>
-                  </div>
-                  
-                  <div className="mt-4 text-xs text-muted-foreground">
-                    Member since {new Date(member.created_at).toLocaleDateString()}
+                    <a 
+                      href={`mailto:${member.email}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="truncate hover:text-primary transition-colors"
+                    >
+                      {member.email}
+                    </a>
                   </div>
                 </CardContent>
               </Card>
