@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,14 +10,50 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User } from "lucide-react";
+import { Upload, User, ArrowLeft } from "lucide-react";
 
 const ProfileSetup = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.user_metadata?.avatar_url || "");
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const editingUserId = searchParams.get('userId');
+  const isEditingOtherUser = editingUserId && editingUserId !== user?.id;
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (editingUserId) {
+        setIsEditing(true);
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', editingUserId)
+            .single();
+          
+          if (error && error.code !== 'PGRST116') throw error;
+          
+          if (data) {
+            setProfileData(data);
+            setAvatarUrl(data.avatar_url || "");
+          }
+        } catch (error: any) {
+          toast({
+            title: "Error loading profile",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    loadProfile();
+  }, [editingUserId, toast]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,15 +67,17 @@ const ProfileSetup = () => {
     const role = formData.get('role') as string;
 
     try {
+      const targetUserId = editingUserId || user.id;
+      
       // Update or create the user profile
       const { error } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id,
+          id: targetUserId,
           full_name: fullName,
           bio: bio,
           role: role,
-          email: user.email,
+          email: profileData?.email || user.email,
           avatar_url: avatarUrl,
           is_band_member: true
         });
@@ -47,14 +85,16 @@ const ProfileSetup = () => {
       if (error) throw error;
 
       toast({
-        title: "Profile created!",
-        description: "Welcome to Wovenmusic. You can now access all features.",
+        title: isEditing ? "Profile updated!" : "Profile created!",
+        description: isEditing 
+          ? "Profile has been updated successfully." 
+          : "Welcome to Wovenmusic. You can now access all features.",
       });
 
-      navigate('/');
+      navigate(isEditing ? '/members' : '/');
     } catch (error: any) {
       toast({
-        title: "Error creating profile",
+        title: isEditing ? "Error updating profile" : "Error creating profile",
         description: error.message,
         variant: "destructive",
       });
@@ -101,19 +141,30 @@ const ProfileSetup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">W</span>
-          </div>
-          <CardTitle className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-            Complete Your Profile
-          </CardTitle>
-          <CardDescription>
-            Tell us a bit about yourself to get started
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-background">
+      {/* Back Button */}
+      {isEditing && (
+        <div className="p-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/members")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Members
+          </Button>
+        </div>
+      )}
+      
+      <div className="flex items-center justify-center p-4 min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-bold text-lg">W</span>
+            </div>
+            <CardTitle className="text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              {isEditing ? "Edit Profile" : "Complete Your Profile"}
+            </CardTitle>
+            <CardDescription>
+              {isEditing ? "Update your profile information" : "Tell us a bit about yourself to get started"}
+            </CardDescription>
+          </CardHeader>
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +203,7 @@ const ProfileSetup = () => {
                 name="fullName"
                 type="text"
                 placeholder="Enter your full name"
-                defaultValue={user?.user_metadata?.full_name || ""}
+                defaultValue={profileData?.full_name || user?.user_metadata?.full_name || ""}
                 required
               />
             </div>
@@ -160,7 +211,7 @@ const ProfileSetup = () => {
             {/* Role */}
             <div className="space-y-2">
               <Label htmlFor="role">Your Role *</Label>
-              <Select name="role" defaultValue={user?.user_metadata?.invitation_role || ""} required>
+              <Select name="role" defaultValue={profileData?.role || user?.user_metadata?.invitation_role || ""} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role in the band" />
                 </SelectTrigger>
@@ -186,15 +237,17 @@ const ProfileSetup = () => {
                 name="bio"
                 placeholder="Tell us about yourself and your musical background..."
                 rows={3}
+                defaultValue={profileData?.bio || ""}
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating Profile..." : "Complete Setup"}
+              {isLoading ? (isEditing ? "Updating Profile..." : "Creating Profile...") : (isEditing ? "Update Profile" : "Complete Setup")}
             </Button>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

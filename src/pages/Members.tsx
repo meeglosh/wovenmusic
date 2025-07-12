@@ -193,7 +193,7 @@ const Members = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {members.map((member) => (
-              <Card key={member.id} className="hover:shadow-md transition-shadow">
+              <Card key={member.id} className="group hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
@@ -209,15 +209,25 @@ const Members = () => {
                         </Badge>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
-                      disabled={member.id === user?.id} // Can't remove yourself
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => navigate(`/profile-setup?userId=${member.id}`)}
+                      >
+                        <Settings className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
+                        disabled={member.id === user?.id} // Can't remove yourself
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 
