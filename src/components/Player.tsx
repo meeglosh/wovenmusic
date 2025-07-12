@@ -70,7 +70,7 @@ const Player = ({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm sm:text-base truncate">{getFileName(track)}</p>
+            <p className="font-medium text-sm sm:text-base truncate text-primary">{getFileName(track)}</p>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ const Player = ({
               disabled={!onShuffle}
               className="hidden sm:flex"
             >
-              <Shuffle className="w-4 h-4" />
+              <Shuffle className="w-4 h-4 text-primary" />
             </Button>
             <Button 
               variant="ghost" 
@@ -93,7 +93,7 @@ const Player = ({
               onClick={onPrevious}
               disabled={!onPrevious}
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="w-4 h-4 text-primary" />
             </Button>
             <Button
               variant="default"
@@ -113,7 +113,7 @@ const Player = ({
               onClick={onNext}
               disabled={!onNext}
             >
-              <SkipForward className="w-4 h-4" />
+              <SkipForward className="w-4 h-4 text-primary" />
             </Button>
             {/* Hide repeat/fullscreen on mobile to save space */}
             <Button 
@@ -123,11 +123,11 @@ const Player = ({
               disabled={!onRepeat}
               className="hidden sm:flex"
             >
-              <Repeat className="w-4 h-4" />
+              <Repeat className="w-4 h-4 text-primary" />
             </Button>
             {onFullScreen && (
               <Button variant="ghost" size="sm" onClick={onFullScreen} className="hidden sm:flex">
-                <Maximize2 className="w-4 h-4" />
+                <Maximize2 className="w-4 h-4 text-primary" />
               </Button>
             )}
           </div>
@@ -147,7 +147,7 @@ const Player = ({
 
         {/* Volume - Hidden on mobile */}
         <div className="hidden sm:flex items-center space-x-2 flex-1 justify-end">
-          <Volume2 className="w-4 h-4" />
+          <Volume2 className="w-4 h-4 text-primary" />
           <Slider
             value={[volume * 100]}
             max={100}
