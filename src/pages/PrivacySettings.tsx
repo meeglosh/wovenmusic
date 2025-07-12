@@ -176,17 +176,20 @@ export default function PrivacySettings() {
                         <p className="font-medium">{getFileName(track)}</p>
                         <p className="text-sm text-muted-foreground">{track.artist}</p>
                       </div>
-                      <Badge variant={track.is_public ? "default" : "secondary"} className="ml-2">
-                        {track.is_public ? (
-                          <><Globe className="h-3 w-3 mr-1" />Public</>
-                        ) : (
-                          <><Lock className="h-3 w-3 mr-1" />Private</>
-                        )}
-                      </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`track-${track.id}`} className="text-sm">
-                        {track.is_public ? "Public" : "Private"}
+                      <Label htmlFor={`track-${track.id}`} className="text-sm flex items-center gap-1">
+                        {track.is_public ? (
+                          <>
+                            <Globe className="h-3 w-3" />
+                            Public
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-3 w-3" />
+                            Private
+                          </>
+                        )}
                       </Label>
                       <Switch
                         id={`track-${track.id}`}
@@ -230,17 +233,20 @@ export default function PrivacySettings() {
                           {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      <Badge variant={playlist.isPublic ? "default" : "secondary"} className="ml-2">
-                        {playlist.isPublic ? (
-                          <><Globe className="h-3 w-3 mr-1" />Public</>
-                        ) : (
-                          <><Lock className="h-3 w-3 mr-1" />Private</>
-                        )}
-                      </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`playlist-${playlist.id}`} className="text-sm">
-                        {playlist.isPublic ? "Public" : "Private"}
+                      <Label htmlFor={`playlist-${playlist.id}`} className="text-sm flex items-center gap-1">
+                        {playlist.isPublic ? (
+                          <>
+                            <Globe className="h-3 w-3" />
+                            Public
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-3 w-3" />
+                            Private
+                          </>
+                        )}
                       </Label>
                       <Switch
                         id={`playlist-${playlist.id}`}
