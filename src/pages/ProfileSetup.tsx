@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, ArrowLeft } from "lucide-react";
+import { Upload, User, ArrowLeft, X } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
 import { useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { Switch } from "@/components/ui/switch";
@@ -186,12 +186,22 @@ const ProfileSetup = () => {
       
       <div className="flex items-center justify-center p-4 min-h-screen">
         <Card className="w-full max-w-sm sm:max-w-md">
-          <CardHeader className="text-center">
+          <CardHeader className="text-center relative">
+            {isEditing && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate("/members")}
+                className="absolute top-0 right-0 p-2"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
             <CardTitle className="text-xl sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
               {isEditing ? "Edit Profile" : "Complete Your Profile"}
             </CardTitle>
             <CardDescription className="text-sm sm:text-base">
-              {isEditing ? "Update your profile information" : "Tell us a bit about yourself to get started"}
+              {isEditing ? "Molt your metadata - become again" : "Tell us a bit about yourself to get started"}
             </CardDescription>
           </CardHeader>
         
@@ -269,7 +279,7 @@ const ProfileSetup = () => {
                 placeholder="Tell us about yourself and your musical background..."
                 rows={3}
                 defaultValue={profileData?.bio || ""}
-                className="border border-input"
+                className="border-2 border-input"
               />
             </div>
 
