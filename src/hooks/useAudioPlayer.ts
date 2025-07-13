@@ -199,10 +199,8 @@ export const useAudioPlayer = () => {
         await canPlayPromise;
         console.log('Audio loaded successfully!');
         
-        // Auto-play after successful load
-        console.log('Attempting to auto-play after load...');
-        await audio.play();
-        setIsPlaying(true);
+        // Don't auto-play on mobile - wait for user interaction
+        console.log('Audio loaded, ready for playback when user interacts');
         
       } catch (error) {
         console.error('Failed to load track:', error);
@@ -385,14 +383,8 @@ export const useAudioPlayer = () => {
       setCurrentTrackIndex(nextIndex);
       setCurrentTrack(playlist[nextIndex]);
       
-      // Auto-play next track
-      setTimeout(() => {
-        const audio = audioRef.current;
-        if (audio) {
-          audio.play().catch(console.error);
-          setIsPlaying(true);
-        }
-      }, 100);
+      // Don't auto-play on mobile - wait for user interaction
+      setIsPlaying(false);
     }
   };
 
@@ -402,14 +394,8 @@ export const useAudioPlayer = () => {
       setCurrentTrackIndex(prevIndex);
       setCurrentTrack(playlist[prevIndex]);
       
-      // Auto-play previous track
-      setTimeout(() => {
-        const audio = audioRef.current;
-        if (audio) {
-          audio.play().catch(console.error);
-          setIsPlaying(true);
-        }
-      }, 100);
+      // Don't auto-play on mobile - wait for user interaction
+      setIsPlaying(false);
     }
   };
 
