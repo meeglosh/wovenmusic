@@ -156,8 +156,8 @@ export class DropboxService {
 
   async handleAuthCallback(code: string): Promise<void> {
     crossLog('=== HANDLING AUTH CALLBACK ===');
-    crossLog('Authorization code received:', code ? `${code.substring(0, 10)}...` : 'NONE');
-    crossLog('Full authorization code:', code);
+    crossLog('Authorization code received:', code ? `${code.substring(0, 6)}...` : 'NONE');
+    // Security: Do not log full authorization codes
     
     // Verify state parameter
     const storedState = localStorage.getItem('dropbox_auth_state');
@@ -191,7 +191,7 @@ export class DropboxService {
       if (data?.access_token) {
         crossLog('=== ACCESS TOKEN RECEIVED ===');
         crossLog('Token length:', data.access_token.length);
-        crossLog('Token preview:', `${data.access_token.substring(0, 10)}...`);
+        crossLog('Token preview:', `${data.access_token.substring(0, 6)}...`);
         
         this.accessToken = data.access_token;
         localStorage.setItem('dropbox_access_token', data.access_token);
@@ -225,7 +225,7 @@ export class DropboxService {
     const stored = localStorage.getItem('dropbox_access_token');
     console.log('Getting stored token from localStorage:', stored ? 'FOUND' : 'NOT FOUND');
     if (stored) {
-      console.log('Token preview:', `${stored.substring(0, 10)}...`);
+      console.log('Token preview:', `${stored.substring(0, 6)}...`);
       this.accessToken = stored; // Update instance cache
     } else {
       this.accessToken = null; // Clear instance cache
@@ -240,7 +240,7 @@ export class DropboxService {
     console.log('=== ENHANCED DROPBOX API DEBUGGING WITH PAGINATION ===');
     console.log('Listing files in folder:', folder);
     console.log('Token exists:', !!token);
-    console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'NONE');
+    console.log('Token preview:', token ? `${token.substring(0, 6)}...` : 'NONE');
 
     let allEntries: DropboxFile[] = [];
     let hasMore = true;
