@@ -113,32 +113,14 @@ export const MultiRoleSelector = ({ selectedRoles, onRolesChange }: MultiRoleSel
             variant={selectedRoles.includes(role) ? "default" : "outline"}
             size="sm"
             onClick={() => handleRoleToggle(role)}
-            className="justify-start text-xs sm:text-sm h-8 sm:h-9"
+            className={`justify-start text-xs sm:text-sm h-8 sm:h-9 ${
+              !selectedRoles.includes(role) ? "border border-input" : ""
+            }`}
           >
             {role}
           </Button>
         ))}
       </div>
-
-      {selectedRoles.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">Selected roles:</Label>
-          <div className="flex flex-wrap gap-2">
-            {selectedRoles.map((role) => (
-              <Badge key={role} variant="secondary" className="gap-1">
-                {role}
-                <button
-                  type="button"
-                  onClick={() => handleRoleToggle(role)}
-                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
