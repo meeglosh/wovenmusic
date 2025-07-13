@@ -35,6 +35,9 @@ export const useAddTrack = () => {
   
   return useMutation({
     mutationFn: async (track: Omit<Track, "id" | "addedAt">) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("tracks")
         .insert({
@@ -43,7 +46,8 @@ export const useAddTrack = () => {
           duration: track.duration,
           file_url: track.fileUrl,
           source_folder: track.source_folder,
-          dropbox_path: track.dropbox_path
+          dropbox_path: track.dropbox_path,
+          created_by: user.id
         })
         .select()
         .single();
