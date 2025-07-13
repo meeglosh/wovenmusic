@@ -376,9 +376,29 @@ export const useAudioPlayer = () => {
         console.log('Paused audio');
       } else {
         console.log('Attempting to play audio...');
-        await audio.play();
-        setIsPlaying(true);
-        console.log('Playing audio');
+        // Ensure audio source is loaded
+        if (!audio.src || audio.readyState < 3) {
+          console.log('Audio not ready, loading first...');
+          if (currentTrack) {
+            // Reload the track to ensure proper audio URL
+            const trackToLoad = { ...currentTrack };
+            setCurrentTrack(trackToLoad);
+            // Wait a bit for loading, then try to play
+            setTimeout(async () => {
+              try {
+                await audio.play();
+                setIsPlaying(true);
+                console.log('Playing audio after reload');
+              } catch (playError) {
+                console.error('Error playing after reload:', playError);
+              }
+            }, 1000);
+          }
+        } else {
+          await audio.play();
+          setIsPlaying(true);
+          console.log('Playing audio');
+        }
       }
     } catch (error) {
       console.error('Error toggling play/pause:', error);
@@ -394,8 +414,23 @@ export const useAudioPlayer = () => {
       setCurrentTrackIndex(nextIndex);
       setCurrentTrack(playlist[nextIndex]);
       
-      // Don't auto-play on mobile - wait for user interaction
-      setIsPlaying(false);
+      // Play next track if user was already playing
+      if (isPlaying) {
+        setTimeout(async () => {
+          const audio = audioRef.current;
+          if (audio) {
+            try {
+              await audio.play();
+              setIsPlaying(true);
+            } catch (error) {
+              console.error('Error playing next track:', error);
+              setIsPlaying(false);
+            }
+          }
+        }, 500);
+      } else {
+        setIsPlaying(false);
+      }
     }
   };
 
@@ -405,8 +440,23 @@ export const useAudioPlayer = () => {
       setCurrentTrackIndex(prevIndex);
       setCurrentTrack(playlist[prevIndex]);
       
-      // Don't auto-play on mobile - wait for user interaction
-      setIsPlaying(false);
+      // Play previous track if user was already playing
+      if (isPlaying) {
+        setTimeout(async () => {
+          const audio = audioRef.current;
+          if (audio) {
+            try {
+              await audio.play();
+              setIsPlaying(true);
+            } catch (error) {
+              console.error('Error playing previous track:', error);
+              setIsPlaying(false);
+            }
+          }
+        }, 500);
+      } else {
+        setIsPlaying(false);
+      }
     }
   };
 
