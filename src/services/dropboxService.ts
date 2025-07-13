@@ -70,17 +70,27 @@ export class DropboxService {
     // Clear any previous browser detection flags
     localStorage.removeItem('brave_detected');
     
+    // Detect mobile browsers
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('Device detection - Is mobile:', isMobile);
+    
     // Simple popup settings that work across browsers
-    const popupFeatures = 'width=600,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no';
+    const popupFeatures = isMobile 
+      ? 'width=100%,height=100%,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no'
+      : 'width=600,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=yes,status=no';
     
     console.log('=== OPENING DROPBOX AUTH POPUP ===');
     console.log('Popup features:', popupFeatures);
+    console.log('Is mobile device:', isMobile);
     
     const authWindow = window.open(authUrl, 'dropbox-auth', popupFeatures);
     
     if (!authWindow) {
       console.error('=== FAILED TO OPEN POPUP ===');
-      throw new Error('Failed to open authentication popup. Please allow popups for this site.');
+      const mobileMessage = isMobile 
+        ? ' On mobile devices, you may need to enable popups and try again, or use the desktop version for initial setup.'
+        : '';
+      throw new Error(`Failed to open authentication popup. Please allow popups for this site.${mobileMessage}`);
     }
     
     console.log('=== POPUP OPENED SUCCESSFULLY ===');

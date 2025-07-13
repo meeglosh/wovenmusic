@@ -89,11 +89,16 @@ export const useAudioPlayer = () => {
           if (currentTrack.dropbox_path) {
             console.log('Using stored dropbox_path to get fresh URL:', currentTrack.dropbox_path);
             try {
+              // Check if Dropbox is authenticated before trying to get temp link
+              if (!dropboxService.isAuthenticated()) {
+                console.error('Dropbox not authenticated - cannot refresh URL');
+                throw new Error('Dropbox authentication required to play this track');
+              }
               audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
               console.log('SUCCESS! Got fresh temporary URL from stored path');
             } catch (error) {
               console.error('Stored path failed:', error.message);
-              throw new Error(`Cannot access stored file path: ${currentTrack.dropbox_path}`);
+              throw new Error(`Cannot access Dropbox file. Please check your Dropbox connection.`);
             }
           } else {
             console.log('No stored dropbox_path available, will try fallback methods');
@@ -104,6 +109,12 @@ export const useAudioPlayer = () => {
         else if (audioUrl.startsWith('/')) {
           console.log('Getting fresh Dropbox temporary link...');
           
+          // Check if Dropbox is authenticated
+          if (!dropboxService.isAuthenticated()) {
+            console.error('Dropbox not authenticated - cannot get temporary link');
+            throw new Error('Dropbox authentication required to play this track');
+          }
+          
           // First check if we have a stored dropbox_path for this track
           if (currentTrack.dropbox_path) {
             console.log('Using stored dropbox_path:', currentTrack.dropbox_path);
@@ -112,7 +123,7 @@ export const useAudioPlayer = () => {
               console.log('SUCCESS! Got fresh temporary URL from stored path');
             } catch (error) {
               console.error('Stored path failed:', error.message);
-              throw new Error(`Cannot access stored file path: ${currentTrack.dropbox_path}`);
+              throw new Error(`Cannot access Dropbox file. Please check your Dropbox connection.`);
             }
           } else {
             // Fallback: search in the source folder with multiple extensions
