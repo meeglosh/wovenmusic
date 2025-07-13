@@ -84,7 +84,6 @@ const ProfileSetup = () => {
     
     const formData = new FormData(e.currentTarget);
     const fullName = formData.get('fullName') as string;
-    const bio = formData.get('bio') as string;
 
     if (selectedRoles.length === 0) {
       toast({
@@ -105,7 +104,6 @@ const ProfileSetup = () => {
         .upsert({
           id: targetUserId,
           full_name: fullName,
-          bio: bio,
           roles: selectedRoles,
           role: selectedRoles[0], // Keep the first role for backward compatibility
           email: profileData?.email || user.email,
@@ -270,18 +268,6 @@ const ProfileSetup = () => {
               </div>
             )}
 
-            {/* Bio */}
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                name="bio"
-                placeholder="Tell us about yourself and your musical background..."
-                rows={3}
-                defaultValue={profileData?.bio || ""}
-                className="border-2 border-input"
-              />
-            </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (isEditing ? "Updating Profile..." : "Creating Profile...") : (isEditing ? "Update Profile" : "Complete Setup")}
