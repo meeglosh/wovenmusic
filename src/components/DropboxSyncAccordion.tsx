@@ -340,7 +340,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
                       onClick={syncSelectedFiles}
                       disabled={isSyncing}
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 max-w-[343px]"
                     >
                       {isSyncing ? (
                         <>
