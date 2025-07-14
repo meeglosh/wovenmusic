@@ -124,12 +124,11 @@ export const DropboxConnectModal = ({ open, onOpenChange, onSuccess }: DropboxCo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DropboxIcon className="w-6 h-6 fill-primary" />
+          <DialogTitle>
             Connect to Dropbox
           </DialogTitle>
           <DialogDescription>
-            Connect your Dropbox account to sync your music files automatically.
+            Reach into the clouded vault and draw your echoes into the fold.
           </DialogDescription>
         </DialogHeader>
         
