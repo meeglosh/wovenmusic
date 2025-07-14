@@ -40,7 +40,9 @@ export const useDeleteTrack = () => {
       return { trackId, isUploadedFile };
     },
     onSuccess: () => {
+      // Force refetch the tracks data
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.refetchQueries({ queryKey: ["tracks"] });
     }
   });
 };
@@ -91,7 +93,9 @@ export const useBulkDeleteTracks = () => {
       };
     },
     onSuccess: () => {
+      // Force refetch the tracks data
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.refetchQueries({ queryKey: ["tracks"] });
     }
   });
 };
