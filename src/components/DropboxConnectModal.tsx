@@ -136,11 +136,11 @@ export const DropboxConnectModal = ({ open, onOpenChange, onSuccess }: DropboxCo
         <div className="space-y-4">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
-              <Cloud className="w-8 h-8 text-primary" />
+              <DropboxIcon className="w-8 h-8 fill-primary" />
             </div>
             
             <div className="space-y-2">
-              <h3 className="font-medium">Sync Your Music Library</h3>
+              <h3 className="font-medium text-primary">Sync Your Music Library</h3>
               <p className="text-sm text-muted-foreground">
                 Access your music files stored in Dropbox and sync them to your library.
               </p>
@@ -173,7 +173,7 @@ export const DropboxConnectModal = ({ open, onOpenChange, onSuccess }: DropboxCo
               )}
             </Button>
             
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-primary border-primary hover:bg-primary hover:text-primary-foreground">
               Cancel
             </Button>
           </div>
