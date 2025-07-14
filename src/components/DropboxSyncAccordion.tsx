@@ -85,9 +85,26 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       
     } catch (error) {
       console.error('Error loading folders:', error);
+      
+      // Handle token expiration specifically
+      if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+        toast({
+          title: "Dropbox Session Expired",
+          description: "Your Dropbox session has expired. Please reconnect.",
+          variant: "destructive",
+        });
+        // Reset the accordion to show connection state
+        setFiles([]);
+        setFolders([]);
+        setCurrentPath("");
+        setSelectedFiles(new Set());
+        setFolderHistory([]);
+        return;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to load folders from Dropbox.",
+        description: error.message || "Failed to load folders from Dropbox.",
         variant: "destructive",
       });
     } finally {
@@ -256,7 +273,10 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             {/* Folders */}
             {!isLoading && folders.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Folders</h4>
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-medium">Folders</h4>
+                  <Badge variant="secondary">{folders.length} folders</Badge>
+                </div>
                 <div className="space-y-1">
                   {folders.map((folder) => (
                     <div
@@ -274,23 +294,29 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             )}
 
             {/* Files */}
+            {!isLoading && (folders.length > 0 || files.length > 0) && (
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Sort all items:</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
+                  title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                </Button>
+              </div>
+            )}
+
             {!isLoading && files.length > 0 && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">Music Files</h4>
-                    <Badge variant="secondary">{files.length} files</Badge>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
-                    title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
-                  >
-                    <ArrowUpDown className="w-3 h-3" />
-                    {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-medium">Music Files</h4>
+                  <Badge variant="secondary">{files.length} files</Badge>
                 </div>
 
                 {/* Select All Checkbox */}

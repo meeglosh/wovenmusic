@@ -294,8 +294,10 @@ export class DropboxService {
               const errorTag = errorJson.error['.tag'];
               console.error('Error tag:', errorTag);
               
-              if (errorTag === 'invalid_access_token') {
-                throw new Error('Access token is invalid or expired. Please reconnect to Dropbox.');
+              if (errorTag === 'invalid_access_token' || errorTag === 'expired_access_token') {
+                // Clear the token and throw specific error
+                this.logout();
+                throw new Error('DROPBOX_TOKEN_EXPIRED');
               } else if (errorTag === 'insufficient_scope') {
                 throw new Error('App permissions are insufficient. Check your Dropbox app permissions.');
               } else {
@@ -369,6 +371,12 @@ export class DropboxService {
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
+      
+      // Handle token expiration specifically
+      if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+        throw error;
+      }
+      
       throw error;
     }
   }
