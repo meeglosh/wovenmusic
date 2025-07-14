@@ -1,5 +1,6 @@
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
@@ -7,6 +8,7 @@ import PlaylistView from "@/components/PlaylistView";
 import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
 import EmptyLibraryState from "@/components/EmptyLibraryState";
+import DropboxSync from "@/components/DropboxSync";
 import { DropboxTokenExpiredDialog } from "@/components/DropboxTokenExpiredDialog";
 import { Track, Playlist } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
@@ -14,12 +16,16 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
   const [showDropboxDialog, setShowDropboxDialog] = useState(false);
+  
+  // Check if dropbox parameter is present
+  const showDropboxSync = searchParams.get('dropbox') === 'true';
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -137,9 +143,9 @@ const Index = () => {
     );
   }
 
-  // Show empty state for new users
+  // Show empty state for new users or dropbox sync
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
-  if (hasNoContent) {
+  if (hasNoContent || showDropboxSync) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header 
@@ -150,7 +156,7 @@ const Index = () => {
           searchTerm=""
           onSearchChange={() => {}}
         />
-        <EmptyLibraryState />
+        {showDropboxSync ? <DropboxSync /> : <EmptyLibraryState />}
       </div>
     );
   }
