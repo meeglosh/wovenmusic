@@ -1,5 +1,6 @@
 
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
@@ -14,6 +15,8 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
@@ -138,9 +141,11 @@ const Index = () => {
     );
   }
 
-  // Show empty state for new users
+  // Check if we should show empty state or main library
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
-  if (hasNoContent) {
+  const isDropboxRoute = searchParams.get('dropbox') === 'true';
+  
+  if (hasNoContent && !showDropboxAccordion) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header 
@@ -154,6 +159,7 @@ const Index = () => {
         <EmptyLibraryState 
           onDropboxConnected={() => {
             setShowDropboxAccordion(true);
+            navigate('/'); // Navigate to main library
           }}
         />
       </div>
