@@ -246,6 +246,25 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
         
         <AccordionContent className="px-4 pb-4">
           <div className="space-y-4">
+            {/* Sorting Controls */}
+            {!isLoading && (folders.length > 0 || files.length > 0) && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Sort all items:</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
+                  title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                </Button>
+              </div>
+            )}
+
             {/* Navigation */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Folder className="w-4 h-4" />
@@ -294,24 +313,6 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             )}
 
             {/* Files */}
-            {!isLoading && (folders.length > 0 || files.length > 0) && (
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Sort all items:</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
-                  title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
-                >
-                  <ArrowUpDown className="w-3 h-3" />
-                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
-                </Button>
-              </div>
-            )}
-
             {!isLoading && files.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
