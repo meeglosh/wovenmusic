@@ -73,19 +73,41 @@ export const useAudioPlayer = () => {
     const audio = audioRef.current;
 
     const loadTrack = async () => {
-      if (!currentTrack?.fileUrl || currentTrack.fileUrl === "#") {
-        console.log('No valid file URL for track:', currentTrack?.title);
+      // Check if we have either a fileUrl or a dropbox_path to work with
+      if ((!currentTrack?.fileUrl || currentTrack.fileUrl === "#" || currentTrack.fileUrl === "") && !currentTrack?.dropbox_path) {
+        console.log('No valid file URL or Dropbox path for track:', currentTrack?.title);
         return;
       }
 
       try {
         console.log('=== ATTEMPTING TO LOAD TRACK ===');
         console.log('Track file URL:', currentTrack.fileUrl);
+        console.log('Track dropbox path:', currentTrack.dropbox_path);
         
         let audioUrl = currentTrack.fileUrl;
         
+        // If no valid fileUrl, but we have dropbox_path, get fresh URL from Dropbox
+        if ((!audioUrl || audioUrl === "#" || audioUrl === "") && currentTrack.dropbox_path) {
+          console.log('No fileUrl, using dropbox_path to get fresh URL:', currentTrack.dropbox_path);
+          
+          if (!dropboxService.isAuthenticated()) {
+            console.error('Dropbox not authenticated - cannot get temporary link');
+            throw new Error('DROPBOX_AUTH_REQUIRED');
+          }
+          
+          try {
+            audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
+            console.log('SUCCESS! Got fresh temporary URL from dropbox_path');
+          } catch (error) {
+            console.error('Dropbox path failed:', error.message);
+            if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+              throw new Error('DROPBOX_TOKEN_EXPIRED');
+            }
+            throw new Error('DROPBOX_CONNECTION_ERROR');
+          }
+        }
         // Check if this is a Dropbox temporary URL that might have expired
-        if (audioUrl.includes('dropboxusercontent.com')) {
+        else if (audioUrl && audioUrl.includes('dropboxusercontent.com')) {
           console.log('Detected Dropbox temporary URL, checking if it needs refresh...');
           
           // First check if we have a stored dropbox_path for this track
@@ -371,11 +393,12 @@ export const useAudioPlayer = () => {
     console.log('Track object:', track);
     console.log('Track title:', track.title);
     console.log('Track fileUrl:', track.fileUrl);
-    console.log('Track fileUrl type:', typeof track.fileUrl);
-    console.log('Is fileUrl valid?', !!track.fileUrl && track.fileUrl.length > 0);
+    console.log('Track dropbox_path:', track.dropbox_path);
+    console.log('Has valid source?', !!(track.fileUrl && track.fileUrl !== "#" && track.fileUrl !== "") || !!track.dropbox_path);
 
-    if (!track.fileUrl || track.fileUrl === "#") {
-      console.error('Track has no valid fileUrl');
+    // Check if we have either a fileUrl or dropbox_path
+    if ((!track.fileUrl || track.fileUrl === "#" || track.fileUrl === "") && !track.dropbox_path) {
+      console.error('Track has no valid fileUrl or dropbox_path');
       return;
     }
 
