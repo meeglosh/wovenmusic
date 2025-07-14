@@ -1,11 +1,12 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
 import PlaylistView from "@/components/PlaylistView";
 import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
+import { DropboxTokenExpiredDialog } from "@/components/DropboxTokenExpiredDialog";
 import { Track, Playlist } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -17,6 +18,7 @@ const Index = () => {
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
+  const [showDropboxDialog, setShowDropboxDialog] = useState(false);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -86,6 +88,25 @@ const Index = () => {
     setSelectedPlaylist(playlist);
     setCurrentView("playlist");
   };
+
+  // Handle Dropbox token expiration
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      setShowDropboxDialog(true);
+    };
+
+    const handleAuthRequired = () => {
+      setShowDropboxDialog(true);
+    };
+
+    window.addEventListener('dropboxTokenExpired', handleTokenExpired);
+    window.addEventListener('dropboxAuthRequired', handleAuthRequired);
+
+    return () => {
+      window.removeEventListener('dropboxTokenExpired', handleTokenExpired);
+      window.removeEventListener('dropboxAuthRequired', handleAuthRequired);
+    };
+  }, []);
 
   // Show loading state
   if (tracksLoading || playlistsLoading) {
@@ -213,6 +234,19 @@ const Index = () => {
           formatTime={formatTime}
         />
       )}
+
+      <DropboxTokenExpiredDialog
+        isOpen={showDropboxDialog}
+        onClose={() => setShowDropboxDialog(false)}
+        onReconnected={() => {
+          // Optionally retry playing the current track
+          if (currentTrack) {
+            setTimeout(() => {
+              handlePlayTrack(currentTrack);
+            }, 1000);
+          }
+        }}
+      />
     </div>
   );
 };

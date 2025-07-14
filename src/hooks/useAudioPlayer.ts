@@ -103,13 +103,16 @@ export const useAudioPlayer = () => {
               // Check if Dropbox is authenticated before trying to get temp link
               if (!dropboxService.isAuthenticated()) {
                 console.error('Dropbox not authenticated - cannot refresh URL');
-                throw new Error('Dropbox authentication required to play this track');
+                throw new Error('DROPBOX_AUTH_REQUIRED');
               }
               audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
               console.log('SUCCESS! Got fresh temporary URL from stored path');
             } catch (error) {
               console.error('Stored path failed:', error.message);
-              throw new Error(`Cannot access Dropbox file. Please check your Dropbox connection.`);
+              if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+                throw new Error('DROPBOX_TOKEN_EXPIRED');
+              }
+              throw new Error('DROPBOX_CONNECTION_ERROR');
             }
           } else {
             console.log('No stored dropbox_path available, will try fallback methods');
@@ -123,7 +126,7 @@ export const useAudioPlayer = () => {
           // Check if Dropbox is authenticated
           if (!dropboxService.isAuthenticated()) {
             console.error('Dropbox not authenticated - cannot get temporary link');
-            throw new Error('Dropbox authentication required to play this track');
+            throw new Error('DROPBOX_AUTH_REQUIRED');
           }
           
           // First check if we have a stored dropbox_path for this track
@@ -134,7 +137,10 @@ export const useAudioPlayer = () => {
               console.log('SUCCESS! Got fresh temporary URL from stored path');
             } catch (error) {
               console.error('Stored path failed:', error.message);
-              throw new Error(`Cannot access Dropbox file. Please check your Dropbox connection.`);
+              if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+                throw new Error('DROPBOX_TOKEN_EXPIRED');
+              }
+              throw new Error('DROPBOX_CONNECTION_ERROR');
             }
           } else {
             // Fallback: search in the source folder with multiple extensions
@@ -224,8 +230,21 @@ export const useAudioPlayer = () => {
         // Don't auto-play on mobile - wait for user interaction
         console.log('Audio loaded, ready for playback when user interacts');
         
-      } catch (error) {
+        } catch (error) {
         console.error('Failed to load track:', error);
+        
+        // Handle specific error types with user-friendly messages
+        if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+          console.error('Dropbox token expired - user needs to re-authenticate');
+          // Emit a custom event for the app to handle gracefully
+          window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+        } else if (error.message === 'DROPBOX_AUTH_REQUIRED') {
+          console.error('Dropbox authentication required');
+          window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+        } else if (error.message === 'DROPBOX_CONNECTION_ERROR') {
+          console.error('Dropbox connection error');
+          // Could add a toast or other UI feedback here
+        }
       }
     };
     

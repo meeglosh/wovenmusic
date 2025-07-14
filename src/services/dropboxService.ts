@@ -411,6 +411,19 @@ export class DropboxService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Temporary link request failed:', response.status, errorText);
+        
+        // Parse error response to check for expired token
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error && errorData.error['.tag'] === 'expired_access_token') {
+            // Clear expired token
+            this.logout();
+            throw new Error('DROPBOX_TOKEN_EXPIRED');
+          }
+        } catch (parseError) {
+          // If we can't parse, continue with generic error
+        }
+        
         throw new Error(`Failed to get temporary link: ${errorText}`);
       }
 
