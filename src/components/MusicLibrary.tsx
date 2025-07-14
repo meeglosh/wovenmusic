@@ -11,6 +11,7 @@ import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateTrack } from "@/hooks/useTracks";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ type SortDirection = 'asc' | 'desc';
 
 const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange }: MusicLibraryProps) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Random title and subtitle selection
   const libraryTitles = useMemo(() => [
@@ -492,7 +494,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-all hover:border hover:border-primary rounded-full"
+                      className={`w-8 h-8 p-0 transition-all hover:border hover:border-primary rounded-full ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
                       onClick={() => onPlayTrack(track)}
                       title="Pause track"
                     >
@@ -502,8 +506,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-all hover:border hover:border-primary rounded-full ${
+                      className={`w-8 h-8 p-0 transition-all hover:border hover:border-primary rounded-full ${
                         track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
+                      } ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}
                       onClick={() => onPlayTrack(track)}
                       disabled={track.duration === 'Failed'}
@@ -512,7 +518,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <Play className="w-4 h-4 fill-current" />
                     </Button>
                   )}
-                  <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
+                  <span className={`text-muted-foreground text-sm transition-opacity ${
+                    isMobile ? 'opacity-0' : 'group-hover:opacity-0'
+                  }`}>
                     {index + 1}
                   </span>
                 </div>
@@ -581,7 +589,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className={`w-8 h-8 p-0 transition-opacity ${
+                          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
