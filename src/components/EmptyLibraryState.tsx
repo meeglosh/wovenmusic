@@ -4,10 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Upload, Music, Users } from "lucide-react";
 import DropboxIcon from "./icons/DropboxIcon";
 import UploadModal from "./UploadModal";
+import { DropboxConnectModal } from "./DropboxConnectModal";
 import { useNavigate } from "react-router-dom";
 
-const EmptyLibraryState = () => {
+interface EmptyLibraryStateProps {
+  onDropboxConnected?: () => void;
+}
+
+const EmptyLibraryState = ({ onDropboxConnected }: EmptyLibraryStateProps) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showDropboxModal, setShowDropboxModal] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -41,7 +47,7 @@ const EmptyLibraryState = () => {
             </Card>
 
             <Card className="border-2 border-dashed border-primary/20 hover:border-primary/40 transition-colors cursor-pointer"
-                  onClick={() => navigate('/?dropbox=true')}>
+                  onClick={() => setShowDropboxModal(true)}>
               <CardHeader className="text-center pb-2">
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <DropboxIcon className="w-6 h-6 fill-primary" />
@@ -83,6 +89,15 @@ const EmptyLibraryState = () => {
       <UploadModal 
         open={showUploadModal} 
         onOpenChange={setShowUploadModal} 
+      />
+      
+      <DropboxConnectModal
+        open={showDropboxModal}
+        onOpenChange={setShowDropboxModal}
+        onSuccess={() => {
+          setShowDropboxModal(false);
+          onDropboxConnected?.();
+        }}
       />
     </>
   );

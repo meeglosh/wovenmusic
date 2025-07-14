@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
 import { Track, getFileName } from "@/types/music";
-import DropboxSync from "./DropboxSync";
+import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
@@ -37,12 +37,13 @@ interface MusicLibraryProps {
   isPlaying?: boolean;
   searchTerm?: string;
   onTitleChange?: (title: string) => void;
+  showDropboxAccordion?: boolean;
 }
 
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion }: MusicLibraryProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -395,9 +396,12 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             </Button>
           </div>
           
-          {isDropboxSyncExpanded && (
-            <div className="border-t border-border">
-              <DropboxSync />
+          {(isDropboxSyncExpanded || showDropboxAccordion) && (
+            <div className="border-t border-border p-4">
+              <DropboxSyncAccordion 
+                isExpanded={isDropboxSyncExpanded || showDropboxAccordion || false}
+                onExpandedChange={setIsDropboxSyncExpanded} 
+              />
             </div>
           )}
         </Card>
