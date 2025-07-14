@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Cloud, 
@@ -16,7 +23,10 @@ import {
   ChevronRight, 
   Check,
   Music,
-  Loader2
+  Loader2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
@@ -44,9 +54,27 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'name' | 'modified' | 'size'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
+
+  const sortItems = (items: DropboxFile[]) => {
+    return [...items].sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortBy === 'modified') {
+        comparison = new Date(a.server_modified).getTime() - new Date(b.server_modified).getTime();
+      } else if (sortBy === 'size') {
+        comparison = a.size - b.size;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
 
   const loadFolders = async (path: string = "") => {
     setIsLoading(true);
@@ -62,8 +90,12 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
         return supportedExtensions.some(ext => fileName.endsWith(ext));
       });
        
-      setFolders(folderItems);
-      setFiles(musicFiles);
+      // Sort both folders and files
+      const sortedFolders = sortItems(folderItems);
+      const sortedFiles = sortItems(musicFiles);
+      
+      setFolders(sortedFolders);
+      setFiles(sortedFiles);
       setCurrentPath(path);
       setSelectedFiles(new Set());
       
@@ -166,6 +198,14 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
     }
   }, [isExpanded]);
 
+  // Re-sort files and folders when sorting options change
+  useEffect(() => {
+    if (files.length > 0 || folders.length > 0) {
+      setFiles(prevFiles => sortItems(prevFiles));
+      setFolders(prevFolders => sortItems(prevFolders));
+    }
+  }, [sortBy, sortOrder]);
+
   const accordionValue = isExpanded ? "dropbox-sync" : "";
 
   return (
@@ -239,9 +279,29 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
             {/* Files */}
             {!isLoading && files.length > 0 && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <h4 className="text-sm font-medium">Music Files</h4>
-                  <Badge variant="secondary">{files.length} files</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{files.length} files</Badge>
+                    <Select value={sortBy} onValueChange={(value: 'name' | 'modified' | 'size') => setSortBy(value)}>
+                      <SelectTrigger className="w-24 h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="modified">Date</SelectItem>
+                        <SelectItem value="size">Size</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="w-7 h-7 p-0"
+                    >
+                      {sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="space-y-1 max-h-60 overflow-y-auto">
