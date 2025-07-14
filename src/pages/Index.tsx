@@ -160,8 +160,6 @@ const Index = () => {
           onDropboxConnected={() => {
             setShowDropboxAccordion(true);
             navigate('/'); // Navigate to main library
-            // Reset the showDropboxAccordion after a short delay to allow normal accordion behavior
-            setTimeout(() => setShowDropboxAccordion(false), 100);
           }}
         />
       </div>
