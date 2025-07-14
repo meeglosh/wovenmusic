@@ -366,9 +366,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         </div>
       </div>
 
-      {/* Collapsible Dropbox Sync Section - Hidden during search */}
+      {/* Collapsible Dropbox Sync Section - Hidden during search and on mobile */}
       {!searchTerm && (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden hidden sm:block">
           <div 
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
             onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
