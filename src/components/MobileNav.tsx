@@ -29,7 +29,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect }: M
     <div className="md:hidden">
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="sm" className="p-2">
+          <Button variant="ghost" size="sm" className="p-2 text-primary">
             <Menu className="w-5 h-5" />
           </Button>
         </SheetTrigger>

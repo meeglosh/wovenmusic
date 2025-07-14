@@ -123,7 +123,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
         <div className="flex lg:hidden items-center space-x-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-primary">
                 <Palette className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -139,12 +139,12 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(true)} className="text-primary">
             <Upload className="w-4 h-4" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-primary">
                 <Settings className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
