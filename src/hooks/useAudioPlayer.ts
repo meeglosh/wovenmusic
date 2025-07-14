@@ -399,113 +399,25 @@ export const useAudioPlayer = () => {
       return;
     }
 
-    // Mobile debugging
-    console.log('=== MOBILE AUDIO DEBUG ===');
-    console.log('User agent:', navigator.userAgent);
-    console.log('Is mobile device:', /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-    console.log('Audio state:', {
-      src: audio.src,
-      readyState: audio.readyState,
-      networkState: audio.networkState,
-      paused: audio.paused,
-      muted: audio.muted,
-      volume: audio.volume
-    });
-
     try {
-      if (isPlaying) {
-        await audio.pause();
-        setIsPlaying(false);
-        console.log('Paused audio');
-      } else {
-        console.log('Attempting to play audio...');
+      if (audio.paused) {
+        // Use audio.paused instead of isPlaying state to avoid sync issues
+        console.log('Starting playback...');
+        setIsPlaying(true); // Set state immediately for responsive UI
         
-        // Mobile-specific audio handling
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          console.log('Mobile device detected - applying mobile audio fixes');
-          
-          // For mobile, ensure we have a proper audio source and load it
-          if (!audio.src && currentTrack) {
-            console.log('No audio source on mobile, reloading track...');
-            const trackToLoad = { ...currentTrack };
-            setCurrentTrack(trackToLoad);
-            return; // Let the useEffect handle loading, then user can try play again
-          }
-          
-          // On mobile, try to load first if not ready
-          if (audio.readyState < 2) {
-            console.log('Audio not ready on mobile, forcing load...');
-            audio.load();
-            
-            // Wait for loadeddata event before attempting play
-            const waitForLoad = new Promise((resolve, reject) => {
-              const timeout = setTimeout(() => {
-                audio.removeEventListener('loadeddata', onLoadedData);
-                audio.removeEventListener('error', onError);
-                reject(new Error('Audio load timeout'));
-              }, 5000);
-              
-              const onLoadedData = () => {
-                clearTimeout(timeout);
-                audio.removeEventListener('loadeddata', onLoadedData);
-                audio.removeEventListener('error', onError);
-                resolve(true);
-              };
-              
-              const onError = (e) => {
-                clearTimeout(timeout);
-                audio.removeEventListener('loadeddata', onLoadedData);
-                audio.removeEventListener('error', onError);
-                reject(e);
-              };
-              
-              audio.addEventListener('loadeddata', onLoadedData);
-              audio.addEventListener('error', onError);
-              
-              // If already loaded, resolve immediately
-              if (audio.readyState >= 2) {
-                clearTimeout(timeout);
-                resolve(true);
-              }
-            });
-            
-            try {
-              await waitForLoad;
-              console.log('Audio loaded successfully on mobile');
-            } catch (error) {
-              console.error('Audio load failed on mobile:', error);
-              return;
-            }
-          }
-        }
-        
-        // Try to play
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           await playPromise;
-          setIsPlaying(true);
-          console.log('Playing audio successfully');
+          console.log('Audio play successful');
         }
+      } else {
+        console.log('Pausing playback...');
+        setIsPlaying(false); // Set state immediately for responsive UI
+        audio.pause();
+        console.log('Audio paused');
       }
     } catch (error) {
-      console.error('Error toggling play/pause:', error);
-      console.log('Error details:', {
-        name: error.name,
-        message: error.message,
-        code: error.code
-      });
-      
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          console.log('Auto-play blocked by browser. User interaction required.');
-        } else if (error.name === 'NotSupportedError') {
-          console.log('Audio format not supported on this device.');
-        } else if (error.name === 'AbortError') {
-          console.log('Audio play was aborted.');
-        }
-      }
-      
+      console.error('Toggle play/pause failed:', error);
       setIsPlaying(false);
     }
   };
