@@ -7,13 +7,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Cloud, 
@@ -54,7 +47,6 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'name' | 'modified' | 'size'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
@@ -62,16 +54,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
 
   const sortItems = (items: DropboxFile[]) => {
     return [...items].sort((a, b) => {
-      let comparison = 0;
-      
-      if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === 'modified') {
-        comparison = new Date(a.server_modified).getTime() - new Date(b.server_modified).getTime();
-      } else if (sortBy === 'size') {
-        comparison = a.size - b.size;
-      }
-      
+      const comparison = a.name.localeCompare(b.name);
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   };
@@ -198,13 +181,13 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
     }
   }, [isExpanded]);
 
-  // Re-sort files and folders when sorting options change
+  // Re-sort files and folders when sorting order changes
   useEffect(() => {
     if (files.length > 0 || folders.length > 0) {
       setFiles(prevFiles => sortItems(prevFiles));
       setFolders(prevFolders => sortItems(prevFolders));
     }
-  }, [sortBy, sortOrder]);
+  }, [sortOrder]);
 
   const accordionValue = isExpanded ? "dropbox-sync" : "";
 
@@ -283,23 +266,18 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
                   <h4 className="text-sm font-medium">Music Files</h4>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{files.length} files</Badge>
-                    <Select value={sortBy} onValueChange={(value: 'name' | 'modified' | 'size') => setSortBy(value)}>
-                      <SelectTrigger className="w-24 h-7 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="name">Name</SelectItem>
-                        <SelectItem value="modified">Date</SelectItem>
-                        <SelectItem value="size">Size</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                      className="w-7 h-7 p-0"
+                      className="h-7 px-2 text-xs"
+                      title={`Sort ${sortOrder === 'asc' ? 'Z-A' : 'A-Z'}`}
                     >
-                      {sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                      {sortOrder === 'asc' ? (
+                        <>A-Z <ArrowUp className="w-3 h-3 ml-1" /></>
+                      ) : (
+                        <>Z-A <ArrowDown className="w-3 h-3 ml-1" /></>
+                      )}
                     </Button>
                   </div>
                 </div>
