@@ -11,12 +11,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Github, Mail, X, ArrowLeft } from "lucide-react";
 
 const Auth = () => {
-  const { user, signIn, signUp, signInWithProvider, acceptInvitation, loading } = useAuth();
+  const { user, signIn, signUp, signInWithProvider, acceptInvitation, sendMagicLink, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const inviteToken = searchParams.get('token');
   const [isLoading, setIsLoading] = useState(false);
+  const [showMagicLinkSent, setShowMagicLinkSent] = useState(false);
 
   // Redirect if user is already authenticated
   if (user && !loading) {
@@ -49,27 +50,27 @@ const Auth = () => {
     setIsLoading(false);
   };
 
-  const handleEmailSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleMagicLinkSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
     const fullName = formData.get('fullName') as string;
     
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await sendMagicLink(email, fullName);
     
     if (error) {
       toast({
-        title: "Error creating account",
+        title: "Error sending magic link",
         description: error.message,
         variant: "destructive",
       });
     } else {
+      setShowMagicLinkSent(true);
       toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
+        title: "Magic link sent!",
+        description: "Check your email and click the link to complete your signup.",
       });
     }
     
@@ -237,40 +238,55 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
-              <form onSubmit={handleEmailSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    placeholder="Enter your full name"
-                  />
+              {!showMagicLinkSent ? (
+                <form onSubmit={handleMagicLinkSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Sending magic link..." : "Send Magic Link"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    We'll send you a secure link to create your password and verify your email.
+                  </p>
+                </form>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <Mail className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Check your email!</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      We've sent you a magic link. Click it to complete your signup and create your password.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowMagicLinkSent(false)}
+                    className="w-full"
+                  >
+                    Send Another Link
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Create a password"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Create Account"}
-                </Button>
-              </form>
+              )}
               
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">

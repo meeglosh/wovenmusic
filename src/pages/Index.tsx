@@ -6,6 +6,7 @@ import MusicLibrary from "@/components/MusicLibrary";
 import PlaylistView from "@/components/PlaylistView";
 import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
+import EmptyLibraryState from "@/components/EmptyLibraryState";
 import { DropboxTokenExpiredDialog } from "@/components/DropboxTokenExpiredDialog";
 import { Track, Playlist } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
@@ -132,6 +133,24 @@ const Index = () => {
           </div>
           <p className="text-muted-foreground">Error loading data. Please try again.</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show empty state for new users
+  const hasNoContent = tracks.length === 0 && playlists.length === 0;
+  if (hasNoContent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header 
+          playlists={[]}
+          currentView={currentView}
+          onViewChange={() => {}}
+          onPlaylistSelect={() => {}}
+          searchTerm=""
+          onSearchChange={() => {}}
+        />
+        <EmptyLibraryState />
       </div>
     );
   }

@@ -12,6 +12,8 @@ interface AuthContextType {
   signInWithProvider: (provider: 'google' | 'github' | 'twitter') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   acceptInvitation: (token: string, password: string, fullName: string) => Promise<{ error: any }>;
+  sendMagicLink: (email: string, fullName?: string) => Promise<{ error: any }>;
+  setPassword: (password: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,6 +89,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  const sendMagicLink = async (email: string, fullName?: string) => {
+    const redirectUrl = `${window.location.origin}/auth/verify`;
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: fullName ? { full_name: fullName } : undefined
+      }
+    });
+    return { error };
+  };
+
+  const setPassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
+    return { error };
+  };
+
   const acceptInvitation = async (token: string, password: string, fullName: string) => {
     // First get the invitation details
     const { data: invitation, error: inviteError } = await supabase
@@ -135,6 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithProvider,
     signOut,
     acceptInvitation,
+    sendMagicLink,
+    setPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

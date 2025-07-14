@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthVerify from "./pages/AuthVerify";
 import Members from "./pages/Members";
 import ProfileSetup from "./pages/ProfileSetup";
 import DropboxCallback from "./pages/DropboxCallback";
@@ -29,6 +30,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/verify" element={<AuthVerify />} />
               <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
               <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
               <Route path="/dropbox-callback" element={<DropboxCallback />} />
