@@ -42,13 +42,24 @@ export const useAudioPlayer = () => {
   const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
   const [isRepeatMode, setIsRepeatMode] = useState(false);
 
-  // Create or get the audio element
+  // Create or get the audio element with mobile optimizations
   useEffect(() => {
     if (!audioRef.current) {
       const audio = document.createElement('audio');
       audio.crossOrigin = 'anonymous';
+      
+      // Mobile-specific audio optimizations
+      audio.setAttribute('playsinline', 'true'); // Prevent fullscreen on iOS
+      audio.setAttribute('webkit-playsinline', 'true'); // Legacy iOS support
+      audio.preload = 'metadata'; // Load metadata but not full audio initially
+      
       audioRef.current = audio;
-      console.log('Audio element created');
+      console.log('Audio element created with mobile optimizations');
+      console.log('Audio attributes:', {
+        crossOrigin: audio.crossOrigin,
+        playsinline: audio.getAttribute('playsinline'),
+        preload: audio.preload
+      });
     }
   }, []);
 
@@ -369,6 +380,19 @@ export const useAudioPlayer = () => {
       return;
     }
 
+    // Mobile debugging
+    console.log('=== MOBILE AUDIO DEBUG ===');
+    console.log('User agent:', navigator.userAgent);
+    console.log('Is mobile device:', /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    console.log('Audio state:', {
+      src: audio.src,
+      readyState: audio.readyState,
+      networkState: audio.networkState,
+      paused: audio.paused,
+      muted: audio.muted,
+      volume: audio.volume
+    });
+
     try {
       if (isPlaying) {
         await audio.pause();
@@ -376,35 +400,94 @@ export const useAudioPlayer = () => {
         console.log('Paused audio');
       } else {
         console.log('Attempting to play audio...');
-        // Ensure audio source is loaded
-        if (!audio.src || audio.readyState < 3) {
-          console.log('Audio not ready, loading first...');
-          if (currentTrack) {
-            // Reload the track to ensure proper audio URL
+        
+        // Mobile-specific audio handling
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          console.log('Mobile device detected - applying mobile audio fixes');
+          
+          // For mobile, ensure we have a proper audio source and load it
+          if (!audio.src && currentTrack) {
+            console.log('No audio source on mobile, reloading track...');
             const trackToLoad = { ...currentTrack };
             setCurrentTrack(trackToLoad);
-            // Wait a bit for loading, then try to play
-            setTimeout(async () => {
-              try {
-                await audio.play();
-                setIsPlaying(true);
-                console.log('Playing audio after reload');
-              } catch (playError) {
-                console.error('Error playing after reload:', playError);
-              }
-            }, 1000);
+            return; // Let the useEffect handle loading, then user can try play again
           }
-        } else {
-          await audio.play();
+          
+          // On mobile, try to load first if not ready
+          if (audio.readyState < 2) {
+            console.log('Audio not ready on mobile, forcing load...');
+            audio.load();
+            
+            // Wait for loadeddata event before attempting play
+            const waitForLoad = new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                audio.removeEventListener('loadeddata', onLoadedData);
+                audio.removeEventListener('error', onError);
+                reject(new Error('Audio load timeout'));
+              }, 5000);
+              
+              const onLoadedData = () => {
+                clearTimeout(timeout);
+                audio.removeEventListener('loadeddata', onLoadedData);
+                audio.removeEventListener('error', onError);
+                resolve(true);
+              };
+              
+              const onError = (e) => {
+                clearTimeout(timeout);
+                audio.removeEventListener('loadeddata', onLoadedData);
+                audio.removeEventListener('error', onError);
+                reject(e);
+              };
+              
+              audio.addEventListener('loadeddata', onLoadedData);
+              audio.addEventListener('error', onError);
+              
+              // If already loaded, resolve immediately
+              if (audio.readyState >= 2) {
+                clearTimeout(timeout);
+                resolve(true);
+              }
+            });
+            
+            try {
+              await waitForLoad;
+              console.log('Audio loaded successfully on mobile');
+            } catch (error) {
+              console.error('Audio load failed on mobile:', error);
+              return;
+            }
+          }
+        }
+        
+        // Try to play
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
           setIsPlaying(true);
-          console.log('Playing audio');
+          console.log('Playing audio successfully');
         }
       }
     } catch (error) {
       console.error('Error toggling play/pause:', error);
-      if (error instanceof Error && error.name === 'NotAllowedError') {
-        console.log('Auto-play blocked by browser. User interaction required.');
+      console.log('Error details:', {
+        name: error.name,
+        message: error.message,
+        code: error.code
+      });
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          console.log('Auto-play blocked by browser. User interaction required.');
+        } else if (error.name === 'NotSupportedError') {
+          console.log('Audio format not supported on this device.');
+        } else if (error.name === 'AbortError') {
+          console.log('Audio play was aborted.');
+        }
       }
+      
+      setIsPlaying(false);
     }
   };
 
