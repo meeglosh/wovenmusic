@@ -429,9 +429,9 @@
     @apply bg-background text-foreground font-sans;
   }
 
-  /* Global heading styles - use REM thin font for all headings */
+  /* Global heading styles - use REM light font for all headings */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-rem font-thin;
+    @apply font-rem font-light;
   }
 
   /* Custom scrollbar */
