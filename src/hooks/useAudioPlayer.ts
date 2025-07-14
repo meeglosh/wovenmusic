@@ -227,8 +227,22 @@ export const useAudioPlayer = () => {
         await canPlayPromise;
         console.log('Audio loaded successfully!');
         
-        // Don't auto-play on mobile - wait for user interaction
-        console.log('Audio loaded, ready for playback when user interacts');
+        // Auto-start playback if isPlaying state is true (from playPlaylist)
+        if (isPlaying) {
+          console.log('Auto-starting playback as requested...');
+          try {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              console.log('Auto-play successful');
+            }
+          } catch (error) {
+            console.error('Auto-play failed:', error);
+            setIsPlaying(false);
+          }
+        } else {
+          console.log('Audio loaded, ready for playback when user interacts');
+        }
         
         } catch (error) {
         console.error('Failed to load track:', error);
@@ -404,7 +418,10 @@ export const useAudioPlayer = () => {
     // Force a new object reference to ensure React sees the change
     setCurrentTrack({ ...trackToPlay });
     
-    console.log('Track set, waiting for useEffect to load and play...');
+    // Auto-start playback when a new track is selected
+    setIsPlaying(true);
+    
+    console.log('Track set with auto-play enabled, waiting for useEffect to load...');
   };
 
   const togglePlayPause = async () => {
