@@ -276,14 +276,29 @@ export const useAudioPlayer = () => {
       playNext();
     };
 
+    // Keep isPlaying state in sync with actual audio state
+    const handlePlay = () => {
+      console.log('Audio play event - syncing state');
+      setIsPlaying(true);
+    };
+
+    const handlePause = () => {
+      console.log('Audio pause event - syncing state');
+      setIsPlaying(false);
+    };
+
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
     };
   }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode, currentTrack, updateTrackMutation]);
 
@@ -401,10 +416,8 @@ export const useAudioPlayer = () => {
 
     try {
       if (audio.paused) {
-        // Use audio.paused instead of isPlaying state to avoid sync issues
         console.log('Starting playback...');
-        setIsPlaying(true); // Set state immediately for responsive UI
-        
+        // Don't set state here - let the 'play' event handler do it
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           await playPromise;
@@ -412,7 +425,7 @@ export const useAudioPlayer = () => {
         }
       } else {
         console.log('Pausing playback...');
-        setIsPlaying(false); // Set state immediately for responsive UI
+        // Don't set state here - let the 'pause' event handler do it
         audio.pause();
         console.log('Audio paused');
       }
