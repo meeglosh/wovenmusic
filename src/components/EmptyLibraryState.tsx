@@ -18,9 +18,9 @@ const EmptyLibraryState = () => {
             <div className="w-24 h-24 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <Music className="w-12 h-12 text-white" />
             </div>
-            <h1 className="text-3xl font-bold mb-3">Welcome to Your Music Library</h1>
+            <h1 className="text-3xl font-bold mb-3 text-primary font-rem">Welcome to Your Music Library</h1>
             <p className="text-lg text-muted-foreground mb-8">
-              Your creative space is ready. Start by adding your first tracks or connecting with collaborators.
+              Your vessel hums with potential. Seed it with sound or summon your co-dreamers.
             </p>
           </div>
 
