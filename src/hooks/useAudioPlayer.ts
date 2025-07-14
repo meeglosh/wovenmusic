@@ -414,10 +414,51 @@ export const useAudioPlayer = () => {
       return;
     }
 
+    console.log('Toggle play/pause - current state:', {
+      paused: audio.paused,
+      readyState: audio.readyState,
+      networkState: audio.networkState,
+      src: !!audio.src
+    });
+
     try {
       if (audio.paused) {
         console.log('Starting playback...');
-        // Don't set state here - let the 'play' event handler do it
+        
+        // Ensure audio is ready before playing
+        if (audio.readyState < 2 && audio.src) {
+          console.log('Audio not ready, forcing load...');
+          audio.load();
+          
+          // Wait for audio to be ready
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Audio load timeout'));
+            }, 3000);
+            
+            const onCanPlay = () => {
+              clearTimeout(timeout);
+              audio.removeEventListener('canplay', onCanPlay);
+              audio.removeEventListener('error', onError);
+              resolve(null);
+            };
+            
+            const onError = () => {
+              clearTimeout(timeout);
+              audio.removeEventListener('canplay', onCanPlay);
+              audio.removeEventListener('error', onError);
+              reject(new Error('Audio load failed'));
+            };
+            
+            if (audio.readyState >= 2) {
+              onCanPlay();
+            } else {
+              audio.addEventListener('canplay', onCanPlay);
+              audio.addEventListener('error', onError);
+            }
+          });
+        }
+        
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           await playPromise;
@@ -425,7 +466,6 @@ export const useAudioPlayer = () => {
         }
       } else {
         console.log('Pausing playback...');
-        // Don't set state here - let the 'pause' event handler do it
         audio.pause();
         console.log('Audio paused');
       }
