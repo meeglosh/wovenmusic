@@ -21,6 +21,7 @@ import {
   ArrowUp,
   ArrowDown
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
@@ -39,7 +40,7 @@ interface DropboxSyncAccordionProps {
   onExpandedChange?: (expanded: boolean) => void;
 }
 
-export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: DropboxSyncAccordionProps) => {
+export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: DropboxSyncAccordionProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -116,6 +117,19 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
     }
     setSelectedFiles(newSelected);
   };
+
+  const handleSelectAll = () => {
+    if (selectedFiles.size === files.length) {
+      // If all are selected, deselect all
+      setSelectedFiles(new Set());
+    } else {
+      // Select all files
+      setSelectedFiles(new Set(files.map(file => file.path_lower)));
+    }
+  };
+
+  const isAllSelected = files.length > 0 && selectedFiles.size === files.length;
+  const isIndeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length;
 
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
@@ -263,20 +277,40 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
             {!isLoading && files.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-medium">Music Files</h4>
                   <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium">Music Files</h4>
                     <Badge variant="secondary">{files.length} files</Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                      className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
-                      title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
-                    >
-                      <ArrowUpDown className="w-3 h-3" />
-                      {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
-                    </Button>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
+                    title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                    {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                  </Button>
+                </div>
+
+                {/* Select All Checkbox */}
+                <div className="flex items-center gap-2 p-2 border-b border-border">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    className="data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground"
+                    style={{
+                      backgroundColor: isIndeterminate ? 'hsl(var(--primary))' : undefined,
+                    }}
+                  />
+                  <span className="text-sm font-medium">
+                    {isAllSelected ? 'Deselect All' : isIndeterminate ? `${selectedFiles.size} selected` : 'Select All'}
+                  </span>
+                  {selectedFiles.size > 0 && (
+                    <Badge variant="outline" className="ml-auto">
+                      {selectedFiles.size} selected
+                    </Badge>
+                  )}
                 </div>
                 
                 <div className="space-y-1 max-h-60 overflow-y-auto">
@@ -286,13 +320,12 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange }: D
                       className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
                       onClick={() => handleFileToggle(file.path_lower)}
                     >
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        {selectedFiles.has(file.path_lower) ? (
-                          <Check className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Music className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
+                      <Checkbox
+                        checked={selectedFiles.has(file.path_lower)}
+                        onCheckedChange={() => handleFileToggle(file.path_lower)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Music className="w-4 h-4 text-muted-foreground" />
                       <span className="flex-1 text-sm">{file.name}</span>
                       <span className="text-xs text-muted-foreground">
                         {(file.size / 1024 / 1024).toFixed(1)} MB

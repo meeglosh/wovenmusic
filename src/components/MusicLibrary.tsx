@@ -112,7 +112,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   }, [randomLibraryTitle.title, onTitleChange]);
 
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
-  const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
+  const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(true);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('addedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
