@@ -221,15 +221,6 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Debug: Check if currentTrack exists and Player should render */}
-      {(() => {
-        console.log('=== PLAYER UI DEBUG ===', { 
-          hasCurrentTrack: !!currentTrack, 
-          currentTrackTitle: currentTrack?.title,
-          isPlaying: isPlaying 
-        });
-        return null;
-      })()}
       
       {currentTrack && (
         <Player 

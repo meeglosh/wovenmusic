@@ -63,22 +63,14 @@ export const useAudioPlayer = () => {
     }
   }, []);
 
-  // Track loading and metadata - simplified with debug
+  // Track loading and metadata
   useEffect(() => {
-    console.log('=== TRACK LOADING USEEFFECT TRIGGERED ===');
-    console.log('currentTrack:', currentTrack);
-    console.log('audioRef.current:', audioRef.current);
-    console.log('currentTrack changed, current ID:', currentTrack?.id);
     
     if (!currentTrack || !audioRef.current) {
-      console.log('Track loading skipped - currentTrack:', !!currentTrack, 'audioRef:', !!audioRef.current);
       return;
     }
 
     const audio = audioRef.current;
-    console.log('=== LOADING TRACK ===');
-    console.log('Track:', currentTrack.title);
-    console.log('URL:', currentTrack.fileUrl);
 
     const loadTrack = async () => {
       if (!currentTrack?.fileUrl || currentTrack.fileUrl === "#") {
