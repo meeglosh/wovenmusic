@@ -396,10 +396,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             </Button>
           </div>
           
-          {(isDropboxSyncExpanded || showDropboxAccordion) && (
+          {isDropboxSyncExpanded && (
             <div className="border-t border-border p-4">
               <DropboxSyncAccordion 
-                isExpanded={isDropboxSyncExpanded || !!showDropboxAccordion}
+                isExpanded={isDropboxSyncExpanded}
                 onExpandedChange={(expanded) => {
                   setIsDropboxSyncExpanded(expanded);
                 }} 
