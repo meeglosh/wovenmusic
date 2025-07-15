@@ -68,19 +68,41 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       
       return new Promise((resolve) => {
         const audio = new Audio();
-        audio.addEventListener('loadedmetadata', () => {
-          const minutes = Math.floor(audio.duration / 60);
-          const seconds = Math.floor(audio.duration % 60);
-          resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        let resolved = false;
+        
+        const cleanup = (duration?: number) => {
+          if (!resolved) {
+            resolved = true;
+            if (duration && !isNaN(duration) && duration > 0) {
+              const minutes = Math.floor(duration / 60);
+              const seconds = Math.floor(duration % 60);
+              resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            } else {
+              // Estimate based on file size for unsupported formats
+              const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
+              resolve(`~${estimatedMinutes}:00`);
+            }
+          }
+        };
+        
+        audio.addEventListener('loadedmetadata', () => cleanup(audio.duration));
+        audio.addEventListener('error', () => cleanup());
+        audio.addEventListener('canplaythrough', () => {
+          if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+            cleanup(audio.duration);
+          }
         });
-        audio.addEventListener('error', () => {
-          resolve('--:--');
-        });
+        
+        // Timeout for large files
+        setTimeout(() => cleanup(), 15000);
+        
+        audio.preload = 'metadata';
         audio.src = tempUrl;
       });
     } catch (error) {
-      console.error('Error getting duration:', error);
-      return '--:--';
+      console.error('Error getting duration for', file.name, ':', error);
+      const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
+      return `~${estimatedMinutes}:00`;
     }
   };
 

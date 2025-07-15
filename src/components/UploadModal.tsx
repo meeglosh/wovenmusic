@@ -105,17 +105,35 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     return new Promise((resolve) => {
       const audio = new Audio();
       const url = URL.createObjectURL(file);
+      let resolved = false;
+      
+      const cleanup = (duration?: number) => {
+        if (!resolved) {
+          resolved = true;
+          URL.revokeObjectURL(url);
+          resolve(duration || 180); // Default 3 minutes if can't extract
+        }
+      };
       
       audio.addEventListener('loadedmetadata', () => {
-        URL.revokeObjectURL(url);
-        resolve(audio.duration);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        } else {
+          cleanup(); // Use default if duration is invalid
+        }
       });
       
-      audio.addEventListener('error', () => {
-        URL.revokeObjectURL(url);
-        resolve(0); // Return 0 if we can't get duration
+      audio.addEventListener('error', () => cleanup());
+      audio.addEventListener('canplaythrough', () => {
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        }
       });
       
+      // Set timeout for larger files or slow networks
+      setTimeout(() => cleanup(), 10000);
+      
+      audio.preload = 'metadata';
       audio.src = url;
     });
   };
