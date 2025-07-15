@@ -27,6 +27,7 @@ import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { importTranscodingService } from "@/services/importTranscodingService";
 
 interface DropboxFile {
   name: string;
@@ -308,59 +309,111 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
 
     setIsSyncing(true);
     let syncedCount = 0;
+    const totalFiles = selectedFiles.size;
 
     try {
       const selectedFileObjects = files.filter(file => selectedFiles.has(file.path_lower));
       
-      for (const file of selectedFileObjects) {
+      for (let i = 0; i < selectedFileObjects.length; i++) {
+        const file = selectedFileObjects[i];
+        const fileIndex = i + 1;
+        
         try {
-          console.log(`Downloading and storing ${file.name} permanently...`);
+          console.log(`[${fileIndex}/${totalFiles}] Processing ${file.name}...`);
           
-          // Download the file from Dropbox
-          const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-          const response = await fetch(tempUrl);
-          const blob = await response.blob();
+          // Check if this is a WAV file that needs transcoding
+          const isWavFile = file.name.toLowerCase().endsWith('.wav');
           
-          // Generate unique filename
-          const timestamp = Date.now();
-          const fileExtension = file.name.split('.').pop();
-          const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          
-          // Upload to Supabase storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('audio-files')
-            .upload(fileName, blob, {
-              contentType: blob.type || 'audio/mpeg',
-              cacheControl: '3600',
-              upsert: false
-            });
+          toast({
+            title: `Processing ${fileIndex}/${totalFiles}`,
+            description: isWavFile 
+              ? `Transcoding ${file.name} to MP3 format...`
+              : `Downloading and storing ${file.name}...`,
+          });
 
-          if (uploadError) throw uploadError;
+          let finalUrl: string;
+          let formattedDuration: string;
 
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('audio-files')
-            .getPublicUrl(fileName);
+          if (isWavFile) {
+            // For WAV files, use transcoding to MP3
+            console.log(`Transcoding WAV file: ${file.name}`);
+            
+            // Get temporary URL for transcoding
+            const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+            
+            // Transcode to MP3 using the edge function
+            finalUrl = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+            
+            // Get duration from the transcoded file
+            const duration = await getDurationFromUrl(finalUrl);
+            formattedDuration = formatDuration(duration);
+            
+            console.log(`Successfully transcoded ${file.name} to MP3`);
+          } else {
+            // For other formats, download and store directly
+            console.log(`Direct download for: ${file.name}`);
+            
+            const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+            const response = await fetch(tempUrl);
+            const blob = await response.blob();
+            
+            // Generate unique filename
+            const timestamp = Date.now();
+            const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            
+            // Upload to Supabase storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('audio-files')
+              .upload(fileName, blob, {
+                contentType: blob.type || 'audio/mpeg',
+                cacheControl: '3600',
+                upsert: false
+              });
 
-          // Get duration from the stored file
-          const duration = await getDurationFromUrl(urlData.publicUrl);
-          const formattedDuration = formatDuration(duration);
+            if (uploadError) throw uploadError;
 
-          // Create track data with permanent Supabase storage URL
+            // Get public URL
+            const { data: urlData } = supabase.storage
+              .from('audio-files')
+              .getPublicUrl(fileName);
+
+            finalUrl = urlData.publicUrl;
+
+            // Get duration from the stored file
+            const duration = await getDurationFromUrl(finalUrl);
+            formattedDuration = formatDuration(duration);
+          }
+
+          // Create track data with permanent storage URL
           const trackData = {
             title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
             artist: "Unknown Artist", // Default artist
             duration: formattedDuration,
-            fileUrl: urlData.publicUrl, // Permanent Supabase storage URL
+            fileUrl: finalUrl, // Permanent storage URL (either direct or transcoded)
             dropbox_path: null, // No longer needed since file is permanently stored
             is_public: false,
           };
           
           await addTrackMutation.mutateAsync(trackData);
           syncedCount++;
-          console.log(`Successfully stored ${file.name} permanently`);
+          
+          console.log(`[${fileIndex}/${totalFiles}] Successfully stored ${file.name}`);
+          
+          // Update progress
+          toast({
+            title: `Progress: ${fileIndex}/${totalFiles} complete`,
+            description: `Successfully processed: ${file.name}`,
+          });
+          
         } catch (error) {
           console.error(`Failed to sync ${file.name}:`, error);
+          
+          // Show specific error for failed file
+          toast({
+            title: `Failed to process ${file.name}`,
+            description: error.message || "Unknown error occurred",
+            variant: "destructive",
+          });
         }
       }
 
@@ -369,7 +422,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${syncedCount} of ${selectedFiles.size} files.`,
+        description: `Successfully synced ${syncedCount} of ${totalFiles} files to your library.`,
       });
       
       setSelectedFiles(new Set());
