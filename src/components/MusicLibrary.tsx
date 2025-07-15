@@ -116,7 +116,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('addedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [calculatingDurations, setCalculatingDurations] = useState<Set<string>>(new Set());
+  
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
   const updateTrackMutation = useUpdateTrack();
@@ -172,70 +172,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
 
-  const calculateDuration = async (track: Track) => {
-    if (calculatingDurations.has(track.id)) return;
-    
-    setCalculatingDurations(prev => new Set([...prev, track.id]));
-    
-    try {
-      let audioUrl = track.fileUrl;
-      
-      // For Dropbox tracks without fileUrl, get temporary link
-      if (!audioUrl || audioUrl === '#') {
-        if (track.dropbox_path) {
-          const { dropboxService } = await import('@/services/dropboxService');
-          audioUrl = await dropboxService.getTemporaryLink(track.dropbox_path);
-        } else {
-          return; // Can't calculate duration without a source
-        }
-      }
-      
-      const audio = new Audio();
-      const promise = new Promise<number>((resolve, reject) => {
-        audio.addEventListener('loadedmetadata', () => {
-          resolve(audio.duration);
-        });
-        audio.addEventListener('error', reject);
-      });
-      
-      audio.src = audioUrl;
-      const duration = await promise;
-      
-      if (duration && !isNaN(duration)) {
-        const minutes = Math.floor(duration / 60);
-        const seconds = Math.floor(duration % 60);
-        const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
-        await updateTrackMutation.mutateAsync({
-          id: track.id,
-          updates: { duration: formattedDuration }
-        });
-      }
-    } catch (error) {
-      console.error('Failed to calculate duration for track:', track.title, error);
-    } finally {
-      setCalculatingDurations(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(track.id);
-        return newSet;
-      });
-    }
-  };
-
-  // Auto-calculate durations for tracks with --:-- duration
-  useEffect(() => {
-    const tracksNeedingDuration = tracks.filter(track => 
-      (track.duration === '--:--' || track.duration === '0:00') && 
-      (track.fileUrl || track.dropbox_path) &&
-      !calculatingDurations.has(track.id)
-    );
-    
-    // Calculate durations one at a time to avoid overwhelming the browser
-    if (tracksNeedingDuration.length > 0) {
-      const track = tracksNeedingDuration[0];
-      calculateDuration(track);
-    }
-  }, [tracks, calculatingDurations]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -578,11 +514,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     </div>
                   ) : track.duration === 'Failed' ? (
                     <span className="text-destructive text-sm">Failed</span>
-                  ) : calculatingDurations.has(track.id) ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Calculating...</span>
-                    </div>
                   ) : (
                     track.duration
                   )}
