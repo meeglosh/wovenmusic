@@ -17,10 +17,43 @@ export class ImportTranscodingService {
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // Convert to MP3-like quality by downsampling and compressing
-      const targetSampleRate = 44100;
-      const channels = Math.min(audioBuffer.numberOfChannels, 2); // Stereo max
+      // Calculate target compression to stay under 45MB (safe limit)
+      const maxFileSizeBytes = 45 * 1024 * 1024; // 45MB
+      const originalDuration = audioBuffer.duration;
+      
+      // Start with high quality settings and adjust if needed
+      let targetSampleRate = 44100;
+      let channels = Math.min(audioBuffer.numberOfChannels, 2); // Start with stereo
+      
+      // Estimate file size and reduce quality if needed
+      const estimateFileSize = (sampleRate: number, channelCount: number) => {
+        const samplesPerSecond = sampleRate * channelCount;
+        const bytesPerSample = 2; // 16-bit
+        const headerSize = 44;
+        return (samplesPerSecond * originalDuration * bytesPerSample) + headerSize;
+      };
+      
+      // Adjust settings to stay under size limit
+      if (estimateFileSize(targetSampleRate, channels) > maxFileSizeBytes) {
+        // Try mono first
+        channels = 1;
+        console.log('Reducing to mono to fit size limit');
+        
+        if (estimateFileSize(targetSampleRate, channels) > maxFileSizeBytes) {
+          // Reduce sample rate to 32kHz (still very good quality)
+          targetSampleRate = 32000;
+          console.log('Reducing sample rate to 32kHz to fit size limit');
+          
+          if (estimateFileSize(targetSampleRate, channels) > maxFileSizeBytes) {
+            // Final fallback: 22.05kHz mono (acceptable quality)
+            targetSampleRate = 22050;
+            console.log('Reducing sample rate to 22.05kHz to fit size limit');
+          }
+        }
+      }
+      
       const length = Math.floor(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate);
+      console.log(`Transcoding: ${audioBuffer.sampleRate}Hz ${audioBuffer.numberOfChannels}ch -> ${targetSampleRate}Hz ${channels}ch`);
       
       // Create new buffer with target sample rate
       const resampledBuffer = audioContext.createBuffer(channels, length, targetSampleRate);
