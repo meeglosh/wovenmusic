@@ -105,30 +105,16 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     return new Promise((resolve) => {
       const audio = new Audio();
       const url = URL.createObjectURL(file);
-      let hasResolved = false;
-      
-      const cleanup = () => {
-        URL.revokeObjectURL(url);
-        if (!hasResolved) {
-          hasResolved = true;
-          // For unsupported formats, return a default duration
-          console.warn(`Could not extract duration from ${file.name}, using default`);
-          resolve(180); // 3 minutes default
-        }
-      };
       
       audio.addEventListener('loadedmetadata', () => {
-        if (!hasResolved) {
-          hasResolved = true;
-          URL.revokeObjectURL(url);
-          resolve(audio.duration || 180); // Fallback to 3 minutes if duration is 0
-        }
+        URL.revokeObjectURL(url);
+        resolve(audio.duration);
       });
       
-      audio.addEventListener('error', cleanup);
-      
-      // Timeout after 10 seconds
-      setTimeout(cleanup, 10000);
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(url);
+        resolve(0); // Return 0 if we can't get duration
+      });
       
       audio.src = url;
     });
