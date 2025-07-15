@@ -56,7 +56,7 @@ export const DropboxTokenExpiredDialog = ({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-warning" />
+            <AlertTriangle className="h-5 w-5 text-destructive" />
             <AlertDialogTitle>Dropbox Session Expired</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-left space-y-3">
