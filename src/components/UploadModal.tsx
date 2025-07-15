@@ -151,6 +151,55 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     });
   };
 
+  const getDurationFromUrl = (url: string): Promise<number> => {
+    console.log(`Getting duration from URL: ${url.substring(0, 50)}...`);
+    
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      let resolved = false;
+      
+      const cleanup = (duration?: number) => {
+        if (!resolved) {
+          resolved = true;
+          console.log(`Duration extracted from URL: ${duration || 'fallback to 180'}`);
+          resolve(duration || 180); // Default 3 minutes if can't extract
+        }
+      };
+      
+      audio.addEventListener('loadedmetadata', () => {
+        console.log(`Loadedmetadata from URL: duration = ${audio.duration}`);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        } else {
+          console.log(`Invalid duration from URL, using fallback`);
+          cleanup(); // Use default if duration is invalid
+        }
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.log(`Audio error from URL:`, e);
+        cleanup();
+      });
+      
+      audio.addEventListener('canplaythrough', () => {
+        console.log(`Canplaythrough from URL: duration = ${audio.duration}`);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        }
+      });
+      
+      // Set timeout for larger files or slow networks
+      setTimeout(() => {
+        console.log(`Timeout reached for URL`);
+        cleanup();
+      }, 15000);
+      
+      audio.preload = 'metadata';
+      audio.crossOrigin = 'anonymous';
+      audio.src = url;
+    });
+  };
+
   const formatDuration = (seconds: number): string => {
     if (seconds === 0) return '--:--';
     const minutes = Math.floor(seconds / 60);
@@ -207,14 +256,15 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         i === index ? { ...f, status: 'processing' as const, progress: 100 } : f
       ));
 
-      // Get file duration
-      const duration = await getDurationFromFile(file);
-      const formattedDuration = formatDuration(duration);
-
-      // Get public URL
+      // Get public URL first
       const { data: urlData } = supabase.storage
         .from('audio-files')
         .getPublicUrl(fileName);
+
+      // Get file duration from the uploaded file URL
+      const duration = await getDurationFromUrl(urlData.publicUrl);
+      const formattedDuration = formatDuration(duration);
+
 
       // Extract metadata from filename
       const { artist, title } = extractMetadata(file.name);
