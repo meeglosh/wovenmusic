@@ -26,6 +26,7 @@ import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
   name: string;
@@ -60,6 +61,62 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       const comparison = a.name.localeCompare(b.name);
       return sortOrder === 'asc' ? comparison : -comparison;
     });
+  };
+
+  const getDurationFromUrl = (url: string): Promise<number> => {
+    console.log(`Getting duration from URL: ${url.substring(0, 50)}...`);
+    
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      let resolved = false;
+      
+      const cleanup = (duration?: number) => {
+        if (!resolved) {
+          resolved = true;
+          console.log(`Duration extracted from URL: ${duration || 'fallback to 180'}`);
+          resolve(duration || 180); // Default 3 minutes if can't extract
+        }
+      };
+      
+      audio.addEventListener('loadedmetadata', () => {
+        console.log(`Loadedmetadata from URL: duration = ${audio.duration}`);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        } else {
+          console.log(`Invalid duration from URL, using fallback`);
+          cleanup(); // Use default if duration is invalid
+        }
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.log(`Audio error from URL:`, e);
+        cleanup();
+      });
+      
+      audio.addEventListener('canplaythrough', () => {
+        console.log(`Canplaythrough from URL: duration = ${audio.duration}`);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          cleanup(audio.duration);
+        }
+      });
+      
+      // Set timeout for larger files or slow networks
+      setTimeout(() => {
+        console.log(`Timeout reached for URL`);
+        cleanup();
+      }, 15000);
+      
+      audio.preload = 'metadata';
+      audio.crossOrigin = 'anonymous';
+      audio.src = url;
+    });
+  };
+
+  const formatDuration = (seconds: number): string => {
+    if (seconds === 0) return '--:--';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const getDurationFromDropboxFile = async (file: DropboxFile): Promise<string> => {
@@ -257,18 +314,51 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       
       for (const file of selectedFileObjects) {
         try {
-          // Create track data from Dropbox file
+          console.log(`Downloading and storing ${file.name} permanently...`);
+          
+          // Download the file from Dropbox
+          const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+          const response = await fetch(tempUrl);
+          const blob = await response.blob();
+          
+          // Generate unique filename
+          const timestamp = Date.now();
+          const fileExtension = file.name.split('.').pop();
+          const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          
+          // Upload to Supabase storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('audio-files')
+            .upload(fileName, blob, {
+              contentType: blob.type || 'audio/mpeg',
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('audio-files')
+            .getPublicUrl(fileName);
+
+          // Get duration from the stored file
+          const duration = await getDurationFromUrl(urlData.publicUrl);
+          const formattedDuration = formatDuration(duration);
+
+          // Create track data with permanent Supabase storage URL
           const trackData = {
             title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
             artist: "Unknown Artist", // Default artist
-            duration: file.duration || "0:00", // Use calculated duration or default
-            fileUrl: "", // Will be populated with Dropbox URL when played
-            dropbox_path: file.path_lower,
+            duration: formattedDuration,
+            fileUrl: urlData.publicUrl, // Permanent Supabase storage URL
+            dropbox_path: null, // No longer needed since file is permanently stored
             is_public: false,
           };
           
           await addTrackMutation.mutateAsync(trackData);
           syncedCount++;
+          console.log(`Successfully stored ${file.name} permanently`);
         } catch (error) {
           console.error(`Failed to sync ${file.name}:`, error);
         }
