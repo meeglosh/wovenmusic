@@ -198,11 +198,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   const handleDeleteTrack = async (track: Track) => {
     try {
       const result = await deleteTrackMutation.mutateAsync(track.id);
-      const isUploadedFile = result.isUploadedFile;
+      const isStoredFile = result.isStoredFile;
       
       toast({
         title: "Track removed",
-        description: isUploadedFile 
+        description: isStoredFile 
           ? `"${track.title}" has been permanently deleted.`
           : `"${track.title}" has been removed from your library. The file remains in your Dropbox.`,
       });
@@ -223,10 +223,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
       
       // Create appropriate message based on what was deleted
       let description = "";
-      if (result.uploadedCount > 0 && result.dropboxCount > 0) {
-        description = `${result.uploadedCount} uploaded file(s) permanently deleted, ${result.dropboxCount} Dropbox file(s) removed from library.`;
-      } else if (result.uploadedCount > 0) {
-        description = `${result.uploadedCount} uploaded file(s) permanently deleted.`;
+      if (result.storedCount > 0 && result.dropboxCount > 0) {
+        description = `${result.storedCount} stored file(s) permanently deleted, ${result.dropboxCount} Dropbox file(s) removed from library.`;
+      } else if (result.storedCount > 0) {
+        description = `${result.storedCount} stored file(s) permanently deleted.`;
       } else {
         description = `${result.dropboxCount} file(s) removed from library. The files remain in your Dropbox.`;
       }

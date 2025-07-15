@@ -335,13 +335,13 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
           let formattedDuration: string;
 
           if (isWavFile) {
-            // For WAV files, use transcoding to MP3
+            // For WAV files, use client-side transcoding to MP3
             console.log(`Transcoding WAV file: ${file.name}`);
             
-            // Get temporary URL for transcoding
+            // Get temporary URL for download
             const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
             
-            // Transcode to MP3 using the edge function
+            // Transcode client-side and upload to storage
             finalUrl = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
             
             // Get duration from the transcoded file

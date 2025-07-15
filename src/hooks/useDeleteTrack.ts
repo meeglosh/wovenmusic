@@ -15,17 +15,36 @@ export const useDeleteTrack = () => {
       
       if (fetchError) throw fetchError;
       
-      // If the track has a file_url and no dropbox_path, it's an uploaded file - delete from storage
-      const isUploadedFile = track?.file_url && !track?.dropbox_path;
-      if (isUploadedFile) {
+      // If the track has a file_url and no dropbox_path, it's a stored file - delete from storage
+      const isStoredFile = track?.file_url && !track?.dropbox_path;
+      if (isStoredFile) {
         const fileName = track.file_url.split('/').pop();
         if (fileName) {
-          const { error: storageError } = await supabase.storage
-            .from('audio-files')
-            .remove([fileName]);
+          // Try to delete from both possible buckets
+          let deleteSuccess = false;
           
-          if (storageError) {
-            console.warn('Failed to delete file from storage:', storageError);
+          // First try transcoded-audio bucket (for converted WAV files)
+          if (fileName.includes('.mp3') || fileName.includes('transcoded')) {
+            const { error: transcodedError } = await supabase.storage
+              .from('transcoded-audio')
+              .remove([fileName]);
+            
+            if (!transcodedError) {
+              deleteSuccess = true;
+            } else {
+              console.warn('Failed to delete from transcoded-audio bucket:', transcodedError);
+            }
+          }
+          
+          // If not found in transcoded bucket, try audio-files bucket (for direct uploads)
+          if (!deleteSuccess) {
+            const { error: audioError } = await supabase.storage
+              .from('audio-files')
+              .remove([fileName]);
+            
+            if (audioError) {
+              console.warn('Failed to delete from audio-files bucket:', audioError);
+            }
           }
         }
       }
@@ -37,7 +56,7 @@ export const useDeleteTrack = () => {
         .eq("id", trackId);
       
       if (error) throw error;
-      return { trackId, isUploadedFile };
+      return { trackId, isStoredFile };
     },
     onSuccess: () => {
       // Force refetch the tracks data
@@ -60,20 +79,38 @@ export const useBulkDeleteTracks = () => {
       
       if (fetchError) throw fetchError;
       
-      // Delete uploaded files from storage (files with file_url but no dropbox_path)
-      const uploadedFiles = tracks?.filter(track => track.file_url && !track.dropbox_path) || [];
-      if (uploadedFiles.length > 0) {
-        const fileNames = uploadedFiles
+      // Delete stored files from storage (files with file_url but no dropbox_path)
+      const storedFiles = tracks?.filter(track => track.file_url && !track.dropbox_path) || [];
+      if (storedFiles.length > 0) {
+        const fileNames = storedFiles
           .map(track => track.file_url?.split('/').pop())
           .filter(Boolean) as string[];
         
         if (fileNames.length > 0) {
-          const { error: storageError } = await supabase.storage
-            .from('audio-files')
-            .remove(fileNames);
+          // Group files by bucket type
+          const transcodedFiles = fileNames.filter(name => name.includes('.mp3') || name.includes('transcoded'));
+          const audioFiles = fileNames.filter(name => !transcodedFiles.includes(name));
           
-          if (storageError) {
-            console.warn('Failed to delete files from storage:', storageError);
+          // Delete from transcoded-audio bucket
+          if (transcodedFiles.length > 0) {
+            const { error: transcodedError } = await supabase.storage
+              .from('transcoded-audio')
+              .remove(transcodedFiles);
+            
+            if (transcodedError) {
+              console.warn('Failed to delete files from transcoded-audio bucket:', transcodedError);
+            }
+          }
+          
+          // Delete from audio-files bucket
+          if (audioFiles.length > 0) {
+            const { error: audioError } = await supabase.storage
+              .from('audio-files')
+              .remove(audioFiles);
+            
+            if (audioError) {
+              console.warn('Failed to delete files from audio-files bucket:', audioError);
+            }
           }
         }
       }
@@ -88,8 +125,8 @@ export const useBulkDeleteTracks = () => {
       
       return {
         trackIds,
-        uploadedCount: uploadedFiles.length,
-        dropboxCount: trackIds.length - uploadedFiles.length
+        storedCount: storedFiles.length,
+        dropboxCount: trackIds.length - storedFiles.length
       };
     },
     onSuccess: () => {
