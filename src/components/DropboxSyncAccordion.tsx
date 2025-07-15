@@ -68,19 +68,41 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       
       return new Promise((resolve) => {
         const audio = new Audio();
+        let hasResolved = false;
+        
+        const cleanup = (duration?: number) => {
+          if (!hasResolved) {
+            hasResolved = true;
+            if (duration && !isNaN(duration) && duration > 0) {
+              const minutes = Math.floor(duration / 60);
+              const seconds = Math.floor(duration % 60);
+              resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            } else {
+              // For files where we can't extract duration, estimate based on file size
+              const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5))); // Rough estimate: 0.5MB per minute
+              resolve(`~${estimatedMinutes}:00`);
+            }
+          }
+        };
+        
         audio.addEventListener('loadedmetadata', () => {
-          const minutes = Math.floor(audio.duration / 60);
-          const seconds = Math.floor(audio.duration % 60);
-          resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+          cleanup(audio.duration);
         });
+        
         audio.addEventListener('error', () => {
-          resolve('--:--');
+          cleanup();
         });
+        
+        // Timeout after 15 seconds for large files
+        setTimeout(() => cleanup(), 15000);
+        
         audio.src = tempUrl;
       });
     } catch (error) {
-      console.error('Error getting duration:', error);
-      return '--:--';
+      console.error('Error getting duration for', file.name, ':', error);
+      // Estimate duration based on file size as fallback
+      const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
+      return `~${estimatedMinutes}:00`;
     }
   };
 
