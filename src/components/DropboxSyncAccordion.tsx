@@ -220,7 +220,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
           const trackData = {
             title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
             artist: "Unknown Artist", // Default artist
-            duration: "0:00", // Will be updated when file is played
+            duration: file.duration || "0:00", // Use calculated duration or default
             fileUrl: "", // Will be populated with Dropbox URL when played
             dropbox_path: file.path_lower,
             is_public: false,

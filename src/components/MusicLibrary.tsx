@@ -173,11 +173,23 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   };
 
   const calculateDuration = async (track: Track) => {
-    if (!track.fileUrl || track.fileUrl === '#' || calculatingDurations.has(track.id)) return;
+    if (calculatingDurations.has(track.id)) return;
     
     setCalculatingDurations(prev => new Set([...prev, track.id]));
     
     try {
+      let audioUrl = track.fileUrl;
+      
+      // For Dropbox tracks without fileUrl, get temporary link
+      if (!audioUrl || audioUrl === '#') {
+        if (track.dropbox_path) {
+          const { dropboxService } = await import('@/services/dropboxService');
+          audioUrl = await dropboxService.getTemporaryLink(track.dropbox_path);
+        } else {
+          return; // Can't calculate duration without a source
+        }
+      }
+      
       const audio = new Audio();
       const promise = new Promise<number>((resolve, reject) => {
         audio.addEventListener('loadedmetadata', () => {
@@ -186,7 +198,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         audio.addEventListener('error', reject);
       });
       
-      audio.src = track.fileUrl;
+      audio.src = audioUrl;
       const duration = await promise;
       
       if (duration && !isNaN(duration)) {
@@ -213,9 +225,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   // Auto-calculate durations for tracks with --:-- duration
   useEffect(() => {
     const tracksNeedingDuration = tracks.filter(track => 
-      track.duration === '--:--' && 
-      track.fileUrl && 
-      track.fileUrl !== '#' &&
+      (track.duration === '--:--' || track.duration === '0:00') && 
+      (track.fileUrl || track.dropbox_path) &&
       !calculatingDurations.has(track.id)
     );
     
