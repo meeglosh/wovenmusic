@@ -33,6 +33,7 @@ interface DropboxFile {
   size: number;
   server_modified: string;
   ".tag": "file" | "folder";
+  duration?: string;
 }
 
 interface DropboxSyncAccordionProps {
@@ -49,6 +50,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -57,6 +59,49 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
     return [...items].sort((a, b) => {
       const comparison = a.name.localeCompare(b.name);
       return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const getDurationFromDropboxFile = async (file: DropboxFile): Promise<string> => {
+    try {
+      const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+      
+      return new Promise((resolve) => {
+        const audio = new Audio();
+        audio.addEventListener('loadedmetadata', () => {
+          const minutes = Math.floor(audio.duration / 60);
+          const seconds = Math.floor(audio.duration % 60);
+          resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        });
+        audio.addEventListener('error', () => {
+          resolve('--:--');
+        });
+        audio.src = tempUrl;
+      });
+    } catch (error) {
+      console.error('Error getting duration:', error);
+      return '--:--';
+    }
+  };
+
+  const loadFileDuration = async (file: DropboxFile) => {
+    if (file.duration) return; // Already loaded
+    
+    setLoadingDurations(prev => new Set(prev).add(file.path_lower));
+    const duration = await getDurationFromDropboxFile(file);
+    
+    setFiles(prevFiles => 
+      prevFiles.map(f => 
+        f.path_lower === file.path_lower 
+          ? { ...f, duration }
+          : f
+      )
+    );
+    
+    setLoadingDurations(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(file.path_lower);
+      return newSet;
     });
   };
 
@@ -82,6 +127,11 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       setFiles(sortedFiles);
       setCurrentPath(path);
       setSelectedFiles(new Set());
+      
+      // Load durations for all music files
+      sortedFiles.forEach(file => {
+        loadFileDuration(file);
+      });
       
     } catch (error) {
       console.error('Error loading folders:', error);
@@ -354,9 +404,14 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
                       />
                       <Music className="w-4 h-4 text-muted-foreground" />
                       <span className="flex-1 text-sm">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(1)} MB
-                      </span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {loadingDurations.has(file.path_lower) ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <span>{file.duration || '--:--'}</span>
+                        )}
+                        <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                      </div>
                     </div>
                   ))}
                 </div>
