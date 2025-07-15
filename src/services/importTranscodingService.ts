@@ -17,34 +17,22 @@ export class ImportTranscodingService {
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // Aggressively compress: lower sample rate, mono, 16-bit
-      const targetSampleRate = 22050; // Half the standard rate for smaller files
-      const channels = 1; // Force mono to reduce file size by ~50%
+      // Convert to MP3-like quality by downsampling and compressing
+      const targetSampleRate = 44100;
+      const channels = Math.min(audioBuffer.numberOfChannels, 2); // Stereo max
       const length = Math.floor(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate);
       
       // Create new buffer with target sample rate
       const resampledBuffer = audioContext.createBuffer(channels, length, targetSampleRate);
       
-      // Resample and mix to mono if needed
-      const outputData = resampledBuffer.getChannelData(0);
-      
-      if (audioBuffer.numberOfChannels === 1) {
-        // Already mono, just resample
-        const inputData = audioBuffer.getChannelData(0);
+      // Resample each channel
+      for (let channel = 0; channel < channels; channel++) {
+        const inputData = audioBuffer.getChannelData(channel);
+        const outputData = resampledBuffer.getChannelData(channel);
+        
         for (let i = 0; i < length; i++) {
           const sourceIndex = Math.floor(i * audioBuffer.sampleRate / targetSampleRate);
           outputData[i] = inputData[sourceIndex] || 0;
-        }
-      } else {
-        // Mix stereo/multi-channel to mono and resample
-        for (let i = 0; i < length; i++) {
-          const sourceIndex = Math.floor(i * audioBuffer.sampleRate / targetSampleRate);
-          let mixedSample = 0;
-          for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-            const channelData = audioBuffer.getChannelData(ch);
-            mixedSample += (channelData[sourceIndex] || 0) / audioBuffer.numberOfChannels;
-          }
-          outputData[i] = mixedSample;
         }
       }
       
