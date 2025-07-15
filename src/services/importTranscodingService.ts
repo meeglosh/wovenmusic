@@ -17,17 +17,29 @@ export class ImportTranscodingService {
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // Convert to MP3-like quality by downsampling and compressing
-      const targetSampleRate = 44100;
-      const channels = Math.min(audioBuffer.numberOfChannels, 2); // Stereo max
+      // Estimate output file size for different quality settings
+      const duration = audioBuffer.duration;
+      const channels = Math.min(audioBuffer.numberOfChannels, 2);
+      
+      // Estimate file size for 256kbps (high quality)
+      const estimatedSize256kbps = this.estimateOutputFileSize(duration, channels, 44100);
+      const use256kbps = estimatedSize256kbps <= 50 * 1024 * 1024; // 50MB limit
+      
+      // Choose quality settings based on predicted file size
+      const targetSampleRate = use256kbps ? 44100 : 32000; // Reduce sample rate for 128kbps equivalent
+      const targetChannels = use256kbps ? channels : Math.min(channels, 2);
+      
+      console.log(`File duration: ${duration}s, estimated size at 256kbps: ${(estimatedSize256kbps / 1024 / 1024).toFixed(1)}MB`);
+      console.log(`Using ${use256kbps ? '256kbps' : '128kbps'} quality (${targetSampleRate}Hz, ${targetChannels} channels)`);
+      
       const length = Math.floor(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate);
       
-      // Create new buffer with target sample rate
-      const resampledBuffer = audioContext.createBuffer(channels, length, targetSampleRate);
+      // Create new buffer with target sample rate and channels
+      const resampledBuffer = audioContext.createBuffer(targetChannels, length, targetSampleRate);
       
       // Resample each channel
-      for (let channel = 0; channel < channels; channel++) {
-        const inputData = audioBuffer.getChannelData(channel);
+      for (let channel = 0; channel < targetChannels; channel++) {
+        const inputData = audioBuffer.getChannelData(Math.min(channel, audioBuffer.numberOfChannels - 1));
         const outputData = resampledBuffer.getChannelData(channel);
         
         for (let i = 0; i < length; i++) {
@@ -37,7 +49,6 @@ export class ImportTranscodingService {
       }
       
       // Convert to WAV format (since we can't create actual MP3 in browser without additional libs)
-      // This will still be much smaller than the original WAV due to resampling
       const wavBuffer = this.audioBufferToWav(resampledBuffer);
       
       // Create blob and upload to Supabase
@@ -49,6 +60,7 @@ export class ImportTranscodingService {
       const storagePath = `${timestamp}_${safeName}.mp3`;
       
       console.log('Uploading transcoded audio to storage:', storagePath);
+      console.log(`Final file size: ${(blob.size / 1024 / 1024).toFixed(1)}MB`);
       
       // Upload to transcoded-audio bucket
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -130,6 +142,13 @@ export class ImportTranscodingService {
     return arrayBuffer;
   }
   
+  private estimateOutputFileSize(duration: number, channels: number, sampleRate: number): number {
+    // Estimate WAV file size: duration * sample_rate * channels * bytes_per_sample + header
+    const bytesPerSample = 2; // 16-bit PCM
+    const estimatedSize = (duration * sampleRate * channels * bytesPerSample) + 44; // 44 bytes for WAV header
+    return estimatedSize;
+  }
+
   needsTranscoding(filePath: string): boolean {
     // No files need transcoding since .aif files are now blocked
     // and all other supported formats (.wav, .mp3, etc.) play natively
