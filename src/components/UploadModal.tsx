@@ -102,6 +102,8 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
   };
 
   const getDurationFromFile = (file: File): Promise<number> => {
+    console.log(`Getting duration for file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    
     return new Promise((resolve) => {
       const audio = new Audio();
       const url = URL.createObjectURL(file);
@@ -111,27 +113,38 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         if (!resolved) {
           resolved = true;
           URL.revokeObjectURL(url);
+          console.log(`Duration extracted for ${file.name}: ${duration || 'fallback to 180'}`);
           resolve(duration || 180); // Default 3 minutes if can't extract
         }
       };
       
       audio.addEventListener('loadedmetadata', () => {
+        console.log(`Loadedmetadata for ${file.name}: duration = ${audio.duration}`);
         if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
           cleanup(audio.duration);
         } else {
+          console.log(`Invalid duration for ${file.name}, using fallback`);
           cleanup(); // Use default if duration is invalid
         }
       });
       
-      audio.addEventListener('error', () => cleanup());
+      audio.addEventListener('error', (e) => {
+        console.log(`Audio error for ${file.name}:`, e);
+        cleanup();
+      });
+      
       audio.addEventListener('canplaythrough', () => {
+        console.log(`Canplaythrough for ${file.name}: duration = ${audio.duration}`);
         if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
           cleanup(audio.duration);
         }
       });
       
       // Set timeout for larger files or slow networks
-      setTimeout(() => cleanup(), 10000);
+      setTimeout(() => {
+        console.log(`Timeout reached for ${file.name}`);
+        cleanup();
+      }, 10000);
       
       audio.preload = 'metadata';
       audio.src = url;

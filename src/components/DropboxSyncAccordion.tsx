@@ -63,8 +63,11 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
   };
 
   const getDurationFromDropboxFile = async (file: DropboxFile): Promise<string> => {
+    console.log(`Getting duration for Dropbox file: ${file.name}, size: ${file.size}`);
+    
     try {
       const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+      console.log(`Got temp URL for ${file.name}: ${tempUrl.substring(0, 50)}...`);
       
       return new Promise((resolve) => {
         const audio = new Audio();
@@ -76,25 +79,41 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             if (duration && !isNaN(duration) && duration > 0) {
               const minutes = Math.floor(duration / 60);
               const seconds = Math.floor(duration % 60);
-              resolve(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+              const result = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+              console.log(`Duration extracted for ${file.name}: ${result} (${duration}s)`);
+              resolve(result);
             } else {
               // Estimate based on file size for unsupported formats
               const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
-              resolve(`~${estimatedMinutes}:00`);
+              const result = `~${estimatedMinutes}:00`;
+              console.log(`Using estimated duration for ${file.name}: ${result}`);
+              resolve(result);
             }
           }
         };
         
-        audio.addEventListener('loadedmetadata', () => cleanup(audio.duration));
-        audio.addEventListener('error', () => cleanup());
+        audio.addEventListener('loadedmetadata', () => {
+          console.log(`Loadedmetadata for ${file.name}: duration = ${audio.duration}`);
+          cleanup(audio.duration);
+        });
+        
+        audio.addEventListener('error', (e) => {
+          console.log(`Audio error for ${file.name}:`, e);
+          cleanup();
+        });
+        
         audio.addEventListener('canplaythrough', () => {
+          console.log(`Canplaythrough for ${file.name}: duration = ${audio.duration}`);
           if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
             cleanup(audio.duration);
           }
         });
         
         // Timeout for large files
-        setTimeout(() => cleanup(), 15000);
+        setTimeout(() => {
+          console.log(`Timeout reached for ${file.name}`);
+          cleanup();
+        }, 15000);
         
         audio.preload = 'metadata';
         audio.src = tempUrl;
