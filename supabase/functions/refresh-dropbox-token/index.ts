@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -13,14 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { code, redirect_uri } = await req.json();
+    const { refresh_token } = await req.json();
     
     const dropboxAppKey = Deno.env.get("DROPBOX_APP_KEY");
     const dropboxAppSecret = Deno.env.get("DROPBOX_APP_SECRET");
     
-    console.log("Checking secrets...", {
+    console.log("Refreshing Dropbox token...", {
       hasAppKey: !!dropboxAppKey,
-      hasAppSecret: !!dropboxAppSecret
+      hasAppSecret: !!dropboxAppSecret,
+      hasRefreshToken: !!refresh_token
     });
     
     if (!dropboxAppKey || !dropboxAppSecret) {
@@ -35,32 +35,40 @@ serve(async (req) => {
       );
     }
 
+    if (!refresh_token) {
+      return new Response(
+        JSON.stringify({ error: "Refresh token is required" }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400 
+        }
+      );
+    }
+
     const tokenResponse = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        code,
-        grant_type: 'authorization_code',
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token,
         client_id: dropboxAppKey,
-        client_secret: dropboxAppSecret,
-        redirect_uri
+        client_secret: dropboxAppSecret
       })
     });
 
     const tokenData = await tokenResponse.json();
     
     if (!tokenResponse.ok) {
-      console.error("Dropbox token exchange failed:", tokenData);
-      throw new Error(tokenData.error_description || 'Token exchange failed');
+      console.error("Dropbox token refresh failed:", tokenData);
+      throw new Error(tokenData.error_description || 'Token refresh failed');
     }
 
-    // Return both access token and refresh token for long-term access
     return new Response(
       JSON.stringify({ 
         access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
+        refresh_token: tokenData.refresh_token || refresh_token, // Some providers don't return new refresh token
         expires_in: tokenData.expires_in
       }),
       { 
@@ -69,7 +77,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error in exchange-dropbox-token:", error);
+    console.error("Error in refresh-dropbox-token:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

@@ -26,6 +26,8 @@ const crossLog = (message: string, data?: any) => {
 
 export class DropboxService {
   private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+  private tokenExpiresAt: number | null = null;
 
   private get redirectUri(): string {
     return `${window.location.origin}/dropbox-callback`;
@@ -194,13 +196,26 @@ export class DropboxService {
         crossLog('Token preview:', `${data.access_token.substring(0, 6)}...`);
         
         this.accessToken = data.access_token;
+        this.refreshToken = data.refresh_token;
+        
+        // Calculate expiration time (with 5 minute buffer)
+        const expiresIn = data.expires_in || 14400; // Default 4 hours if not provided
+        this.tokenExpiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        
+        // Store tokens and expiration
         localStorage.setItem('dropbox_access_token', data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem('dropbox_refresh_token', data.refresh_token);
+        }
+        localStorage.setItem('dropbox_token_expires_at', this.tokenExpiresAt.toString());
         
         // Verify storage
         const storedToken = localStorage.getItem('dropbox_access_token');
         crossLog('=== TOKEN STORAGE VERIFICATION ===');
         crossLog('Token stored successfully:', storedToken ? 'YES' : 'NO');
         crossLog('Stored token matches:', storedToken === data.access_token ? 'YES' : 'NO');
+        crossLog('Refresh token stored:', !!data.refresh_token);
+        crossLog('Token expires at:', new Date(this.tokenExpiresAt));
         
         // Clean up auth state
         localStorage.removeItem('dropbox_auth_state');
@@ -223,19 +238,97 @@ export class DropboxService {
   getStoredToken(): string | null {
     // Always check localStorage directly to avoid instance issues
     const stored = localStorage.getItem('dropbox_access_token');
+    const expiresAt = localStorage.getItem('dropbox_token_expires_at');
+    const refreshToken = localStorage.getItem('dropbox_refresh_token');
+    
     console.log('Getting stored token from localStorage:', stored ? 'FOUND' : 'NOT FOUND');
+    
     if (stored) {
       console.log('Token preview:', `${stored.substring(0, 6)}...`);
+      
+      // Check if token is expired
+      if (expiresAt && Date.now() > parseInt(expiresAt)) {
+        console.log('=== TOKEN EXPIRED ===');
+        console.log('Expired at:', new Date(parseInt(expiresAt)));
+        console.log('Current time:', new Date());
+        
+        if (refreshToken) {
+          console.log('Refresh token available, will attempt refresh on next API call');
+          // Don't clear tokens yet, let the API call handle refresh
+        } else {
+          console.log('No refresh token available, clearing expired tokens');
+          this.logout();
+          return null;
+        }
+      }
+      
       this.accessToken = stored; // Update instance cache
+      this.refreshToken = refreshToken;
+      this.tokenExpiresAt = expiresAt ? parseInt(expiresAt) : null;
     } else {
       this.accessToken = null; // Clear instance cache
+      this.refreshToken = null;
+      this.tokenExpiresAt = null;
     }
     return stored;
   }
 
+  async refreshAccessToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('dropbox_refresh_token');
+    
+    if (!refreshToken) {
+      console.log('No refresh token available');
+      return null;
+    }
+
+    try {
+      console.log('=== REFRESHING DROPBOX TOKEN ===');
+      const { data, error } = await supabase.functions.invoke('refresh-dropbox-token', {
+        body: { refresh_token: refreshToken }
+      });
+
+      if (error) {
+        console.error('Token refresh failed:', error);
+        this.logout(); // Clear all tokens
+        return null;
+      }
+
+      if (data?.access_token) {
+        console.log('=== TOKEN REFRESH SUCCESSFUL ===');
+        
+        this.accessToken = data.access_token;
+        this.refreshToken = data.refresh_token || refreshToken;
+        
+        // Calculate new expiration
+        const expiresIn = data.expires_in || 14400;
+        this.tokenExpiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        
+        // Update localStorage
+        localStorage.setItem('dropbox_access_token', data.access_token);
+        localStorage.setItem('dropbox_refresh_token', this.refreshToken);
+        localStorage.setItem('dropbox_token_expires_at', this.tokenExpiresAt.toString());
+        
+        console.log('New token expires at:', new Date(this.tokenExpiresAt));
+        return data.access_token;
+      }
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      this.logout(); // Clear all tokens
+    }
+    
+    return null;
+  }
+
   async listFiles(folder: string = ''): Promise<DropboxFile[]> {
-    const token = this.getStoredToken();
+    let token = this.getStoredToken();
     if (!token) throw new Error('Not authenticated with Dropbox');
+
+    // Check if token needs refresh
+    if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt) {
+      console.log('Token expired, attempting refresh...');
+      token = await this.refreshAccessToken();
+      if (!token) throw new Error('DROPBOX_TOKEN_EXPIRED');
+    }
 
     console.log('=== ENHANCED DROPBOX API DEBUGGING WITH PAGINATION ===');
     console.log('Listing files in folder:', folder);
@@ -401,8 +494,15 @@ export class DropboxService {
   }
 
   async getTemporaryLink(path: string): Promise<string> {
-    const token = this.getStoredToken();
+    let token = this.getStoredToken();
     if (!token) throw new Error('Not authenticated with Dropbox');
+
+    // Check if token needs refresh
+    if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt) {
+      console.log('Token expired, attempting refresh...');
+      token = await this.refreshAccessToken();
+      if (!token) throw new Error('DROPBOX_TOKEN_EXPIRED');
+    }
 
     console.log('Getting temporary link for:', path);
 
@@ -424,9 +524,18 @@ export class DropboxService {
         try {
           const errorData = JSON.parse(errorText);
           if (errorData.error && errorData.error['.tag'] === 'expired_access_token') {
-            // Clear expired token
-            this.logout();
-            throw new Error('DROPBOX_TOKEN_EXPIRED');
+            // Try to refresh token first
+            console.log('Access token expired, attempting refresh...');
+            const newToken = await this.refreshAccessToken();
+            if (newToken) {
+              // Retry the request with new token
+              console.log('Token refreshed, retrying temporary link request...');
+              return this.getTemporaryLink(path);
+            } else {
+              // Clear expired token
+              this.logout();
+              throw new Error('DROPBOX_TOKEN_EXPIRED');
+            }
           }
         } catch (parseError) {
           // If we can't parse, continue with generic error
@@ -525,11 +634,14 @@ export class DropboxService {
   }
 
   logout(): void {
-    console.log('=== LOGGING OUT ===');
     this.accessToken = null;
+    this.refreshToken = null;
+    this.tokenExpiresAt = null;
     localStorage.removeItem('dropbox_access_token');
+    localStorage.removeItem('dropbox_refresh_token');
+    localStorage.removeItem('dropbox_token_expires_at');
     localStorage.removeItem('dropbox_auth_state');
-    localStorage.removeItem('dropbox_auth_success');
+    console.log('Dropbox tokens cleared');
   }
 }
 
