@@ -21,6 +21,21 @@ export const getFileName = (track: Track): string => {
   return fileName;
 };
 
+// Utility function to get clean display filename by stripping timestamp prefix
+export const getCleanFileName = (track: Track): string => {
+  const fileName = getFileName(track);
+  // Strip timestamp prefix pattern (digits followed by underscore)
+  const cleanName = fileName.replace(/^\d+_/, '');
+  return cleanName;
+};
+
+// Utility function to extract clean title from filename (without extension)
+export const getCleanTitle = (track: Track): string => {
+  const cleanFileName = getCleanFileName(track);
+  // Remove file extension for title display
+  return cleanFileName.replace(/\.[^/.]+$/, '');
+};
+
 export interface Playlist {
   id: string;
   name: string;

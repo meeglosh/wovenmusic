@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
-import { Track, getFileName } from "@/types/music";
+import { Track, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
@@ -128,7 +128,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     
     switch (sortField) {
       case 'title':
-        comparison = getFileName(a).localeCompare(getFileName(b));
+        comparison = getCleanFileName(a).localeCompare(getCleanFileName(b));
         break;
       case 'artist':
         comparison = a.artist.localeCompare(b.artist);
@@ -499,7 +499,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         onClick={() => navigate(`/track/${track.id}`)}
                         title="Open track view with comments"
                       >
-                        {getFileName(track)}
+                        {getCleanFileName(track)}
                       </button>
                       <p className="text-sm text-muted-foreground">{track.artist}</p>
                     </div>
@@ -556,7 +556,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove "{getFileName(track)}" from your library?
+                              Are you sure you want to remove "{getCleanFileName(track)}" from your library?
                               {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
