@@ -20,31 +20,23 @@ export const useDeleteTrack = () => {
       if (isStoredFile) {
         const fileName = track.file_url.split('/').pop();
         if (fileName) {
-          // Try to delete from both possible buckets
-          let deleteSuccess = false;
+          console.log('Attempting to delete file:', fileName);
           
-          // First try transcoded-audio bucket (for converted WAV files)
-          if (fileName.includes('.mp3') || fileName.includes('transcoded')) {
-            const { error: transcodedError } = await supabase.storage
-              .from('transcoded-audio')
-              .remove([fileName]);
-            
-            if (!transcodedError) {
-              deleteSuccess = true;
-            } else {
-              console.warn('Failed to delete from transcoded-audio bucket:', transcodedError);
-            }
-          }
+          // Try both buckets - don't assume which one based on filename
+          const { error: transcodedError } = await supabase.storage
+            .from('transcoded-audio')
+            .remove([fileName]);
           
-          // If not found in transcoded bucket, try audio-files bucket (for direct uploads)
-          if (!deleteSuccess) {
-            const { error: audioError } = await supabase.storage
-              .from('audio-files')
-              .remove([fileName]);
-            
-            if (audioError) {
-              console.warn('Failed to delete from audio-files bucket:', audioError);
-            }
+          const { error: audioError } = await supabase.storage
+            .from('audio-files')
+            .remove([fileName]);
+          
+          // Log results (at least one should succeed, both may fail if file doesn't exist)
+          if (transcodedError && audioError) {
+            console.warn('File not found in either bucket:', { transcodedError, audioError });
+          } else {
+            if (!transcodedError) console.log('Successfully deleted from transcoded-audio bucket');
+            if (!audioError) console.log('Successfully deleted from audio-files bucket');
           }
         }
       }
@@ -87,30 +79,23 @@ export const useBulkDeleteTracks = () => {
           .filter(Boolean) as string[];
         
         if (fileNames.length > 0) {
-          // Group files by bucket type
-          const transcodedFiles = fileNames.filter(name => name.includes('.mp3') || name.includes('transcoded'));
-          const audioFiles = fileNames.filter(name => !transcodedFiles.includes(name));
+          console.log('Attempting to delete files:', fileNames);
           
-          // Delete from transcoded-audio bucket
-          if (transcodedFiles.length > 0) {
-            const { error: transcodedError } = await supabase.storage
-              .from('transcoded-audio')
-              .remove(transcodedFiles);
-            
-            if (transcodedError) {
-              console.warn('Failed to delete files from transcoded-audio bucket:', transcodedError);
-            }
-          }
+          // Try to delete from both buckets for all files
+          const { error: transcodedError } = await supabase.storage
+            .from('transcoded-audio')
+            .remove(fileNames);
           
-          // Delete from audio-files bucket
-          if (audioFiles.length > 0) {
-            const { error: audioError } = await supabase.storage
-              .from('audio-files')
-              .remove(audioFiles);
-            
-            if (audioError) {
-              console.warn('Failed to delete files from audio-files bucket:', audioError);
-            }
+          const { error: audioError } = await supabase.storage
+            .from('audio-files')
+            .remove(fileNames);
+          
+          // Log results
+          if (transcodedError && audioError) {
+            console.warn('Some files may not have been found in either bucket:', { transcodedError, audioError });
+          } else {
+            if (!transcodedError) console.log('Successfully attempted deletion from transcoded-audio bucket');
+            if (!audioError) console.log('Successfully attempted deletion from audio-files bucket');
           }
         }
       }
