@@ -9,6 +9,7 @@ const corsHeaders = {
 interface TranscodeRequest {
   audioUrl: string;
   fileName: string;
+  bitrate?: string; // Optional bitrate specification
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -27,9 +28,10 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== FFMPEG TRANSCODING STARTED ===');
     
-    const { audioUrl, fileName }: TranscodeRequest = await req.json();
+    const { audioUrl, fileName, bitrate = '256k' }: TranscodeRequest = await req.json();
     console.log('Transcoding request for:', fileName);
     console.log('Source URL:', audioUrl);
+    console.log('Target bitrate:', bitrate);
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -80,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       args: [
         '-i', inputPath,           // Input file
         '-codec:a', 'libmp3lame',  // Use LAME MP3 encoder
-        '-b:a', '256k',            // Set bitrate to 256kbps
+        '-b:a', bitrate,           // Dynamic bitrate (256k or 128k)
         '-ar', '44100',            // Set sample rate to 44.1kHz
         '-ac', '2',                // Set to stereo
         '-y',                      // Overwrite output file
