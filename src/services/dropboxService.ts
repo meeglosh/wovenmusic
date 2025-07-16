@@ -717,6 +717,10 @@ export class DropboxService {
       expiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt) : null,
       isAuthenticating: this.isAuthenticating
     });
+    
+    // Dispatch event to signal that auth state has been refreshed
+    // This allows other components to cancel/restart operations with fresh tokens
+    window.dispatchEvent(new CustomEvent('dropboxAuthRefreshed'));
   }
 
   logout(): void {

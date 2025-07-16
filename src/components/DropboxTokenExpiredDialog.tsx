@@ -39,11 +39,11 @@ export const DropboxTokenExpiredDialog = ({
         dropboxService.refreshAuthState();
         setIsReconnecting(false);
         
-        // Give the token a moment to be fully processed
+        // Give a longer delay to ensure all services have processed the auth refresh
         setTimeout(() => {
           onReconnected?.();
           onClose();
-        }, 500);
+        }, 1000); // Increased from 500ms to 1000ms
       } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
         console.error('Auth failed:', event.data.error);
         window.removeEventListener('message', handleAuthMessage);

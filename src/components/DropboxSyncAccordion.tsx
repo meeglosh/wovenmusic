@@ -449,6 +449,24 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
     }
   }, [isExpanded]);
 
+  // Handle auth refresh to reload content with fresh tokens
+  useEffect(() => {
+    const handleAuthRefresh = () => {
+      console.log('Dropbox auth refreshed, reloading folder contents...');
+      // Small delay to ensure token is fully updated
+      setTimeout(() => {
+        if (isExpanded) {
+          loadFolders(currentPath);
+        }
+      }, 500);
+    };
+
+    window.addEventListener('dropboxAuthRefreshed', handleAuthRefresh);
+    return () => {
+      window.removeEventListener('dropboxAuthRefreshed', handleAuthRefresh);
+    };
+  }, [isExpanded, currentPath]);
+
   // Re-sort files and folders when sorting order changes
   useEffect(() => {
     if (files.length > 0 || folders.length > 0) {
