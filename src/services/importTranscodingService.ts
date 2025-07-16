@@ -35,23 +35,32 @@ export class ImportTranscodingService {
         console.warn('Could not analyze audio for bitrate selection, using default 256kbps:', analysisError);
       }
       
-      // Use the transcode-audio edge function for proper MP3 conversion with FFmpeg
-      const response = await supabase.functions.invoke('transcode-audio', {
-        body: {
+      // Use the transcode-audio standard function (Node runtime) for proper MP3 conversion with FFmpeg
+      // Call the standard function endpoint instead of Edge Function endpoint
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`https://woakvdhlpludrttjixxq.supabase.co/rest/v1/functions/transcode-audio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || 'anonymous'}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg'
+        },
+        body: JSON.stringify({
           audioUrl: audioUrl,
           fileName: fileName,
           bitrate: bitrate
-        }
+        })
       });
 
       // Log full error details for debugging
-      if (response.error) {
-        console.error('Transcoding edge function error:', response.error);
-        console.error('Full error response:', response);
-        throw new Error(`Transcoding failed: ${response.error.message || 'Edge Function returned a non-2xx status code'}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Transcoding function error:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        throw new Error(`Transcoding failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const { data, error } = response;
+      const data = await response.json();
 
       if (!data?.publicUrl) {
         throw new Error('No public URL returned from transcoding service');
