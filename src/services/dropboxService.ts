@@ -28,12 +28,32 @@ export class DropboxService {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private tokenExpiresAt: number | null = null;
+  private isAuthenticating: boolean = false;
+  private authenticationPromise: Promise<void> | null = null;
 
   private get redirectUri(): string {
     return `${window.location.origin}/dropbox-callback`;
   }
 
   async authenticate(): Promise<void> {
+    // Prevent multiple simultaneous authentication attempts
+    if (this.isAuthenticating) {
+      console.log('Authentication already in progress...');
+      return this.authenticationPromise || Promise.resolve();
+    }
+
+    this.isAuthenticating = true;
+    this.authenticationPromise = this._performAuthentication();
+    
+    try {
+      await this.authenticationPromise;
+    } finally {
+      this.isAuthenticating = false;
+      this.authenticationPromise = null;
+    }
+  }
+
+  private async _performAuthentication(): Promise<void> {
     console.log('=== STARTING DROPBOX AUTHENTICATION ===');
     console.log('Current URL:', window.location.href);
     console.log('Window location origin:', window.location.origin);
@@ -318,14 +338,27 @@ export class DropboxService {
       this.logout(); // Clear all tokens
     }
     
+    // Clear authentication flags on logout
+    this.isAuthenticating = false;
+    this.authenticationPromise = null;
     return null;
   }
 
   async listFiles(folder: string = ''): Promise<DropboxFile[]> {
+    // Check if already authenticating to prevent multiple auth dialogs
+    if (this.isAuthenticating) {
+      console.log('Authentication in progress, waiting...');
+      if (this.authenticationPromise) {
+        await this.authenticationPromise;
+      }
+    }
+
     let token = this.getStoredToken();
     if (!token) {
-      // Dispatch event to trigger re-authentication dialog
-      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      // Only trigger auth if not already in progress
+      if (!this.isAuthenticating) {
+        window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      }
       throw new Error('DROPBOX_AUTH_REQUIRED');
     }
 
@@ -481,9 +514,16 @@ export class DropboxService {
   }
 
   async downloadFile(path: string): Promise<Blob> {
+    // Check if already authenticating
+    if (this.isAuthenticating && this.authenticationPromise) {
+      await this.authenticationPromise;
+    }
+
     const token = this.getStoredToken();
     if (!token) {
-      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      if (!this.isAuthenticating) {
+        window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      }
       throw new Error('DROPBOX_AUTH_REQUIRED');
     }
 
@@ -503,9 +543,16 @@ export class DropboxService {
   }
 
   async getTemporaryLink(path: string): Promise<string> {
+    // Check if already authenticating
+    if (this.isAuthenticating && this.authenticationPromise) {
+      await this.authenticationPromise;
+    }
+
     let token = this.getStoredToken();
     if (!token) {
-      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      if (!this.isAuthenticating) {
+        window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      }
       throw new Error('DROPBOX_AUTH_REQUIRED');
     }
 
@@ -660,10 +707,15 @@ export class DropboxService {
     this.refreshToken = refreshToken;
     this.tokenExpiresAt = expiresAt ? parseInt(expiresAt) : null;
     
+    // Clear authentication state
+    this.isAuthenticating = false;
+    this.authenticationPromise = null;
+    
     console.log('Auth state refreshed:', {
       hasToken: !!this.accessToken,
       hasRefreshToken: !!this.refreshToken,
-      expiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt) : null
+      expiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt) : null,
+      isAuthenticating: this.isAuthenticating
     });
   }
 

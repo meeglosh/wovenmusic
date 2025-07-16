@@ -24,6 +24,7 @@ const Index = () => {
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
   const [showDropboxDialog, setShowDropboxDialog] = useState(false);
   const [showDropboxAccordion, setShowDropboxAccordion] = useState(false);
+  const [lastDialogTime, setLastDialogTime] = useState(0);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -97,11 +98,21 @@ const Index = () => {
   // Handle Dropbox token expiration
   useEffect(() => {
     const handleTokenExpired = () => {
-      setShowDropboxDialog(true);
+      const now = Date.now();
+      // Only show dialog if last one was more than 3 seconds ago
+      if (now - lastDialogTime > 3000) {
+        setLastDialogTime(now);
+        setShowDropboxDialog(true);
+      }
     };
 
     const handleAuthRequired = () => {
-      setShowDropboxDialog(true);
+      const now = Date.now();
+      // Only show dialog if last one was more than 3 seconds ago
+      if (now - lastDialogTime > 3000) {
+        setLastDialogTime(now);
+        setShowDropboxDialog(true);
+      }
     };
 
     window.addEventListener('dropboxTokenExpired', handleTokenExpired);

@@ -53,6 +53,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
+  const [lastAuthError, setLastAuthError] = useState<number>(0);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -236,9 +237,13 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       console.error('Error loading folders:', error);
       
       // Handle token expiration specifically
-      if (error.message === 'DROPBOX_TOKEN_EXPIRED' || error.message === 'Not authenticated with Dropbox') {
-        // Dispatch event to trigger re-authentication dialog
-        window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+      if (error.message === 'DROPBOX_TOKEN_EXPIRED' || error.message === 'DROPBOX_AUTH_REQUIRED' || error.message === 'Not authenticated with Dropbox') {
+        // Debounce auth errors to prevent rapid-fire dialogs
+        const now = Date.now();
+        if (now - lastAuthError > 5000) { // 5 second debounce
+          setLastAuthError(now);
+          window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+        }
         
         // Reset the accordion to show connection state
         setFiles([]);
