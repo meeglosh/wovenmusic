@@ -7,4 +7,5 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.transcode-audio]
+runtime = "node"
 verify_jwt = false
