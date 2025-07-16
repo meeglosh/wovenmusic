@@ -30,6 +30,7 @@ export const useAudioPlayer = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.75);
+  const [recentlyReauthed, setRecentlyReauthed] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Add mutation for updating track duration
@@ -261,23 +262,54 @@ export const useAudioPlayer = () => {
         } catch (error) {
         console.error('Failed to load track:', error);
         
-        // Handle specific error types with user-friendly messages
-        if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-          console.error('Dropbox token expired - user needs to re-authenticate');
-          // Emit a custom event for the app to handle gracefully
-          window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
-        } else if (error.message === 'DROPBOX_AUTH_REQUIRED') {
-          console.error('Dropbox authentication required');
-          window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
-        } else if (error.message === 'DROPBOX_CONNECTION_ERROR') {
-          console.error('Dropbox connection error');
-          // Could add a toast or other UI feedback here
+        // Only dispatch auth events if we haven't recently re-authenticated
+        // This prevents loops after successful re-auth
+        if (!recentlyReauthed) {
+          // Handle specific error types with user-friendly messages
+          if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
+            console.error('Dropbox token expired - user needs to re-authenticate');
+            // Emit a custom event for the app to handle gracefully
+            window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+          } else if (error.message === 'DROPBOX_AUTH_REQUIRED') {
+            console.error('Dropbox authentication required');
+            window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+          } else if (error.message === 'DROPBOX_CONNECTION_ERROR') {
+            console.error('Dropbox connection error');
+            // Could add a toast or other UI feedback here
+          }
+        } else {
+          console.log('Skipping auth event dispatch - recently re-authenticated');
         }
       }
     };
     
     loadTrack();
-  }, [currentTrack]); // Make sure we include currentTrack in dependencies
+  }, [currentTrack, recentlyReauthed]); // Include recentlyReauthed in dependencies
+
+  // Listen for auth refresh events
+  useEffect(() => {
+    const handleAuthRefresh = () => {
+      console.log('Auth refreshed in useAudioPlayer, setting reauth flag and reloading track');
+      setRecentlyReauthed(true);
+      
+      // Clear the flag after a delay to allow normal error handling later
+      setTimeout(() => {
+        setRecentlyReauthed(false);
+      }, 10000); // 10 second cooldown period
+      
+      // If we have a current track, try to reload it with fresh auth
+      if (currentTrack) {
+        console.log('Reloading current track with fresh auth...');
+        // Trigger a reload by updating the currentTrack dependency
+        setCurrentTrack(prev => prev ? { ...prev } : null);
+      }
+    };
+
+    window.addEventListener('dropboxAuthRefreshed', handleAuthRefresh);
+    return () => {
+      window.removeEventListener('dropboxAuthRefreshed', handleAuthRefresh);
+    };
+  }, [currentTrack]);
 
   // Time and duration updates
   useEffect(() => {

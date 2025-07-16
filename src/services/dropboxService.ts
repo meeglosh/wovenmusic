@@ -354,9 +354,17 @@ export class DropboxService {
     }
 
     let token = this.getStoredToken();
+    console.log('=== LISTFILES TOKEN CHECK ===', {
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE',
+      isAuthenticating: this.isAuthenticating,
+      instanceToken: this.accessToken ? `${this.accessToken.substring(0, 10)}...` : 'NONE'
+    });
+
     if (!token) {
       // Only trigger auth if not already in progress
       if (!this.isAuthenticating) {
+        console.log('=== DISPATCHING dropboxAuthRequired FROM listFiles ===');
         window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
       }
       throw new Error('DROPBOX_AUTH_REQUIRED');
@@ -549,8 +557,16 @@ export class DropboxService {
     }
 
     let token = this.getStoredToken();
+    console.log('=== GETTEMPORARYLINK TOKEN CHECK ===', {
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE',
+      path: path,
+      isAuthenticating: this.isAuthenticating
+    });
+
     if (!token) {
       if (!this.isAuthenticating) {
+        console.log('=== DISPATCHING dropboxAuthRequired FROM getTemporaryLink ===');
         window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
       }
       throw new Error('DROPBOX_AUTH_REQUIRED');
