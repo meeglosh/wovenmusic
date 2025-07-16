@@ -501,7 +501,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       >
                         {getCleanFileName(track)}
                       </button>
-                      <p className="text-sm text-muted-foreground">{track.artist}</p>
                     </div>
                   </div>
                 </div>
