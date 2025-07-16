@@ -26,7 +26,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('=== FFMPEG TRANSCODING STARTED ===');
+    console.log('=== NODE RUNTIME FFMPEG TRANSCODING STARTED ===');
+    console.log('Function running on Node.js runtime with FFmpeg support');
     
     const { audioUrl, fileName, bitrate = '256k' }: TranscodeRequest = await req.json();
     console.log('Transcoding request for:', fileName);
