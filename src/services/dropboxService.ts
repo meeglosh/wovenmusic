@@ -117,11 +117,42 @@ export class DropboxService {
     
     console.log('=== POPUP OPENED SUCCESSFULLY ===');
     
+    // Listen for messages from popup before starting polling
+    const handlePopupMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
+        console.log('=== RECEIVED AUTH SUCCESS MESSAGE FROM POPUP ===');
+        clearInterval(checkClosed);
+        clearTimeout(timeoutId);
+        localStorage.removeItem('dropbox_auth_state');
+        
+        // If token was passed in message, store it
+        if (event.data.token) {
+          this.accessToken = event.data.token;
+          localStorage.setItem('dropbox_access_token', event.data.token);
+          console.log('=== TOKEN STORED FROM POPUP MESSAGE ===');
+        }
+        
+        // Verify token is accessible
+        const token = this.getStoredToken();
+        console.log('=== TOKEN VERIFICATION AFTER POPUP ===', token ? 'SUCCESS' : 'FAILED');
+        
+      } else if (event.data?.type === 'DROPBOX_AUTH_ERROR') {
+        console.log('=== RECEIVED AUTH ERROR MESSAGE FROM POPUP ===', event.data.error);
+        clearInterval(checkClosed);
+        clearTimeout(timeoutId);
+        localStorage.removeItem('dropbox_auth_state');
+      }
+    };
+
+    // Add message listener
+    window.addEventListener('message', handlePopupMessage);
+
     // Enhanced popup monitoring with better error detection
     let checkClosed: any = setInterval(() => {
       try {
         if (authWindow?.closed) {
           clearInterval(checkClosed);
+          window.removeEventListener('message', handlePopupMessage);
           console.log('=== AUTH POPUP CLOSED ===');
           
           // Clean up state
@@ -132,20 +163,9 @@ export class DropboxService {
             console.log('=== CHECKING FOR TOKEN AFTER POPUP CLOSED ===');
             const token = this.getStoredToken();
             console.log('Found token after popup closed:', token ? 'YES' : 'NO');
-            if (token) {
-              console.log('=== TOKEN FOUND, AUTH SUCCESSFUL ===');
-              // Update internal state immediately
-              this.accessToken = token;
-              // Post success message to parent window
-              window.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
-            } else {
+            if (!token) {
               console.log('=== NO TOKEN FOUND, AUTH MAY HAVE FAILED ===');
               console.log('This could be due to redirect URI mismatch or other issues');
-              // Post error message
-              window.postMessage({ 
-                type: 'DROPBOX_AUTH_ERROR', 
-                error: 'Authentication failed - check Dropbox app redirect URI configuration'
-              }, '*');
             }
           }, 1000);
         }
@@ -161,21 +181,8 @@ export class DropboxService {
         console.log('=== AUTH TAKING LONGER THAN EXPECTED ===');
         console.log('This may indicate redirect URI issues or other problems');
       }
+      window.removeEventListener('message', handlePopupMessage);
     }, 15000);
-
-    // Clean up timeout when popup closes
-    const originalInterval = checkClosed;
-    checkClosed = setInterval(() => {
-      try {
-        if (authWindow?.closed) {
-          clearTimeout(timeoutId);
-          clearInterval(checkClosed);
-          originalInterval();
-        }
-      } catch (error) {
-        // Handle cross-origin errors
-      }
-    }, 1000);
   }
 
   async handleAuthCallback(code: string): Promise<void> {
