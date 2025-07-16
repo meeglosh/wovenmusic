@@ -261,7 +261,7 @@ const Index = () => {
         isOpen={showDropboxDialog}
         onClose={() => setShowDropboxDialog(false)}
         onReconnected={() => {
-          // Refresh the page to reload any failed content
+          // Force a refresh of tracks and playlists data without full page reload
           window.location.reload();
         }}
       />

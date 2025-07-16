@@ -114,6 +114,8 @@ export class DropboxService {
             console.log('Found token after popup closed:', token ? 'YES' : 'NO');
             if (token) {
               console.log('=== TOKEN FOUND, AUTH SUCCESSFUL ===');
+              // Update internal state immediately
+              this.accessToken = token;
               // Post success message to parent window
               window.postMessage({ type: 'DROPBOX_AUTH_SUCCESS' }, '*');
             } else {
@@ -639,14 +641,30 @@ export class DropboxService {
     const token = this.getStoredToken();
     const isAuth = !!token;
     
-    // Add stack trace to see what's calling this repeatedly
     console.log('=== IS AUTHENTICATED CHECK ===', { 
       hasToken: isAuth, 
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE',
-      caller: new Error().stack?.split('\n')[1]?.trim() || 'unknown'
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE'
     });
     
     return isAuth;
+  }
+
+  // Method to refresh internal state after re-authentication
+  refreshAuthState(): void {
+    console.log('=== REFRESHING AUTH STATE ===');
+    const token = this.getStoredToken();
+    const refreshToken = localStorage.getItem('dropbox_refresh_token');
+    const expiresAt = localStorage.getItem('dropbox_token_expires_at');
+    
+    this.accessToken = token;
+    this.refreshToken = refreshToken;
+    this.tokenExpiresAt = expiresAt ? parseInt(expiresAt) : null;
+    
+    console.log('Auth state refreshed:', {
+      hasToken: !!this.accessToken,
+      hasRefreshToken: !!this.refreshToken,
+      expiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt) : null
+    });
   }
 
   logout(): void {

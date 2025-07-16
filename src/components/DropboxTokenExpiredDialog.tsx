@@ -28,25 +28,36 @@ export const DropboxTokenExpiredDialog = ({
 
   const handleReconnect = async () => {
     setIsReconnecting(true);
+    
+    // Set up message listener BEFORE starting auth
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
+        console.log('Received auth success message, refreshing auth state...');
+        window.removeEventListener('message', handleAuthMessage);
+        
+        // Refresh the dropbox service auth state
+        dropboxService.refreshAuthState();
+        setIsReconnecting(false);
+        
+        // Give the token a moment to be fully processed
+        setTimeout(() => {
+          onReconnected?.();
+          onClose();
+        }, 500);
+      } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
+        console.error('Auth failed:', event.data.error);
+        window.removeEventListener('message', handleAuthMessage);
+        setIsReconnecting(false);
+      }
+    };
+    
+    window.addEventListener('message', handleAuthMessage);
+    
     try {
       await dropboxService.authenticate();
-      
-      // Listen for auth success
-      const handleAuthSuccess = () => {
-        window.removeEventListener('message', handleAuthSuccess);
-        setIsReconnecting(false);
-        onReconnected?.();
-        onClose();
-      };
-      
-      window.addEventListener('message', (event) => {
-        if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
-          handleAuthSuccess();
-        }
-      });
-      
     } catch (error) {
       console.error('Reconnection failed:', error);
+      window.removeEventListener('message', handleAuthMessage);
       setIsReconnecting(false);
     }
   };
