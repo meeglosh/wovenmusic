@@ -321,7 +321,11 @@ export class DropboxService {
 
   async listFiles(folder: string = ''): Promise<DropboxFile[]> {
     let token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
+    if (!token) {
+      // Dispatch event to trigger re-authentication dialog
+      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
 
     // Check if token needs refresh
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt) {
@@ -476,7 +480,10 @@ export class DropboxService {
 
   async downloadFile(path: string): Promise<Blob> {
     const token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
+    if (!token) {
+      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
 
     const response = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
@@ -495,7 +502,10 @@ export class DropboxService {
 
   async getTemporaryLink(path: string): Promise<string> {
     let token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
+    if (!token) {
+      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
 
     // Check if token needs refresh
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt) {
@@ -556,7 +566,10 @@ export class DropboxService {
   // Add method to check account info for debugging
   async getAccountInfo(): Promise<any> {
     const token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
+    if (!token) {
+      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
 
     console.log('=== GETTING DROPBOX ACCOUNT INFO ===');
     
@@ -588,7 +601,10 @@ export class DropboxService {
   // Add method to check app permissions
   async checkAppPermissions(): Promise<any> {
     const token = this.getStoredToken();
-    if (!token) throw new Error('Not authenticated with Dropbox');
+    if (!token) {
+      window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
 
     console.log('=== CHECKING APP PERMISSIONS ===');
     

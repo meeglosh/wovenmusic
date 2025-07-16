@@ -236,12 +236,10 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       console.error('Error loading folders:', error);
       
       // Handle token expiration specifically
-      if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-        toast({
-          title: "Dropbox Session Expired",
-          description: "Your Dropbox session has expired. Please reconnect.",
-          variant: "destructive",
-        });
+      if (error.message === 'DROPBOX_TOKEN_EXPIRED' || error.message === 'Not authenticated with Dropbox') {
+        // Dispatch event to trigger re-authentication dialog
+        window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+        
         // Reset the accordion to show connection state
         setFiles([]);
         setFolders([]);

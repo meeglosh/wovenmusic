@@ -261,12 +261,8 @@ const Index = () => {
         isOpen={showDropboxDialog}
         onClose={() => setShowDropboxDialog(false)}
         onReconnected={() => {
-          // Optionally retry playing the current track
-          if (currentTrack) {
-            setTimeout(() => {
-              handlePlayTrack(currentTrack);
-            }, 1000);
-          }
+          // Refresh the page to reload any failed content
+          window.location.reload();
         }}
       />
     </div>

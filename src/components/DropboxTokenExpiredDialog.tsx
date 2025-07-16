@@ -61,12 +61,12 @@ export const DropboxTokenExpiredDialog = ({
           </div>
           <AlertDialogDescription className="text-left space-y-3">
             <p>
-              Your Dropbox access has expired. This is normal for security reasons 
-              and happens periodically.
+              Your Dropbox session has expired. This is normal for security 
+              reasons and happens periodically.
             </p>
             <p>
-              To continue playing your music, please reconnect to Dropbox. 
-              This will only take a moment.
+              Please reconnect to continue syncing your music files. 
+              This will only take a moment and you'll be back to your music.
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
