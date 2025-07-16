@@ -36,7 +36,7 @@ export class ImportTranscodingService {
       }
       
       // Use the transcode-audio edge function for proper MP3 conversion with FFmpeg
-      const { data, error } = await supabase.functions.invoke('transcode-audio', {
+      const response = await supabase.functions.invoke('transcode-audio', {
         body: {
           audioUrl: audioUrl,
           fileName: fileName,
@@ -44,10 +44,14 @@ export class ImportTranscodingService {
         }
       });
 
-      if (error) {
-        console.error('Transcoding edge function error:', error);
-        throw new Error(`Transcoding failed: ${error.message}`);
+      // Log full error details for debugging
+      if (response.error) {
+        console.error('Transcoding edge function error:', response.error);
+        console.error('Full error response:', response);
+        throw new Error(`Transcoding failed: ${response.error.message || 'Edge Function returned a non-2xx status code'}`);
       }
+
+      const { data, error } = response;
 
       if (!data?.publicUrl) {
         throw new Error('No public URL returned from transcoding service');
