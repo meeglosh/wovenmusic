@@ -38,16 +38,21 @@ export class ImportTranscodingService {
       // External transcoding service deployed on Render
       const EXTERNAL_TRANSCODING_URL = 'https://transcode-server.onrender.com/transcode';
       
+      // Download the audio file from Dropbox
+      const audioResponse = await fetch(audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio file: ${audioResponse.status}`);
+      }
+      const audioBlob = await audioResponse.blob();
+      
+      // Create FormData with the audio file
+      const formData = new FormData();
+      formData.append('audio', audioBlob, fileName);
+      formData.append('bitrate', bitrate);
+      
       const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          audioUrl: audioUrl,
-          fileName: fileName,
-          bitrate: bitrate
-        })
+        body: formData
       });
 
       // Log full error details for debugging
