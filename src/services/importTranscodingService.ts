@@ -35,8 +35,8 @@ export class ImportTranscodingService {
         console.warn('Could not analyze audio for bitrate selection, using default 256kbps:', analysisError);
       }
       
-      // TODO: Replace with your external transcoding service URL
-      const EXTERNAL_TRANSCODING_URL = 'https://your-transcoding-service.vercel.app/transcode'; // Update this!
+      // External transcoding service deployed on Render
+      const EXTERNAL_TRANSCODING_URL = 'https://transcode-server.onrender.com/transcode';
       
       const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
