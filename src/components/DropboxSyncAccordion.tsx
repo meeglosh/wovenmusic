@@ -350,7 +350,8 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             console.log(`Extracted metadata for ${file.name}:`, metadata);
             
             // Transcode client-side and upload to storage
-            finalUrl = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+            const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+            finalUrl = transcodeResult.publicUrl;
             
             // Get duration from the transcoded file or use extracted metadata
             const duration = metadata.duration || await getDurationFromUrl(finalUrl);
@@ -360,7 +361,10 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             
             // Create track data with extracted metadata
             const trackData = {
-              title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
+              // Use originalFilename from transcoding service if available, otherwise use metadata or filename
+              title: transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
+                     metadata.title || 
+                     file.name.replace(/\.[^/.]+$/, ""),
               artist: metadata.artist || "Unknown Artist",
               duration: formattedDuration,
               fileUrl: finalUrl, // Permanent storage URL (transcoded)

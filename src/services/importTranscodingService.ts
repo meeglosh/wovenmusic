@@ -1,8 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 
+export interface TranscodeResult {
+  publicUrl: string;
+  originalFilename?: string;
+}
+
 export class ImportTranscodingService {
   
-  async transcodeAndStore(audioUrl: string, fileName: string): Promise<string> {
+  async transcodeAndStore(audioUrl: string, fileName: string): Promise<TranscodeResult> {
     try {
       console.log('Starting server-side MP3 transcoding for:', fileName);
       
@@ -92,7 +97,15 @@ export class ImportTranscodingService {
         console.log(`Compression: ${(data.originalSize / 1024 / 1024).toFixed(1)}MB → ${(data.transcodedSize / 1024 / 1024).toFixed(1)}MB (${compressionRatio}% reduction)`);
       }
       
-      return data.publicUrl;
+      // If the server returned the original filename, log it
+      if (data.originalFilename) {
+        console.log(`Original filename preserved by transcoding service: ${data.originalFilename}`);
+      }
+      
+      return {
+        publicUrl: data.publicUrl,
+        originalFilename: data.originalFilename
+      };
     } catch (error) {
       console.error('Failed to transcode and store audio:', error);
       throw error;

@@ -678,24 +678,29 @@ const DropboxSync = () => {
           const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
           
           // Transcode and store in Supabase Storage
-          const transcodedUrl = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
+          const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
           
           // Extract duration from transcoded file
           let finalDuration = '--:--';
           try {
-            const durationSeconds = await getDurationFromDropboxFile(transcodedUrl);
+            const durationSeconds = await getDurationFromDropboxFile(transcodeResult.publicUrl);
             finalDuration = formatDuration(durationSeconds);
             console.log('Extracted duration from transcoded file:', finalDuration);
           } catch (error) {
             console.warn('Failed to extract duration from transcoded file:', error);
           }
           
-          // Update the track with transcoded URL and extracted duration
+          // Use the original filename from transcoding service if available
+          const displayName = transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
+                              file.name.replace(/\.[^/.]+$/, "");
+          
+          // Update the track with transcoded URL, extracted duration, and original filename
           const { error: updateError } = await supabase
             .from('tracks')
             .update({ 
-              file_url: transcodedUrl,
-              duration: finalDuration
+              file_url: transcodeResult.publicUrl,
+              duration: finalDuration,
+              title: displayName
             })
             .eq('id', track.id);
             
@@ -704,7 +709,7 @@ const DropboxSync = () => {
             throw updateError;
           }
           
-          console.log('Successfully updated track with transcoded URL:', transcodedUrl);
+          console.log('Successfully updated track with transcoded URL:', transcodeResult.publicUrl);
           
           // Invalidate queries to show completion
           queryClient.invalidateQueries({ queryKey: ["tracks"] });
