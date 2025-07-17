@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { audioMetadataService } from "@/services/audioMetadataService";
 import { 
   Cloud, 
   Download, 
@@ -344,19 +345,40 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             // Get temporary URL for download
             const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
             
+            // Extract metadata from the original WAV file before transcoding
+            const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
+            console.log(`Extracted metadata for ${file.name}:`, metadata);
+            
             // Transcode client-side and upload to storage
             finalUrl = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
             
-            // Get duration from the transcoded file
-            const duration = await getDurationFromUrl(finalUrl);
+            // Get duration from the transcoded file or use extracted metadata
+            const duration = metadata.duration || await getDurationFromUrl(finalUrl);
             formattedDuration = formatDuration(duration);
             
             console.log(`Successfully transcoded ${file.name} to MP3`);
+            
+            // Create track data with extracted metadata
+            const trackData = {
+              title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
+              artist: metadata.artist || "Unknown Artist",
+              duration: formattedDuration,
+              fileUrl: finalUrl, // Permanent storage URL (transcoded)
+              dropbox_path: null, // No longer needed since file is permanently stored
+              is_public: false,
+            };
+            
+            await addTrackMutation.mutateAsync(trackData);
           } else {
             // For other formats, download and store directly
             console.log(`Direct download for: ${file.name}`);
             
             const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+            
+            // Extract metadata from filename for non-WAV files
+            const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
+            console.log(`Extracted metadata for ${file.name}:`, metadata);
+            
             const response = await fetch(tempUrl);
             const blob = await response.blob();
             
@@ -382,22 +404,22 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
 
             finalUrl = urlData.publicUrl;
 
-            // Get duration from the stored file
-            const duration = await getDurationFromUrl(finalUrl);
+            // Get duration from the stored file or use extracted metadata
+            const duration = metadata.duration || await getDurationFromUrl(finalUrl);
             formattedDuration = formatDuration(duration);
+            
+            // Create track data with extracted metadata
+            const trackData = {
+              title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
+              artist: metadata.artist || "Unknown Artist", 
+              duration: formattedDuration,
+              fileUrl: finalUrl, // Permanent storage URL (direct)
+              dropbox_path: null, // No longer needed since file is permanently stored
+              is_public: false,
+            };
+            
+            await addTrackMutation.mutateAsync(trackData);
           }
-
-          // Create track data with permanent storage URL
-          const trackData = {
-            title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
-            artist: "Unknown Artist", // Default artist
-            duration: formattedDuration,
-            fileUrl: finalUrl, // Permanent storage URL (either direct or transcoded)
-            dropbox_path: null, // No longer needed since file is permanently stored
-            is_public: false,
-          };
-          
-          await addTrackMutation.mutateAsync(trackData);
           syncedCount++;
           
           console.log(`[${fileIndex}/${totalFiles}] Successfully stored ${file.name}`);
