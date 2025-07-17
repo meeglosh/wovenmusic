@@ -359,18 +359,30 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
             
             console.log(`Successfully transcoded ${file.name} to MP3`);
             
+            // Sanitize and prepare title with proper fallbacks
+            let title = transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
+                       metadata.title || 
+                       file.name.replace(/\.[^/.]+$/, "");
+            
+            // Remove any extra whitespace and ensure we have a valid title
+            title = title.trim() || "Unknown Track";
+            
             // Create track data with extracted metadata
             const trackData = {
-              // Use originalFilename from transcoding service if available, otherwise use metadata or filename
-              title: transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
-                     metadata.title || 
-                     file.name.replace(/\.[^/.]+$/, ""),
+              title: title,
               artist: metadata.artist || "Unknown Artist",
               duration: formattedDuration,
               fileUrl: finalUrl, // Permanent storage URL (transcoded)
               dropbox_path: null, // No longer needed since file is permanently stored
               is_public: false,
             };
+
+            console.log("Creating track with:", { 
+              title: trackData.title, 
+              publicUrl: finalUrl, 
+              originalFilename: transcodeResult.originalFilename,
+              trackData 
+            });
             
             await addTrackMutation.mutateAsync(trackData);
           } else {
