@@ -128,7 +128,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     
     switch (sortField) {
       case 'title':
-        comparison = getCleanFileName(a).localeCompare(getCleanFileName(b));
+        comparison = a.title.localeCompare(b.title);
         break;
       case 'artist':
         comparison = a.artist.localeCompare(b.artist);
@@ -499,7 +499,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         onClick={() => navigate(`/track/${track.id}`)}
                         title="Open track view with comments"
                       >
-                        {getCleanFileName(track)}
+                        {track.title}
                       </button>
                     </div>
                   </div>
@@ -555,7 +555,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove "{getCleanFileName(track)}" from your library?
+                              Are you sure you want to remove "{track.title}" from your library?
                               {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
