@@ -35,15 +35,13 @@ export class ImportTranscodingService {
         console.warn('Could not analyze audio for bitrate selection, using default 256kbps:', analysisError);
       }
       
-      // Use the transcode-audio standard function (Node runtime) for proper MP3 conversion with FFmpeg
-      // Call the standard function endpoint instead of Edge Function endpoint
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`https://woakvdhlpludrttjixxq.supabase.co/rest/v1/functions/transcode-audio`, {
+      // TODO: Replace with your external transcoding service URL
+      const EXTERNAL_TRANSCODING_URL = 'https://your-transcoding-service.vercel.app/transcode'; // Update this!
+      
+      const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || 'anonymous'}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg'
         },
         body: JSON.stringify({
           audioUrl: audioUrl,
