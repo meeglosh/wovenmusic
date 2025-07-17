@@ -50,16 +50,33 @@ export class ImportTranscodingService {
       formData.append('audio', audioBlob, fileName);
       formData.append('bitrate', bitrate);
       
+      console.log('Sending transcoding request:', {
+        url: EXTERNAL_TRANSCODING_URL,
+        fileName,
+        bitrate,
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type
+      });
+      
       const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
         body: formData
       });
 
+      console.log('Transcoding response status:', response.status, response.statusText);
+      
       // Log full error details for debugging
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Transcoding function error:', response.status, response.statusText);
         console.error('Error response body:', errorText);
+        console.error('Request details:', {
+          url: EXTERNAL_TRANSCODING_URL,
+          fileName,
+          bitrate,
+          blobSize: audioBlob.size,
+          blobType: audioBlob.type
+        });
         throw new Error(`Transcoding failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
