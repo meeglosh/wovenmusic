@@ -41,6 +41,12 @@ export const getCleanFileName = (track: Track): string => {
 
 // Utility function to extract clean title from filename (without extension)
 export const getCleanTitle = (track: Track): string => {
+  // If we have a proper title from the database, use that
+  if (track.title && track.title.trim() && !track.title.includes('gen_random_uuid')) {
+    return track.title;
+  }
+  
+  // Fallback to extracting from filename
   const cleanFileName = getCleanFileName(track);
   // Remove file extension for title display
   return cleanFileName.replace(/\.[^/.]+$/, '');
