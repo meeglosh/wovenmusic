@@ -620,15 +620,16 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
   // Convert import progress to pending tracks for library display
   useEffect(() => {
     const pendingTracks = Object.values(importProgress)
-      .filter(progress => progress.status === 'processing' || progress.status === 'error')
+      .filter(progress => progress.status === 'pending' || progress.status === 'processing' || progress.status === 'error')
       .map(progress => ({
         id: `pending-${progress.path}`,
         title: progress.name.replace(/\.[^/.]+$/, '') || 'Unknown Track', // Remove file extension
-        artist: 'Unknown Artist',
+        artist: progress.status === 'pending' ? 'Processing...' : 'Unknown Artist',
         duration: '--:--',
-        status: progress.status === 'processing' ? 'processing' as const : 'failed' as const,
+        status: progress.status === 'processing' ? 'processing' as const : 
+                progress.status === 'pending' ? 'processing' as const : 'failed' as const,
         error: progress.error,
-        progress: progress.progress
+        progress: progress.progress || 0
       }));
     
     onPendingTracksChange?.(pendingTracks);
