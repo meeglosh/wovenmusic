@@ -408,6 +408,14 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         title = title.trim() || "Unknown Track";
         artist = metadata.artist || "Unknown Artist";
         
+        console.log(`Title extraction for transcoded file:`, {
+          originalFilename: transcodeResult.originalFilename,
+          metadataTitle: metadata.title,
+          fileName: file.name,
+          finalTitle: title,
+          finalArtist: artist
+        });
+        
         console.log(`Successfully transcoded ${file.name} to MP3`);
         
       } else {
@@ -624,9 +632,11 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
       .map(progress => ({
         id: `pending-${progress.path}`,
         title: progress.name.replace(/\.[^/.]+$/, '') || 'Unknown Track', // Remove file extension
-        artist: progress.status === 'pending' ? 'Queued...' : 'Unknown Artist',
+        artist: progress.status === 'pending' ? 'Queued...' : 
+                progress.status === 'processing' ? 'Processing...' : 'Unknown Artist',
         duration: '--:--',
-        status: progress.status as 'processing' | 'failed',
+        status: progress.status === 'pending' ? 'processing' as const :
+                progress.status === 'processing' ? 'processing' as const : 'failed' as const,
         error: progress.error,
         progress: progress.progress || 0
       }));
