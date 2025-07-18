@@ -193,9 +193,9 @@ const Index = () => {
         onSearchChange={setSearchTerm}
       />
       
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar - Hidden on mobile, overlay on tablet */}
-        <div className="hidden md:block md:w-64 lg:w-80 h-full">
+        <div className="hidden md:flex md:w-64 lg:w-80">
           <Sidebar 
             playlists={filteredPlaylists}
             currentView={currentView}
