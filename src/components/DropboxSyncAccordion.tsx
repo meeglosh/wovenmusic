@@ -29,6 +29,7 @@ import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { importTranscodingService } from "@/services/importTranscodingService";
+import { FileImportStatus, ImportProgress } from "@/types/fileImport";
 
 interface DropboxFile {
   name: string;
@@ -55,6 +56,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
   const [lastAuthError, setLastAuthError] = useState<number>(0);
+  const [importProgress, setImportProgress] = useState<ImportProgress>({});
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -301,6 +303,195 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
   const isAllSelected = files.length > 0 && selectedFiles.size === files.length;
   const isIndeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length;
 
+  const retryFailedImport = async (filePath: string) => {
+    const file = files.find(f => f.path_lower === filePath);
+    if (!file) return;
+    
+    // Reset status to pending
+    setImportProgress(prev => ({
+      ...prev,
+      [filePath]: { ...prev[filePath], status: 'pending', error: undefined }
+    }));
+    
+    // Process the single file
+    await processFile(file, 1, 1);
+  };
+
+  const processFile = async (file: DropboxFile, fileIndex: number, totalFiles: number): Promise<boolean> => {
+    const updateProgress = (status: FileImportStatus['status'], error?: string, progress?: number) => {
+      setImportProgress(prev => ({
+        ...prev,
+        [file.path_lower]: {
+          path: file.path_lower,
+          name: file.name,
+          status,
+          error,
+          progress
+        }
+      }));
+    };
+    
+    updateProgress('processing', undefined, 0);
+    
+    const createTrackWithRetry = async (trackData: any, retries = 3): Promise<boolean> => {
+      let lastError: Error | null = null;
+      
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          console.log(`Creating track attempt ${attempt}/${retries} for:`, { 
+            title: trackData.title, 
+            fileUrl: trackData.fileUrl?.substring(0, 50) + '...',
+            attempt 
+          });
+          
+          await addTrackMutation.mutateAsync(trackData);
+          console.log(`Successfully created track for ${file.name} on attempt ${attempt}`);
+          return true;
+          
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+          console.error(`Track creation attempt ${attempt}/${retries} failed for ${file.name}:`, lastError.message);
+          
+          if (attempt < retries) {
+            const delayMs = Math.pow(2, attempt - 1) * 500; // 500ms, 1s, 2s
+            console.log(`Retrying track creation in ${delayMs}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
+      }
+      
+      console.error(`All ${retries} track creation attempts failed for ${file.name}`);
+      throw lastError || new Error('Track creation failed after all retry attempts');
+    };
+
+    try {
+      console.log(`[${fileIndex}/${totalFiles}] Processing ${file.name}...`);
+      
+      // Check if this is a file that needs transcoding
+      const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
+      
+      updateProgress('processing', undefined, 20);
+
+      let finalUrl: string;
+      let formattedDuration: string;
+      let title: string;
+      let artist: string;
+
+      if (needsTranscoding) {
+        // For files that need transcoding (WAV, AIF)
+        console.log(`Transcoding file: ${file.name}`);
+        updateProgress('processing', undefined, 30);
+        
+        // Get temporary URL for download
+        const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+        updateProgress('processing', undefined, 40);
+        
+        // Extract metadata from the original file before transcoding
+        const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
+        console.log(`Extracted metadata for ${file.name}:`, metadata);
+        updateProgress('processing', undefined, 50);
+        
+        // Transcode with retry logic built into the service
+        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+        finalUrl = transcodeResult.publicUrl;
+        updateProgress('processing', undefined, 70);
+        
+        // Get duration with extended timeout for large files
+        const duration = metadata.duration || await getDurationFromUrl(finalUrl);
+        formattedDuration = formatDuration(duration);
+        
+        // Sanitize and prepare title with proper fallbacks
+        title = transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
+               metadata.title || 
+               file.name.replace(/\.[^/.]+$/, "");
+        title = title.trim() || "Unknown Track";
+        artist = metadata.artist || "Unknown Artist";
+        
+        console.log(`Successfully transcoded ${file.name} to MP3`);
+        
+      } else {
+        // For other formats, download and store directly
+        console.log(`Direct download for: ${file.name}`);
+        updateProgress('processing', undefined, 30);
+        
+        const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
+        updateProgress('processing', undefined, 40);
+        
+        // Extract metadata from filename for non-transcoded files
+        const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
+        console.log(`Extracted metadata for ${file.name}:`, metadata);
+        updateProgress('processing', undefined, 50);
+        
+        const response = await fetch(tempUrl);
+        const blob = await response.blob();
+        updateProgress('processing', undefined, 60);
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        
+        // Upload to Supabase storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('audio-files')
+          .upload(fileName, blob, {
+            contentType: blob.type || 'audio/mpeg',
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('audio-files')
+          .getPublicUrl(fileName);
+
+        finalUrl = urlData.publicUrl;
+        updateProgress('processing', undefined, 70);
+
+        // Get duration with extended timeout for large files
+        const duration = metadata.duration || await getDurationFromUrl(finalUrl);
+        formattedDuration = formatDuration(duration);
+        
+        title = metadata.title || file.name.replace(/\.[^/.]+$/, "");
+        artist = metadata.artist || "Unknown Artist";
+      }
+      
+      updateProgress('processing', undefined, 80);
+
+      // Create track data
+      const trackData = {
+        title: title,
+        artist: artist,
+        duration: formattedDuration,
+        fileUrl: finalUrl,
+        dropbox_path: null, // No longer needed since file is permanently stored
+        is_public: false,
+      };
+
+      console.log("Creating track with:", { 
+        title: trackData.title, 
+        publicUrl: finalUrl?.substring(0, 50) + '...',
+        trackData 
+      });
+      
+      updateProgress('processing', undefined, 90);
+      
+      // Create track with retry logic
+      await createTrackWithRetry(trackData);
+      
+      updateProgress('success', undefined, 100);
+      console.log(`[${fileIndex}/${totalFiles}] Successfully stored ${file.name}`);
+      return true;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(`Failed to process ${file.name}:`, errorMessage);
+      updateProgress('error', errorMessage);
+      return false;
+    }
+  };
+
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
       toast({
@@ -314,159 +505,55 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
     setIsSyncing(true);
     let syncedCount = 0;
     const totalFiles = selectedFiles.size;
+    
+    // Initialize progress for all selected files
+    const selectedFileObjects = files.filter(file => selectedFiles.has(file.path_lower));
+    const initialProgress: ImportProgress = {};
+    selectedFileObjects.forEach(file => {
+      initialProgress[file.path_lower] = {
+        path: file.path_lower,
+        name: file.name,
+        status: 'pending'
+      };
+    });
+    setImportProgress(initialProgress);
 
     try {
-      const selectedFileObjects = files.filter(file => selectedFiles.has(file.path_lower));
-      
+      // Process files sequentially to avoid overwhelming the system
       for (let i = 0; i < selectedFileObjects.length; i++) {
         const file = selectedFileObjects[i];
         const fileIndex = i + 1;
         
-        try {
-          console.log(`[${fileIndex}/${totalFiles}] Processing ${file.name}...`);
-          
-          // Check if this is a WAV file that needs transcoding
-          const isWavFile = file.name.toLowerCase().endsWith('.wav');
-          
-          toast({
-            title: `Processing ${fileIndex}/${totalFiles}`,
-            description: isWavFile 
-              ? `Transcoding ${file.name} to MP3 format...`
-              : `Downloading and storing ${file.name}...`,
-          });
-
-          let finalUrl: string;
-          let formattedDuration: string;
-
-          if (isWavFile) {
-            // For WAV files, use client-side transcoding to MP3
-            console.log(`Transcoding WAV file: ${file.name}`);
-            
-            // Get temporary URL for download
-            const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-            
-            // Extract metadata from the original WAV file before transcoding
-            const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-            console.log(`Extracted metadata for ${file.name}:`, metadata);
-            
-            // Transcode client-side and upload to storage
-            const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
-            finalUrl = transcodeResult.publicUrl;
-            
-            // Get duration from the transcoded file or use extracted metadata
-            const duration = metadata.duration || await getDurationFromUrl(finalUrl);
-            formattedDuration = formatDuration(duration);
-            
-            console.log(`Successfully transcoded ${file.name} to MP3`);
-            
-            // Sanitize and prepare title with proper fallbacks
-            let title = transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
-                       metadata.title || 
-                       file.name.replace(/\.[^/.]+$/, "");
-            
-            // Remove any extra whitespace and ensure we have a valid title
-            title = title.trim() || "Unknown Track";
-            
-            // Create track data with extracted metadata
-            const trackData = {
-              title: title,
-              artist: metadata.artist || "Unknown Artist",
-              duration: formattedDuration,
-              fileUrl: finalUrl, // Permanent storage URL (transcoded)
-              dropbox_path: null, // No longer needed since file is permanently stored
-              is_public: false,
-            };
-
-            console.log("Creating track with:", { 
-              title: trackData.title, 
-              publicUrl: finalUrl, 
-              originalFilename: transcodeResult.originalFilename,
-              trackData 
-            });
-            
-            await addTrackMutation.mutateAsync(trackData);
-          } else {
-            // For other formats, download and store directly
-            console.log(`Direct download for: ${file.name}`);
-            
-            const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-            
-            // Extract metadata from filename for non-WAV files
-            const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-            console.log(`Extracted metadata for ${file.name}:`, metadata);
-            
-            const response = await fetch(tempUrl);
-            const blob = await response.blob();
-            
-            // Generate unique filename
-            const timestamp = Date.now();
-            const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            
-            // Upload to Supabase storage
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('audio-files')
-              .upload(fileName, blob, {
-                contentType: blob.type || 'audio/mpeg',
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from('audio-files')
-              .getPublicUrl(fileName);
-
-            finalUrl = urlData.publicUrl;
-
-            // Get duration from the stored file or use extracted metadata
-            const duration = metadata.duration || await getDurationFromUrl(finalUrl);
-            formattedDuration = formatDuration(duration);
-            
-            // Create track data with extracted metadata
-            const trackData = {
-              title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
-              artist: metadata.artist || "Unknown Artist", 
-              duration: formattedDuration,
-              fileUrl: finalUrl, // Permanent storage URL (direct)
-              dropbox_path: null, // No longer needed since file is permanently stored
-              is_public: false,
-            };
-            
-            await addTrackMutation.mutateAsync(trackData);
-          }
+        const success = await processFile(file, fileIndex, totalFiles);
+        if (success) {
           syncedCount++;
-          
-          console.log(`[${fileIndex}/${totalFiles}] Successfully stored ${file.name}`);
-          
-          // Update progress
-          toast({
-            title: `Progress: ${fileIndex}/${totalFiles} complete`,
-            description: `Successfully processed: ${file.name}`,
-          });
-          
-        } catch (error) {
-          console.error(`Failed to sync ${file.name}:`, error);
-          
-          // Show specific error for failed file
-          toast({
-            title: `Failed to process ${file.name}`,
-            description: error.message || "Unknown error occurred",
-            variant: "destructive",
-          });
         }
+        
+        // Update overall progress toast
+        toast({
+          title: `Import Progress: ${fileIndex}/${totalFiles}`,
+          description: `Completed: ${syncedCount}, Failed: ${fileIndex - syncedCount}`,
+        });
       }
 
       // Refresh the tracks list
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
       
+      const failedCount = totalFiles - syncedCount;
+      const failedFiles = Object.values(importProgress).filter(f => f.status === 'error');
+      
       toast({
-        title: "Sync Complete",
-        description: `Successfully synced ${syncedCount} of ${totalFiles} files to your library.`,
+        title: "Import Complete",
+        description: failedCount > 0 
+          ? `Successfully imported ${syncedCount} of ${totalFiles} files. ${failedCount} failed - check status below.`
+          : `Successfully imported all ${syncedCount} files to your library.`,
+        variant: failedCount > 0 ? "destructive" : "default"
       });
       
-      setSelectedFiles(new Set());
+      if (failedCount === 0) {
+        setSelectedFiles(new Set());
+        setImportProgress({});
+      }
       
     } catch (error) {
       console.error('Sync error:', error);
@@ -634,30 +721,106 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
                 </div>
                 
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {files.map((file) => (
-                    <div
-                      key={file.path_lower}
-                      className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
-                      onClick={() => handleFileToggle(file.path_lower)}
-                    >
-                      <Checkbox
-                        checked={selectedFiles.has(file.path_lower)}
-                        onCheckedChange={() => handleFileToggle(file.path_lower)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <Music className="w-4 h-4 text-muted-foreground" />
-                      <span className="flex-1 text-sm">{file.name}</span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {loadingDurations.has(file.path_lower) ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <span>{file.duration || '--:--'}</span>
-                        )}
-                        <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                  {files.map((file) => {
+                    const progress = importProgress[file.path_lower];
+                    return (
+                      <div
+                        key={file.path_lower}
+                        className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                        onClick={() => handleFileToggle(file.path_lower)}
+                      >
+                        <Checkbox
+                          checked={selectedFiles.has(file.path_lower)}
+                          onCheckedChange={() => handleFileToggle(file.path_lower)}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={progress?.status === 'processing'}
+                        />
+                        <Music className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{file.name}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>{(file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                            {progress && (
+                              <>
+                                <span>•</span>
+                                <span className={`capitalize ${
+                                  progress.status === 'success' ? 'text-green-600' :
+                                  progress.status === 'error' ? 'text-red-600' :
+                                  progress.status === 'processing' ? 'text-blue-600' :
+                                  'text-muted-foreground'
+                                }`}>
+                                  {progress.status}
+                                  {progress.progress && ` (${progress.progress}%)`}
+                                </span>
+                                {progress.status === 'error' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      retryFailedImport(file.path_lower);
+                                    }}
+                                    className="h-4 px-1 text-xs"
+                                  >
+                                    <RefreshCw className="w-3 h-3 mr-1" />
+                                    Retry
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {progress?.error && (
+                            <div className="text-xs text-red-600 mt-1 truncate" title={progress.error}>
+                              {progress.error}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground min-w-[50px] text-right">
+                          {progress?.status === 'processing' ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : loadingDurations.has(file.path_lower) ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            file.duration || "--:--"
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+
+                {/* Import Progress Summary */}
+                {Object.keys(importProgress).length > 0 && (
+                  <div className="pt-2 border-t border-border">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Import Status: {Object.values(importProgress).filter(f => f.status === 'success').length} success, {Object.values(importProgress).filter(f => f.status === 'error').length} failed, {Object.values(importProgress).filter(f => f.status === 'processing').length} processing
+                    </div>
+                    {Object.values(importProgress).some(f => f.status === 'error') && (
+                      <div className="flex gap-2 mb-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const failedFiles = Object.values(importProgress).filter(f => f.status === 'error');
+                            Promise.all(failedFiles.map(f => retryFailedImport(f.path)));
+                          }}
+                          className="text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Retry All Failed
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setImportProgress({})}
+                          className="text-xs"
+                        >
+                          Clear Status
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {selectedFiles.size > 0 && (
                   <div className="flex items-center gap-2 pt-2 border-t">
@@ -670,12 +833,12 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
                       {isSyncing ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Syncing...
+                          Importing...
                         </>
                       ) : (
                         <>
                           <Download className="w-4 h-4 mr-2" />
-                          Sync {selectedFiles.size} file{selectedFiles.size === 1 ? '' : 's'}
+                          Import {selectedFiles.size} file{selectedFiles.size === 1 ? '' : 's'}
                         </>
                       )}
                     </Button>

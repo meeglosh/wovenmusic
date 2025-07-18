@@ -7,12 +7,15 @@ export interface TranscodeResult {
 
 export class ImportTranscodingService {
   
-  async transcodeAndStore(audioUrl: string, fileName: string): Promise<TranscodeResult> {
-    try {
-      console.log('Starting server-side MP3 transcoding for:', fileName);
-      
-      // Estimate duration and determine optimal bitrate
-      let bitrate = '256k'; // Default to high quality
+  async transcodeAndStore(audioUrl: string, fileName: string, retries = 3): Promise<TranscodeResult> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`Starting server-side MP3 transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
+        
+        // Estimate duration and determine optimal bitrate
+        let bitrate = '256k'; // Default to high quality
       
       try {
         // Quick audio analysis to determine bitrate
@@ -60,12 +63,16 @@ export class ImportTranscodingService {
         fileName,
         bitrate,
         blobSize: audioBlob.size,
-        blobType: audioBlob.type
+        blobType: audioBlob.type,
+        attempt
       });
       
       const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+          'Origin': 'https://wovenmusic.app'
+        }
       });
 
       console.log('Transcoding response status:', response.status, response.statusText);
@@ -106,10 +113,21 @@ export class ImportTranscodingService {
         publicUrl: data.publicUrl,
         originalFilename: data.originalFilename
       };
-    } catch (error) {
-      console.error('Failed to transcode and store audio:', error);
-      throw error;
+      
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Transcoding attempt ${attempt}/${retries} failed for ${fileName}:`, lastError.message);
+        
+        if (attempt < retries) {
+          const delayMs = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Retrying transcoding in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
     }
+    
+    console.error(`All ${retries} transcoding attempts failed for ${fileName}`);
+    throw lastError || new Error('Transcoding failed after all retry attempts');
   }
   
   needsTranscoding(filePath: string): boolean {
