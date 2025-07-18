@@ -23,7 +23,10 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
   const [showDropboxDialog, setShowDropboxDialog] = useState(false);
-  const [showDropboxAccordion, setShowDropboxAccordion] = useState(false);
+  const [showDropboxAccordion, setShowDropboxAccordion] = useState(() => {
+    const saved = localStorage.getItem('showDropboxAccordion');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [lastDialogTime, setLastDialogTime] = useState(0);
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
 
@@ -171,6 +174,7 @@ const Index = () => {
         <EmptyLibraryState 
           onDropboxConnected={() => {
             setShowDropboxAccordion(true);
+            localStorage.setItem('showDropboxAccordion', 'true');
             navigate('/'); // Navigate to main library
           }}
         />
