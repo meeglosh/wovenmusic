@@ -617,7 +617,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <div className="text-left font-medium text-muted-foreground">
                         {pendingTrack.title.replace(/\.[^/.]+$/, '')} {/* Remove file extension */}
                       </div>
-                      <div className="text-sm text-muted-foreground opacity-75">
+                      <div className="text-sm text-muted-foreground opacity-75 flex items-center space-x-2">
                         {pendingTrack.artist}
                       </div>
                     </div>

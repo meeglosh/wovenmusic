@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image, Lock, Globe } from "lucide-react";
-import { Track, Playlist, getFileName } from "@/types/music";
+import { Track, Playlist, getCleanTitle } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
@@ -149,7 +149,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
           )}
         </div>
         <div>
-          <p className="font-medium">{getFileName(track)}</p>
+          <p className="font-medium">{getCleanTitle(track)}</p>
         </div>
       </div>
 
@@ -174,7 +174,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
             <AlertDialogHeader>
               <AlertDialogTitle>Remove track from playlist?</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to remove "{getFileName(track)}" from this playlist?
+                Are you sure you want to remove "{getCleanTitle(track)}" from this playlist?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

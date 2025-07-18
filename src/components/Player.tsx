@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2 } from "lucide-react";
-import { Track, getFileName } from "@/types/music";
+import { Track, getCleanTitle } from "@/types/music";
 
 interface PlayerProps {
   track: Track;
@@ -70,7 +70,7 @@ const Player = ({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm sm:text-base truncate text-primary">{getFileName(track)}</p>
+            <p className="font-medium text-sm sm:text-base truncate text-primary">{getCleanTitle(track)}</p>
           </div>
         </div>
 
