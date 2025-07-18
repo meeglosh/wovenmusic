@@ -484,6 +484,14 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         trackData 
       });
       
+      console.log(`DETAILED TRACK CREATION DEBUG:`, {
+        originalFileName: file.name,
+        extractedTitle: title,
+        trackDataTitle: trackData.title,
+        trackDataArtist: trackData.artist,
+        fullTrackData: trackData
+      });
+      
       updateProgress('processing', undefined, 90);
       
       // Create track with retry logic
