@@ -624,10 +624,9 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
       .map(progress => ({
         id: `pending-${progress.path}`,
         title: progress.name.replace(/\.[^/.]+$/, '') || 'Unknown Track', // Remove file extension
-        artist: progress.status === 'pending' ? 'Processing...' : 'Unknown Artist',
+        artist: progress.status === 'pending' ? 'Queued...' : 'Unknown Artist',
         duration: '--:--',
-        status: progress.status === 'processing' ? 'processing' as const : 
-                progress.status === 'pending' ? 'processing' as const : 'failed' as const,
+        status: progress.status as 'processing' | 'failed',
         error: progress.error,
         progress: progress.progress || 0
       }));
