@@ -43,9 +43,10 @@ interface DropboxFile {
 interface DropboxSyncAccordionProps {
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  onPendingTracksChange?: (pendingTracks: import("@/types/music").PendingTrack[]) => void;
 }
 
-export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: DropboxSyncAccordionProps) => {
+export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPendingTracksChange }: DropboxSyncAccordionProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -599,6 +600,23 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: Dr
       setFolders(prevFolders => sortItems(prevFolders));
     }
   }, [sortOrder]);
+
+  // Convert import progress to pending tracks for library display
+  useEffect(() => {
+    const pendingTracks = Object.values(importProgress)
+      .filter(progress => progress.status === 'processing' || progress.status === 'error')
+      .map(progress => ({
+        id: `pending-${progress.path}`,
+        title: progress.name.replace(/\.[^/.]+$/, '') || 'Unknown Track', // Remove file extension
+        artist: 'Unknown Artist',
+        duration: '--:--',
+        status: progress.status === 'processing' ? 'processing' as const : 'failed' as const,
+        error: progress.error,
+        progress: progress.progress
+      }));
+    
+    onPendingTracksChange?.(pendingTracks);
+  }, [importProgress, onPendingTracksChange]);
 
   const accordionValue = isExpanded ? "dropbox-sync" : "";
 

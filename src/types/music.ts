@@ -12,6 +12,16 @@ export interface Track {
   play_count?: number;
 }
 
+export interface PendingTrack {
+  id: string;
+  title: string;
+  artist: string;
+  duration: string;
+  status: 'processing' | 'failed';
+  error?: string;
+  progress?: number;
+}
+
 // Utility function to get the full filename from a track
 export const getFileName = (track: Track): string => {
   // Try to get the filename from dropbox_path first, then fileUrl

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
-import { Track, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
+import { Track, PendingTrack, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
@@ -38,12 +38,15 @@ interface MusicLibraryProps {
   searchTerm?: string;
   onTitleChange?: (title: string) => void;
   showDropboxAccordion?: boolean;
+  pendingTracks?: PendingTrack[];
+  onRetryPendingTrack?: (trackId: string) => void;
+  onPendingTracksChange?: (pendingTracks: PendingTrack[]) => void;
 }
 
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion, pendingTracks = [], onRetryPendingTrack, onPendingTracksChange }: MusicLibraryProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -349,7 +352,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 isExpanded={isDropboxSyncExpanded}
                 onExpandedChange={(expanded) => {
                   setIsDropboxSyncExpanded(expanded);
-                }} 
+                }}
+                onPendingTracksChange={onPendingTracksChange}
               />
             </div>
           )}
@@ -572,6 +576,89 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                </div>
+              </div>
+            ))}
+            
+            {/* Render pending tracks */}
+            {pendingTracks.map((pendingTrack) => (
+              <div
+                key={pendingTrack.id}
+                className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 bg-muted/20 transition-colors"
+              >
+                <div className="w-8 flex items-center">
+                  {/* No checkbox for pending tracks */}
+                </div>
+                <div className="w-12 flex items-center">
+                  {pendingTrack.status === 'processing' ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-destructive" />
+                  )}
+                  <span className="text-muted-foreground text-sm opacity-50">
+                    --
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-purple-600/10 rounded flex items-center justify-center border border-primary/10">
+                    <div className="flex space-x-px opacity-50">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-0.5 bg-primary/30 rounded-full"
+                          style={{ height: `${Math.random() * 16 + 4}px` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div>
+                      <div className="text-left font-medium text-muted-foreground">
+                        {pendingTrack.title.replace(/\.[^/.]+$/, '')} {/* Remove file extension */}
+                      </div>
+                      <div className="text-sm text-muted-foreground opacity-75">
+                        {pendingTrack.artist}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-muted-foreground">
+                  {pendingTrack.status === 'processing' ? (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-primary">Processing...</span>
+                      {pendingTrack.progress && (
+                        <span className="text-xs opacity-75">({pendingTrack.progress}%)</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-destructive text-sm">Failed</span>
+                      {onRetryPendingTrack && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onRetryPendingTrack(pendingTrack.id)}
+                          className="h-6 text-xs"
+                        >
+                          Retry
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center text-sm text-muted-foreground opacity-50">
+                  --
+                </div>
+
+                <div className="w-8 flex items-center justify-center">
+                  <Lock className="h-3 w-3 text-muted-foreground opacity-50" />
+                </div>
+
+                <div className="w-12 flex items-center">
+                  {/* No actions for pending tracks */}
                 </div>
               </div>
             ))}

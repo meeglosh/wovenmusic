@@ -9,7 +9,7 @@ import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
 import EmptyLibraryState from "@/components/EmptyLibraryState";
 import { DropboxTokenExpiredDialog } from "@/components/DropboxTokenExpiredDialog";
-import { Track, Playlist } from "@/types/music";
+import { Track, Playlist, PendingTrack } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
@@ -25,6 +25,7 @@ const Index = () => {
   const [showDropboxDialog, setShowDropboxDialog] = useState(false);
   const [showDropboxAccordion, setShowDropboxAccordion] = useState(false);
   const [lastDialogTime, setLastDialogTime] = useState(0);
+  const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -218,6 +219,9 @@ const Index = () => {
               searchTerm={searchTerm}
               onTitleChange={setCurrentLibraryTitle}
               showDropboxAccordion={showDropboxAccordion}
+              pendingTracks={pendingTracks}
+              onRetryPendingTrack={() => {/* TODO: Implement retry logic */}}
+              onPendingTracksChange={setPendingTracks}
             />
           ) : (
             <PlaylistView 
