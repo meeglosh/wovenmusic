@@ -507,8 +507,10 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
     let syncedCount = 0;
     const totalFiles = selectedFiles.size;
     
-    // Initialize progress for all selected files
+    // Get all selected files
     const selectedFileObjects = files.filter(file => selectedFiles.has(file.path_lower));
+    
+    // Initialize progress for all selected files
     const initialProgress: ImportProgress = {};
     selectedFileObjects.forEach(file => {
       initialProgress[file.path_lower] = {
@@ -518,6 +520,20 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
       };
     });
     setImportProgress(initialProgress);
+
+    // Immediately show all tracks as pending in the library
+    const pendingTracks = selectedFileObjects.map(file => ({
+      id: `pending-${file.path_lower}`,
+      title: file.name,
+      artist: 'Processing...',
+      duration: file.duration || '0:00',
+      status: 'processing' as const,
+      progress: 0
+    }));
+    
+    if (onPendingTracksChange) {
+      onPendingTracksChange(pendingTracks);
+    }
 
     try {
       // Process files sequentially to avoid overwhelming the system
