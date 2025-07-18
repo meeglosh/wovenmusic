@@ -41,10 +41,11 @@ interface DropboxFile {
 }
 
 interface DropboxSyncAccordionProps {
-  onUploadComplete?: () => void;
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
-export const DropboxSyncAccordion = ({ onUploadComplete }: DropboxSyncAccordionProps) => {
+export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange }: DropboxSyncAccordionProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -56,9 +57,6 @@ export const DropboxSyncAccordion = ({ onUploadComplete }: DropboxSyncAccordionP
   const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
   const [lastAuthError, setLastAuthError] = useState<number>(0);
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
-  const [isExpanded, setIsExpanded] = useState(true);
-  
-  const onExpandedChange = (expanded: boolean) => setIsExpanded(expanded);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -491,53 +489,6 @@ export const DropboxSyncAccordion = ({ onUploadComplete }: DropboxSyncAccordionP
       console.error(`Failed to process ${file.name}:`, errorMessage);
       updateProgress('error', errorMessage);
       return false;
-    }
-  };
-
-  const verifyImportCompleteness = async (processedFiles: DropboxFile[]): Promise<void> => {
-    console.log("Starting import completeness verification...");
-    
-    const failedFiles: string[] = [];
-    const retryPromises: Promise<void>[] = [];
-    
-    for (const file of processedFiles) {
-      const status = importProgress[file.path_lower];
-      if (status?.status === 'success') {
-        // Verify track was actually created in database
-        try {
-          const { data: tracks } = await supabase
-            .from("tracks")
-            .select("id, title, file_url")
-            .ilike("title", `%${file.name.replace(/\.[^/.]+$/, "").replace(/[%_]/g, "\\$&")}%`)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          
-          if (!tracks || tracks.length === 0) {
-            console.warn(`Track not found in database for ${file.name}, scheduling retry...`);
-            failedFiles.push(file.name);
-            
-            // Retry the file import
-            retryPromises.push(processFile(file, 1, 1).then(() => {}).catch(console.error));
-          }
-        } catch (error) {
-          console.error(`Error verifying track for ${file.name}:`, error);
-          failedFiles.push(file.name);
-          retryPromises.push(processFile(file, 1, 1).then(() => {}).catch(console.error));
-        }
-      }
-    }
-    
-    if (retryPromises.length > 0) {
-      console.log(`Retrying ${retryPromises.length} failed imports...`);
-      await Promise.allSettled(retryPromises);
-    }
-    
-    if (failedFiles.length > 0) {
-      toast({
-        title: "Import verification completed",
-        description: `${failedFiles.length} files required additional processing. Check your library.`,
-        variant: "destructive",
-      });
     }
   };
 

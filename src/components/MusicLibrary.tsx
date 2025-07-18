@@ -1,16 +1,16 @@
+
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box, RefreshCw, AlertCircle } from "lucide-react";
+import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
 import { Track, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
-import { Badge } from "@/components/ui/badge";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
-import { useUpdateTrack, useTracks } from "@/hooks/useTracks";
+import { useUpdateTrack } from "@/hooks/useTracks";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -38,14 +38,12 @@ interface MusicLibraryProps {
   searchTerm?: string;
   onTitleChange?: (title: string) => void;
   showDropboxAccordion?: boolean;
-  pendingTracks?: any[];
-  onRetryImport?: (trackId: string) => void;
 }
 
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion, pendingTracks = [], onRetryImport }: MusicLibraryProps) => {
+const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion }: MusicLibraryProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -123,18 +121,14 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   const bulkDeleteMutation = useBulkDeleteTracks();
   const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
-  const { refetch } = useTracks();
 
-  // Combine regular tracks with pending tracks for display
-  const allTracks = [...tracks, ...pendingTracks];
-  
   // Sort tracks based on current sort settings
-  const sortedTracks = [...allTracks].sort((a, b) => {
+  const sortedTracks = [...tracks].sort((a, b) => {
     let comparison = 0;
     
     switch (sortField) {
       case 'title':
-        comparison = getCleanTitle(a.title).localeCompare(getCleanTitle(b.title));
+        comparison = a.title.localeCompare(b.title);
         break;
       case 'artist':
         comparison = a.artist.localeCompare(b.artist);
@@ -158,12 +152,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
-  const selectedTracks = sortedTracks.filter(track => selectedTrackIds.has(track.id) && !track.id.startsWith('temp-'));
+  const selectedTracks = sortedTracks.filter(track => selectedTrackIds.has(track.id));
 
   const isSelectionMode = selectedTrackIds.size > 0;
-  const regularTracksCount = tracks.length;
-  const allTracksSelected = regularTracksCount > 0 && selectedTrackIds.size === regularTracksCount;
-  const someTracksSelected = selectedTrackIds.size > 0 && selectedTrackIds.size < regularTracksCount;
+  const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
+  const someTracksSelected = selectedTrackIds.size > 0 && selectedTrackIds.size < tracks.length;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -179,9 +172,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
 
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Only select non-pending tracks
       setSelectedTrackIds(new Set(tracks.map(track => track.id)));
     } else {
       setSelectedTrackIds(new Set());
@@ -250,7 +243,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
       });
     }
   };
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -324,9 +316,49 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         </div>
       </div>
 
-      {showDropboxAccordion && <DropboxSyncAccordion />}
+      {/* Collapsible Dropbox Sync Section - Hidden during search and on mobile */}
+      {!searchTerm && (
+        <Card className="overflow-hidden hidden sm:block">
+          <div 
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
+                <Box className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium text-primary">Dropbox Sync</h3>
+                <p className="text-sm text-muted-foreground">
+                  {isDropboxSyncExpanded ? 'Click to collapse' : 'Click to manage your Dropbox connection'}
+                </p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm">
+              {isDropboxSyncExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          
+          {isDropboxSyncExpanded && (
+            <div className="border-t border-border p-4">
+              <DropboxSyncAccordion 
+                isExpanded={isDropboxSyncExpanded}
+                onExpandedChange={(expanded) => {
+                  setIsDropboxSyncExpanded(expanded);
+                }} 
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
-      {allTracks.length === 0 ? (
+      {/* Dropbox Sync Section */}
+
+      {tracks.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
@@ -347,12 +379,16 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         </div>
       ) : (
         <Card className="overflow-hidden">
-          <div className="grid grid-cols-[auto_1fr_80px_80px_50px_50px] gap-4 items-center py-3 px-4 text-sm font-medium text-muted-foreground border-b border-border">
-            <Checkbox
-              checked={allTracksSelected}
-              onCheckedChange={handleSelectAll}
-              className={someTracksSelected ? 'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground' : ''}
-            />
+          <div className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
+            <div className="w-8">
+              <Checkbox
+                checked={allTracksSelected}
+                onCheckedChange={handleSelectAll}
+                className={someTracksSelected ? 'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground' : ''}
+                data-indeterminate={someTracksSelected}
+              />
+            </div>
+            <div className="w-12"></div>
             <div>
               <Button
                 variant="ghost"
@@ -389,145 +425,156 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           </div>
 
           <div className="divide-y divide-border">
-            {sortedTracks.map((track) => {
-              const isPending = track.id.startsWith('temp-');
-              const isProcessing = track.duration === 'Processing...' || track.status === 'pending';
-              const isError = track.status === 'error' || track.duration === 'Failed';
-              
-              return (
-                <div
-                  key={track.id}
-                  className={`group grid grid-cols-[auto_1fr_80px_80px_50px_50px] gap-4 items-center py-3 px-4 transition-colors hover:bg-secondary/50 ${
-                    currentTrack?.id === track.id ? 'bg-secondary' : ''
-                  } ${isPending ? 'opacity-75' : ''}`}
-                >
+            {sortedTracks.map((track, index) => (
+              <div
+                key={track.id}
+                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
+                  selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
+                }`}
+              >
+                <div className="w-8 flex items-center">
                   <Checkbox
                     checked={selectedTrackIds.has(track.id)}
                     onCheckedChange={(checked) => handleSelectTrack(track.id, checked as boolean)}
-                    disabled={isPending}
                   />
-
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                </div>
+                <div className="w-12 flex items-center">
+                  {/* Show play/pause button based on current track and playing state */}
+                  {track.duration === 'Transcoding...' ? (
+                    // Show nothing during transcoding
+                    null
+                  ) : currentTrack?.id === track.id && isPlaying ? (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-8 h-8 p-0"
-                      onClick={() => !isPending && onPlayTrack(track, sortedTracks.filter(t => !t.id.startsWith('temp-')))}
-                      disabled={isPending}
+                      className={`w-8 h-8 p-0 transition-all hover:border hover:border-primary rounded-full ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      onClick={() => onPlayTrack(track)}
+                      title="Pause track"
                     >
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="w-4 h-4" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
+                      <Pause className="w-4 h-4 fill-current" />
                     </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`w-8 h-8 p-0 transition-all hover:border hover:border-primary rounded-full ${
+                        track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
+                      } ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      onClick={() => onPlayTrack(track)}
+                      disabled={track.duration === 'Failed'}
+                      title={track.duration === 'Failed' ? 'Transcoding failed' : 'Play track'}
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                    </Button>
+                  )}
+                  <span className={`text-muted-foreground text-sm transition-opacity ${
+                    isMobile ? 'opacity-0' : 'group-hover:opacity-0'
+                  }`}>
+                    {index + 1}
+                  </span>
+                </div>
 
-                    <div className="min-w-0 flex-1 flex items-center space-x-2">
-                      <div 
-                        className={`truncate text-sm font-medium transition-colors ${
-                          isPending ? '' : 'cursor-pointer hover:text-primary'
-                        }`}
-                        onClick={() => !isPending && navigate(`/track/${track.id}`)}
-                      >
-                        <button
-                          className="text-left w-full"
-                          title={isPending ? "Track is being processed" : "Open track view with comments"}
-                          disabled={isPending}
-                        >
-                          {getCleanTitle(track.title)}
-                        </button>
-                      </div>
-                      
-                      {isProcessing && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          Processing
-                        </Badge>
-                      )}
-                      
-                      {isError && (
-                        <Badge variant="destructive" className="text-xs cursor-pointer" onClick={() => onRetryImport?.(track.id)}>
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          Failed
-                          <RefreshCw className="w-3 h-3 ml-1" />
-                        </Badge>
-                      )}
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
+                    <div className="flex space-x-px">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-0.5 bg-primary/60 wave-bar rounded-full"
+                          style={{ height: `${Math.random() * 16 + 4}px` }}
+                        />
+                      ))}
                     </div>
                   </div>
-
-                  <div className="flex items-center text-muted-foreground">
-                    {isProcessing ? (
-                      <div className="flex items-center space-x-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Processing...</span>
-                      </div>
-                    ) : isError ? (
-                      <span className="text-destructive text-sm">Failed</span>
-                    ) : (
-                      track.duration
-                    )}
-                  </div>
-
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    {track.addedAt.toLocaleDateString()}
-                  </div>
-
-                  <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
-                    {track.is_public ? (
-                      <Globe className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <Lock className="h-3 w-3 text-muted-foreground" />
-                    )}
-                  </div>
-
-                  <div className="w-12 flex items-center">
-                    {!isPending && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`w-8 h-8 p-0 transition-opacity ${
-                              isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                            }`}
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remove from library
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to remove "{getCleanTitle(track.title)}" from your library?
-                                  {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteTrack(track)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Remove from library
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                  <div className="flex items-center space-x-2">
+                    <div>
+                      <button 
+                        className={`text-left font-medium hover:text-primary transition-colors cursor-pointer ${
+                          track.duration === 'Transcoding...' ? 'opacity-50' : ''
+                        }`}
+                        onClick={() => navigate(`/track/${track.id}`)}
+                        title="Open track view with comments"
+                      >
+                        {track.title}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="flex items-center text-muted-foreground">
+                  {track.duration === 'Transcoding...' ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Transcoding...</span>
+                    </div>
+                  ) : track.duration === 'Failed' ? (
+                    <span className="text-destructive text-sm">Failed</span>
+                  ) : (
+                    track.duration
+                  )}
+                </div>
+
+                <div className="flex items-center text-sm text-muted-foreground">
+                  {track.addedAt.toLocaleDateString()}
+                </div>
+
+                <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
+                  {track.is_public ? (
+                    <Globe className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </div>
+
+                <div className="w-12 flex items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`w-8 h-8 p-0 transition-opacity ${
+                          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Remove from library
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove "{track.title}" from your library?
+                              {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteTrack(track)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remove from library
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}
