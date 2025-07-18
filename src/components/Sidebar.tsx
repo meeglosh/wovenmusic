@@ -19,7 +19,7 @@ interface SidebarProps {
 const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist }: SidebarProps) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   return (
-    <aside className="w-64 bg-card/30 border-r border-border flex flex-col">
+    <aside className="h-full w-64 bg-card/30 border-r border-border flex flex-col">
       <div className="p-4">
         <nav className="space-y-2">
           <Button
