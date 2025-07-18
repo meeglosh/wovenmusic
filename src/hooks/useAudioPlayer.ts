@@ -541,27 +541,32 @@ export const useAudioPlayer = () => {
 
   const playNext = () => {
     const nextIndex = getNextTrackIndex();
+    
+    // If we're at the end and not in repeat mode, stop playback
+    if (nextIndex === currentTrackIndex && !isRepeatMode) {
+      console.log('Reached end of playlist, stopping playback');
+      setIsPlaying(false);
+      return;
+    }
+    
     if (nextIndex !== -1 && playlist[nextIndex]) {
+      console.log(`Moving to next track: ${nextIndex} (${playlist[nextIndex].title})`);
       setCurrentTrackIndex(nextIndex);
-      setCurrentTrack(playlist[nextIndex]);
+      const nextTrack = playlist[nextIndex];
       
-      // Play next track if user was already playing
+      // Force a new object reference to trigger track loading
+      setCurrentTrack({ ...nextTrack });
+      
+      // If we were playing, continue playing the next track
       if (isPlaying) {
-        setTimeout(async () => {
-          const audio = audioRef.current;
-          if (audio) {
-            try {
-              await audio.play();
-              setIsPlaying(true);
-            } catch (error) {
-              console.error('Error playing next track:', error);
-              setIsPlaying(false);
-            }
-          }
-        }, 500);
+        console.log('Auto-continuing playback for next track');
+        // Keep isPlaying true so the track loading effect will auto-start
       } else {
         setIsPlaying(false);
       }
+    } else {
+      console.log('No next track available, stopping playback');
+      setIsPlaying(false);
     }
   };
 
