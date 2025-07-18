@@ -30,6 +30,7 @@ export class DropboxService {
   private tokenExpiresAt: number | null = null;
   private isAuthenticating: boolean = false;
   private authenticationPromise: Promise<void> | null = null;
+  private refreshTimer: any = null;
 
   private get redirectUri(): string {
     return `${window.location.origin}/dropbox-callback`;
@@ -227,9 +228,9 @@ export class DropboxService {
         this.accessToken = data.access_token;
         this.refreshToken = data.refresh_token;
         
-        // Calculate expiration time (with 5 minute buffer)
+        // Calculate expiration time (with larger 30 minute buffer for proactive refresh)
         const expiresIn = data.expires_in || 14400; // Default 4 hours if not provided
-        this.tokenExpiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        this.tokenExpiresAt = Date.now() + (expiresIn - 1800) * 1000; // 30 min buffer
         
         // Store tokens and expiration
         localStorage.setItem('dropbox_access_token', data.access_token);
@@ -237,6 +238,9 @@ export class DropboxService {
           localStorage.setItem('dropbox_refresh_token', data.refresh_token);
         }
         localStorage.setItem('dropbox_token_expires_at', this.tokenExpiresAt.toString());
+        
+        // Set up automatic refresh timer
+        this.scheduleTokenRefresh();
         
         // Verify storage
         const storedToken = localStorage.getItem('dropbox_access_token');
@@ -328,14 +332,17 @@ export class DropboxService {
         this.accessToken = data.access_token;
         this.refreshToken = data.refresh_token || refreshToken;
         
-        // Calculate new expiration
+        // Calculate new expiration with 30 minute buffer
         const expiresIn = data.expires_in || 14400;
-        this.tokenExpiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        this.tokenExpiresAt = Date.now() + (expiresIn - 1800) * 1000; // 30 min buffer
         
         // Update localStorage
         localStorage.setItem('dropbox_access_token', data.access_token);
         localStorage.setItem('dropbox_refresh_token', this.refreshToken);
         localStorage.setItem('dropbox_token_expires_at', this.tokenExpiresAt.toString());
+        
+        // Set up automatic refresh timer
+        this.scheduleTokenRefresh();
         
         console.log('New token expires at:', new Date(this.tokenExpiresAt));
         return data.access_token;
@@ -741,12 +748,60 @@ export class DropboxService {
       isAuthenticating: this.isAuthenticating
     });
     
+    
+    // Set up automatic refresh timer
+    this.scheduleTokenRefresh();
+    
     // Dispatch event to signal that auth state has been refreshed
     // This allows other components to cancel/restart operations with fresh tokens
     window.dispatchEvent(new CustomEvent('dropboxAuthRefreshed'));
   }
+  
+  // Schedule automatic token refresh
+  private scheduleTokenRefresh(): void {
+    // Clear any existing timer
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    
+    if (!this.tokenExpiresAt) return;
+    
+    // Schedule refresh 10 minutes before expiry (even more proactive)
+    const timeUntilRefresh = this.tokenExpiresAt - Date.now() - (10 * 60 * 1000);
+    
+    if (timeUntilRefresh > 0) {
+      console.log('=== SCHEDULING TOKEN REFRESH ===');
+      console.log('Token expires at:', new Date(this.tokenExpiresAt));
+      console.log('Refresh scheduled for:', new Date(Date.now() + timeUntilRefresh));
+      
+      this.refreshTimer = setTimeout(async () => {
+        console.log('=== AUTOMATIC TOKEN REFRESH TRIGGERED ===');
+        try {
+          await this.refreshAccessToken();
+        } catch (error) {
+          console.error('Automatic token refresh failed:', error);
+        }
+      }, timeUntilRefresh);
+    } else {
+      // Token expires very soon, refresh immediately
+      console.log('=== TOKEN EXPIRES SOON, REFRESHING IMMEDIATELY ===');
+      setTimeout(async () => {
+        try {
+          await this.refreshAccessToken();
+        } catch (error) {
+          console.error('Immediate token refresh failed:', error);
+        }
+      }, 0);
+    }
+  }
 
   logout(): void {
+    // Clear refresh timer
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    
     this.accessToken = null;
     this.refreshToken = null;
     this.tokenExpiresAt = null;
