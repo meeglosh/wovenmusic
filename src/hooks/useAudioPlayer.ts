@@ -333,6 +333,8 @@ export const useAudioPlayer = () => {
     };
     const handleEnded = () => {
       console.log('Track ended, playing next...');
+      // Keep isPlaying true for auto-advance to next track
+      setIsPlaying(true);
       playNext();
     };
 
