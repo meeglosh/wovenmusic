@@ -25,26 +25,44 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/verify" element={<AuthVerify />} />
-              <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-              <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
-              <Route path="/dropbox-callback" element={<DropboxCallback />} />
-              <Route path="/playlist/:playlistId" element={<PublicPlaylist />} />
-              <Route path="/playlist/shared" element={<PublicPlaylist />} />
-              <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
-              <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
-              <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes - NO AuthProvider wrapper */}
+            <Route path="/playlist/:playlistId" element={
+              <>
+                <Toaster />
+                <Sonner />
+                <PublicPlaylist />
+              </>
+            } />
+            <Route path="/playlist/shared" element={
+              <>
+                <Toaster />
+                <Sonner />
+                <PublicPlaylist />
+              </>
+            } />
+            
+            {/* All other routes wrapped in AuthProvider */}
+            <Route path="/*" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/verify" element={<AuthVerify />} />
+                  <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
+                  <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
+                  <Route path="/dropbox-callback" element={<DropboxCallback />} />
+                  <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
+                  <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
+                  <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AuthProvider>
+            } />
+          </Routes>
+        </BrowserRouter>
       </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
