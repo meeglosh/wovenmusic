@@ -33,6 +33,16 @@ const PublicPlaylist = () => {
     ? usePublicPlaylistByToken(shareToken!)
     : usePublicPlaylist(playlistId!);
 
+  // Debug logging
+  console.log("PublicPlaylist Debug:", {
+    playlistId,
+    shareToken,
+    shouldUseToken,
+    isLoading,
+    error: error?.message,
+    playlist: playlist?.name
+  });
+
   // Audio player functionality
   const {
     currentTrack,
