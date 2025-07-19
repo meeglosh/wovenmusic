@@ -210,6 +210,7 @@ const Index = () => {
             onPlaylistSelect={handleViewPlaylist}
             libraryTitle={currentLibraryTitle}
             selectedPlaylist={selectedPlaylist}
+            tracks={tracks}
           />
         </div>
         

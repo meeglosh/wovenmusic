@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image, Lock, Globe } from "lucide-react";
-import { Track, Playlist, getCleanTitle } from "@/types/music";
+import { Track, Playlist, getCleanTitle, calculatePlaylistDuration } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
@@ -442,6 +442,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           
           <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-muted-foreground mb-6">
             <span>{playlistTracks.length} track{playlistTracks.length !== 1 ? 's' : ''}</span>
+            <span className="hidden md:inline">•</span>
+            <span>{calculatePlaylistDuration(playlistTracks)}</span>
             <span className="hidden md:inline">•</span>
             <span>Created {playlist.createdAt.toLocaleDateString()}</span>
             {playlist.sharedWith.length > 0 && (

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Music, Plus, Library, List, Lock, Globe } from "lucide-react";
-import { Playlist } from "@/types/music";
+import { Playlist, calculatePlaylistDuration } from "@/types/music";
 import { cn } from "@/lib/utils";
 import CreatePlaylistModal from "./CreatePlaylistModal";
 
@@ -14,9 +14,10 @@ interface SidebarProps {
   onPlaylistSelect: (playlist: Playlist) => void;
   libraryTitle?: string;
   selectedPlaylist?: Playlist | null;
+  tracks: any[]; // Add tracks prop to calculate duration
 }
 
-const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist }: SidebarProps) => {
+const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist, tracks }: SidebarProps) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   return (
     <aside className="w-full h-full bg-card/30 border-r border-border flex flex-col">
@@ -62,6 +63,9 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
             ) : (
               playlists.map((playlist) => {
                 const isSelected = currentView === "playlist" && selectedPlaylist?.id === playlist.id;
+                const playlistTracks = tracks.filter(track => playlist.trackIds.includes(track.id));
+                const duration = calculatePlaylistDuration(playlistTracks);
+                
                 return (
                   <Button
                     key={playlist.id}
@@ -97,7 +101,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
+                        {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''} • {duration}
                       </p>
                     </div>
                   </div>

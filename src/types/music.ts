@@ -81,3 +81,40 @@ export interface Comment {
   userEmail?: string;
   userFullName?: string;
 }
+
+// Utility function to parse duration string (mm:ss or hh:mm:ss) to total seconds
+export const parseDurationToSeconds = (duration: string): number => {
+  const parts = duration.split(':').map(Number);
+  if (parts.length === 2) {
+    // mm:ss format
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 3) {
+    // hh:mm:ss format
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return 0;
+};
+
+// Utility function to format seconds to duration string (mm:ss or hh:mm:ss)
+export const formatSecondsToDuration = (totalSeconds: number): string => {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+};
+
+// Utility function to calculate total playlist duration
+export const calculatePlaylistDuration = (tracks: Track[]): string => {
+  if (tracks.length === 0) return "0:00";
+  
+  const totalSeconds = tracks.reduce((acc, track) => {
+    return acc + parseDurationToSeconds(track.duration);
+  }, 0);
+  
+  return formatSecondsToDuration(totalSeconds);
+};
