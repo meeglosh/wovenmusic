@@ -99,7 +99,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[auto,auto,1fr,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group border-b border-border last:border-b-0"
+      className="grid grid-cols-[auto,auto,1fr,auto,auto] gap-2 sm:gap-4 p-3 sm:p-4 hover:bg-muted/30 transition-colors group border-b border-border last:border-b-0"
     >
       {/* Drag Handle */}
       <div 
@@ -107,27 +107,27 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
         {...listeners}
         className="w-6 flex items-center cursor-grab active:cursor-grabbing"
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity" />
       </div>
 
       {/* Track Number / Play Button */}
-      <div className="w-12 flex items-center">
+      <div className="w-8 sm:w-12 flex items-center">
         <Button
           variant="ghost"
           size="sm"
-          className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity"
           onClick={() => onPlay(track, playlist)}
         >
-          <Play className="w-4 h-4 fill-current" />
+          <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
         </Button>
-        <span className="text-muted-foreground text-sm group-hover:opacity-0 transition-opacity">
+        <span className="text-muted-foreground text-xs sm:text-sm lg:group-hover:opacity-0 transition-opacity">
           {index + 1}
         </span>
       </div>
 
       {/* Track Info */}
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded overflow-hidden">
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden hidden min-[480px]:block">
           {playlistImageUrl ? (
             <img 
               src={playlistImageUrl} 
@@ -148,26 +148,26 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
             </div>
           )}
         </div>
-        <div>
-          <p className="font-medium">{getCleanTitle(track)}</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium truncate text-sm sm:text-base">{getCleanTitle(track)}</p>
         </div>
       </div>
 
       {/* Duration */}
-      <div className="flex items-center text-muted-foreground">
+      <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
         {track.duration}
       </div>
 
       {/* Actions */}
-      <div className="w-12 flex items-center">
+      <div className="w-8 sm:w-12 flex items-center">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+              className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity text-destructive hover:text-destructive"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -392,8 +392,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         <span className="text-primary">Back to Library</span>
       </Button>
 
-      <div className="flex items-start space-x-6 mb-8">
-        <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20" onClick={() => fileInputRef.current?.click()}>
+      <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
+        <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
           {playlist.imageUrl ? (
             <img 
               src={playlist.imageUrl} 
@@ -420,8 +420,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           className="hidden"
         />
 
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <Badge variant="secondary">Playlist</Badge>
             <Badge variant={playlist.isPublic ? "default" : "secondary"} className="text-xs">
               {playlist.isPublic ? (
@@ -438,15 +438,15 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             )}
           </div>
           
-          <h1 className="text-5xl font-bold mb-4 text-primary">{playlist.name}</h1>
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 text-primary break-words">{playlist.name}</h1>
           
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-6">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-muted-foreground mb-6">
             <span>{playlistTracks.length} track{playlistTracks.length !== 1 ? 's' : ''}</span>
-            <span>•</span>
+            <span className="hidden md:inline">•</span>
             <span>Created {playlist.createdAt.toLocaleDateString()}</span>
             {playlist.sharedWith.length > 0 && (
               <>
-                <span>•</span>
+                <span className="hidden md:inline">•</span>
                 <span>Shared with {playlist.sharedWith.length} member{playlist.sharedWith.length !== 1 ? 's' : ''}</span>
               </>
             )}
@@ -455,12 +455,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           {/* Privacy Controls */}
           <div className="mb-6">
             <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-1 flex-1 min-w-0">
                   <Label htmlFor="playlist-privacy" className="text-sm font-medium">
                     Make playlist public
                   </Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {playlist.isPublic 
                       ? "Anyone can discover and listen to this playlist" 
                       : "Only you and shared members can access this playlist"
@@ -472,6 +472,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   checked={playlist.isPublic || false}
                   onCheckedChange={handlePrivacyChange}
                   disabled={updatePlaylistVisibility.isPending}
+                  className="flex-shrink-0"
                 />
               </div>
             </Card>
