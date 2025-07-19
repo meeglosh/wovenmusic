@@ -17,6 +17,21 @@ import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 const Index = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const hasRedirected = useRef(false);
+
+  // Handle playlist share token in URL - MUST be before any early returns
+  const playlistToken = searchParams.get('playlist');
+  
+  // Redirect to public playlist page if playlist token is present
+  useEffect(() => {
+    if (playlistToken && !hasRedirected.current) {
+      hasRedirected.current = true;
+      // Navigate to the PublicPlaylist component with the token as a query param
+      navigate(`/playlist/shared?token=${playlistToken}`, { replace: true });
+    }
+  }, [playlistToken, navigate]); // Include dependencies to prevent stale closures
+
+  // State management
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
@@ -29,7 +44,6 @@ const Index = () => {
   });
   const [lastDialogTime, setLastDialogTime] = useState(0);
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
-  const hasRedirected = useRef(false);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -157,17 +171,6 @@ const Index = () => {
     );
   }
 
-  // Handle playlist share token in URL
-  const playlistToken = searchParams.get('playlist');
-  
-  // Redirect to public playlist page if playlist token is present
-  useEffect(() => {
-    if (playlistToken && !hasRedirected.current) {
-      hasRedirected.current = true;
-      // Navigate to the PublicPlaylist component with the token as a query param
-      navigate(`/playlist/shared?token=${playlistToken}`, { replace: true });
-    }
-  }, []); // Empty dependency array - only run once on mount
 
   // Check if we should show empty state or main library
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
