@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
@@ -29,6 +29,7 @@ const Index = () => {
   });
   const [lastDialogTime, setLastDialogTime] = useState(0);
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
+  const hasRedirected = useRef(false);
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -161,11 +162,12 @@ const Index = () => {
   
   // Redirect to public playlist page if playlist token is present
   useEffect(() => {
-    if (playlistToken) {
+    if (playlistToken && !hasRedirected.current) {
+      hasRedirected.current = true;
       // Navigate to the PublicPlaylist component with the token as a query param
       navigate(`/playlist/shared?token=${playlistToken}`, { replace: true });
     }
-  }, [playlistToken, navigate]);
+  }, [playlistToken]); // Removed navigate from dependencies
 
   // Check if we should show empty state or main library
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
