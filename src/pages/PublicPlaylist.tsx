@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Pause, ExternalLink, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,19 +6,38 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { usePublicPlaylist, usePublicPlaylistByToken } from "@/hooks/usePublicPlaylist";
 import { Track } from "@/types/music";
 import { formatSecondsToDuration, parseDurationToSeconds, getCleanTitle } from "@/types/music";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 const PublicPlaylist = () => {
   const { playlistId } = useParams<{ playlistId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  
+  // Manage user state independently to avoid auth redirects
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+
+  // Check for authenticated user without redirecting
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setUserLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setUserLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Check if accessing by share token or playlist ID
   const shareToken = searchParams.get("playlist") || searchParams.get("token");
@@ -34,14 +53,19 @@ const PublicPlaylist = () => {
     : usePublicPlaylist(playlistId!);
 
   // Debug logging
-  console.log("PublicPlaylist Debug:", {
-    playlistId,
-    shareToken,
-    shouldUseToken,
-    isLoading,
-    error: error?.message,
-    playlist: playlist?.name
-  });
+  useEffect(() => {
+    console.log("PublicPlaylist Debug:", {
+      playlistId,
+      shareToken,
+      shouldUseToken,
+      isLoading,
+      error: error?.message,
+      playlist: playlist?.name,
+      userLoading,
+      hasUser: !!user,
+      currentUrl: window.location.href
+    });
+  }, [playlistId, shareToken, shouldUseToken, isLoading, error, playlist, userLoading, user]);
 
   // Audio player functionality
   const {
@@ -140,7 +164,7 @@ const PublicPlaylist = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => navigate("/")}
+              onClick={() => window.location.href = "/"}
               className="text-primary hover:text-primary/80"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
