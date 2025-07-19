@@ -167,7 +167,7 @@ const Index = () => {
       // Navigate to the PublicPlaylist component with the token as a query param
       navigate(`/playlist/shared?token=${playlistToken}`, { replace: true });
     }
-  }, [playlistToken]); // Removed navigate from dependencies
+  }, []); // Empty dependency array - only run once on mount
 
   // Check if we should show empty state or main library
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
