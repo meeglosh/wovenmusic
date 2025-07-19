@@ -107,7 +107,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
         {...listeners}
         className="w-6 flex items-center cursor-grab active:cursor-grabbing"
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity" />
+        <GripVertical className="w-4 h-4 text-muted-foreground opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity" />
       </div>
 
       {/* Track Number / Play Button */}
@@ -115,12 +115,12 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
         <Button
           variant="ghost"
           size="sm"
-          className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity"
+          className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity"
           onClick={() => onPlay(track, playlist)}
         >
           <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
         </Button>
-        <span className="text-muted-foreground text-xs sm:text-sm lg:group-hover:opacity-0 transition-opacity">
+        <span className="text-muted-foreground text-xs sm:text-sm opacity-0 xl:opacity-100 xl:group-hover:opacity-0 transition-opacity">
           {index + 1}
         </span>
       </div>
@@ -165,7 +165,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
             <Button
               variant="ghost"
               size="sm"
-              className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-0 lg:group-hover:opacity-100 lg:opacity-100 transition-opacity text-destructive hover:text-destructive"
+              className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
             >
               <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
