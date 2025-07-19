@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
 const PublicPlaylist = () => {
+  console.log("Rendering PublicPlaylist", { pathname: window.location.pathname, href: window.location.href });
+  
   const { playlistId } = useParams<{ playlistId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
