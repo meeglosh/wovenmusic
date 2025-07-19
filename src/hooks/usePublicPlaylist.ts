@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@supabase/supabase-js";
 
-// Create a separate Supabase client without RLS for public access
+// Create a separate Supabase client without auth for public access
 const publicSupabase = createClient(
   "https://woakvdhlpludrttjixxq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg",
   {
     auth: {
-      persistSession: false // Don't persist auth for public access
+      persistSession: false
     }
   }
 );
@@ -16,8 +16,10 @@ export const usePublicPlaylist = (playlistId: string) => {
   return useQuery({
     queryKey: ["publicPlaylist", playlistId],
     queryFn: async () => {
+      console.log("Fetching public playlist:", playlistId);
+
       try {
-        // First, check if playlist is public
+        // First check if playlist is public
         const { data: playlist, error: playlistError } = await publicSupabase
           .from("playlists")
           .select("*")
@@ -26,42 +28,56 @@ export const usePublicPlaylist = (playlistId: string) => {
           .single();
         
         if (playlistError || !playlist) {
+          console.error("Playlist error:", playlistError);
           throw new Error("Playlist not found or not public");
         }
 
-        // Get playlist tracks separately
+        console.log("Found playlist:", playlist.name);
+
+        // Get all tracks in this playlist (simplified query)
         const { data: playlistTracks, error: tracksError } = await publicSupabase
           .from("playlist_tracks")
-          .select(`
-            track_id,
-            position,
-            tracks!inner (
-              id,
-              title,
-              artist,
-              duration,
-              file_url,
-              is_public
-            )
-          `)
+          .select("track_id, position")
           .eq("playlist_id", playlistId)
-          .eq("tracks.is_public", true)
           .order("position");
 
         if (tracksError) {
-          console.warn("Error fetching tracks:", tracksError);
+          console.warn("Playlist tracks error:", tracksError);
         }
 
-        // Map tracks data
-        const publicTracks = (playlistTracks || []).map((pt: any) => ({
-          id: pt.tracks.id,
-          title: pt.tracks.title,
-          artist: pt.tracks.artist,
-          duration: pt.tracks.duration,
-          fileUrl: pt.tracks.file_url,
-          addedAt: new Date(),
-          is_public: pt.tracks.is_public
-        }));
+        // Get track details for public tracks only
+        let publicTracks: any[] = [];
+        if (playlistTracks && playlistTracks.length > 0) {
+          const trackIds = playlistTracks.map(pt => pt.track_id);
+          
+          const { data: tracks, error: trackDetailsError } = await publicSupabase
+            .from("tracks")
+            .select("id, title, artist, duration, file_url")
+            .in("id", trackIds)
+            .eq("is_public", true);
+
+          if (trackDetailsError) {
+            console.warn("Track details error:", trackDetailsError);
+          } else if (tracks) {
+            // Match tracks with playlist order
+            publicTracks = playlistTracks
+              .map(pt => {
+                const track = tracks.find(t => t.id === pt.track_id);
+                return track ? {
+                  id: track.id,
+                  title: track.title,
+                  artist: track.artist,
+                  duration: track.duration,
+                  fileUrl: track.file_url,
+                  addedAt: new Date(),
+                  is_public: true
+                } : null;
+              })
+              .filter(Boolean);
+          }
+        }
+
+        console.log("Returning playlist with", publicTracks.length, "public tracks");
         
         return {
           id: playlist.id,
@@ -78,7 +94,9 @@ export const usePublicPlaylist = (playlistId: string) => {
       }
     },
     enabled: !!playlistId,
-    retry: false // Don't retry on auth errors
+    retry: 1,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 };
 
@@ -86,8 +104,10 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
   return useQuery({
     queryKey: ["publicPlaylistByToken", shareToken],
     queryFn: async () => {
+      console.log("Fetching public playlist by token:", shareToken);
+
       try {
-        // First, check if playlist exists with this token and is public
+        // First check if playlist exists with token and is public
         const { data: playlist, error: playlistError } = await publicSupabase
           .from("playlists")
           .select("*")
@@ -96,42 +116,56 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
           .single();
         
         if (playlistError || !playlist) {
+          console.error("Playlist by token error:", playlistError);
           throw new Error("Playlist not found or not public");
         }
 
-        // Get playlist tracks separately
+        console.log("Found playlist by token:", playlist.name);
+
+        // Get all tracks in this playlist
         const { data: playlistTracks, error: tracksError } = await publicSupabase
           .from("playlist_tracks")
-          .select(`
-            track_id,
-            position,
-            tracks!inner (
-              id,
-              title,
-              artist,
-              duration,
-              file_url,
-              is_public
-            )
-          `)
+          .select("track_id, position")
           .eq("playlist_id", playlist.id)
-          .eq("tracks.is_public", true)
           .order("position");
 
         if (tracksError) {
-          console.warn("Error fetching tracks:", tracksError);
+          console.warn("Playlist tracks by token error:", tracksError);
         }
 
-        // Map tracks data
-        const publicTracks = (playlistTracks || []).map((pt: any) => ({
-          id: pt.tracks.id,
-          title: pt.tracks.title,
-          artist: pt.tracks.artist,
-          duration: pt.tracks.duration,
-          fileUrl: pt.tracks.file_url,
-          addedAt: new Date(),
-          is_public: pt.tracks.is_public
-        }));
+        // Get track details for public tracks only
+        let publicTracks: any[] = [];
+        if (playlistTracks && playlistTracks.length > 0) {
+          const trackIds = playlistTracks.map(pt => pt.track_id);
+          
+          const { data: tracks, error: trackDetailsError } = await publicSupabase
+            .from("tracks")
+            .select("id, title, artist, duration, file_url")
+            .in("id", trackIds)
+            .eq("is_public", true);
+
+          if (trackDetailsError) {
+            console.warn("Track details by token error:", trackDetailsError);
+          } else if (tracks) {
+            // Match tracks with playlist order
+            publicTracks = playlistTracks
+              .map(pt => {
+                const track = tracks.find(t => t.id === pt.track_id);
+                return track ? {
+                  id: track.id,
+                  title: track.title,
+                  artist: track.artist,
+                  duration: track.duration,
+                  fileUrl: track.file_url,
+                  addedAt: new Date(),
+                  is_public: true
+                } : null;
+              })
+              .filter(Boolean);
+          }
+        }
+
+        console.log("Returning playlist by token with", publicTracks.length, "public tracks");
         
         return {
           id: playlist.id,
@@ -148,6 +182,8 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
       }
     },
     enabled: !!shareToken,
-    retry: false // Don't retry on auth errors
+    retry: 1,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 };
