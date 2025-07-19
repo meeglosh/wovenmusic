@@ -69,7 +69,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
 
   const copyShareLink = () => {
     const shareUrl = playlist.shareToken 
-      ? `https://wovenmusic.app/?playlist=${playlist.shareToken}`
+      ? `https://wovenmusic.app/playlist/shared?token=${playlist.shareToken}`
       : `https://wovenmusic.app/playlist/${playlist.id}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success("Share link copied to clipboard!");
@@ -114,7 +114,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
               <div className="flex space-x-2">
                 <Input 
                   value={playlist.shareToken 
-                    ? `https://wovenmusic.app/?playlist=${playlist.shareToken}`
+                    ? `https://wovenmusic.app/playlist/shared?token=${playlist.shareToken}`
                     : `https://wovenmusic.app/playlist/${playlist.id}`
                   }
                   readOnly
