@@ -382,7 +382,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
             <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
               <CardContent className="flex flex-col items-center justify-center p-8">
                 <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                <Button onClick={handleFileSelect} variant="outline" className="mb-2">
+                <Button onClick={handleFileSelect} variant="default" className="mb-2">
                   Select Audio Files
                 </Button>
                 <p className="text-sm text-muted-foreground text-center">
