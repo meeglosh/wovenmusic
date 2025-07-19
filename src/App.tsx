@@ -28,18 +28,13 @@ const App = () => (
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
-            {/* Simple test route */}
-            <Route path="/test" element={<div style={{padding: '20px', backgroundColor: 'green', color: 'white'}}><h1>TEST ROUTE WORKS</h1></div>} />
-            
             {/* Public routes - NO AuthProvider wrapper */}
             <Route path="/playlist/shared" element={
-              <div style={{padding: '20px', backgroundColor: 'red', color: 'white'}}>
-                <h1>ROUTE MATCHED: /playlist/shared</h1>
-                <p>URL: {window.location.href}</p>
+              <>
                 <Toaster />
                 <Sonner />
                 <PublicPlaylist />
-              </div>
+              </>
             } />
             <Route path="/playlist/:playlistId" element={
               <>
