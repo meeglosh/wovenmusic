@@ -587,8 +587,8 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         <DrawerHeader className="border-b">
           <div className="flex items-center justify-between">
             <div>
-              <DrawerTitle className="flex items-center gap-2">
-                <DropboxIcon className="w-5 h-5" />
+              <DrawerTitle className="flex items-center gap-2 text-primary">
+                <DropboxIcon className="w-5 h-5 text-primary" />
                 {getCurrentPathName()}
               </DrawerTitle>
               <DrawerDescription>
@@ -599,6 +599,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
+              className="text-primary hover:text-primary"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -614,6 +615,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                     size="sm"
                     onClick={navigateBack}
                     disabled={isLoading}
+                    className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     <ArrowLeft className="w-4 h-4 mr-1" />
                     Back
@@ -624,6 +626,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   size="sm"
                   onClick={() => loadFolders(currentPath)}
                   disabled={isLoading}
+                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </Button>
@@ -660,9 +663,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   className="flex items-center p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer"
                   onClick={() => navigateToFolder(folder.path_lower)}
                 >
-                  <Folder className="w-5 h-5 text-blue-500 mr-3 flex-shrink-0" />
-                  <span className="font-medium flex-1 truncate">{folder.name}</span>
-                  <div className="text-muted-foreground">
+                  <Folder className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                  <span className="font-medium flex-1 truncate text-primary">{folder.name}</span>
+                  <div className="text-primary">
                     <ArrowLeft className="w-4 h-4 rotate-180" />
                   </div>
                 </div>
@@ -691,9 +694,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                     />
                     
                     <div className="flex items-center flex-1 min-w-0">
-                      <Music className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                      <Music className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{file.name.replace(/\.[^/.]+$/, "")}</div>
+                        <div className="font-medium truncate text-primary">{file.name.replace(/\.[^/.]+$/, "")}</div>
                         <div className="text-sm text-muted-foreground">
                           {isLoadingDuration ? (
                             <span className="flex items-center">
