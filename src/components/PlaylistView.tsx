@@ -127,7 +127,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
 
       {/* Track Info */}
       <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden hidden min-[480px]:block">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden hidden sm:block">
           {playlistImageUrl ? (
             <img 
               src={playlistImageUrl} 
