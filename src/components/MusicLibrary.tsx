@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
 import { Track, PendingTrack, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
+import { DropboxSyncDrawer } from "./DropboxSyncDrawer";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
 import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
@@ -119,6 +120,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     const saved = localStorage.getItem('isDropboxSyncExpanded');
     return saved ? JSON.parse(saved) : true;
   });
+  const [isDropboxDrawerOpen, setIsDropboxDrawerOpen] = useState(false);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>(() => {
     const saved = localStorage.getItem('musicLibrarySortField');
@@ -332,9 +334,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         </div>
       </div>
 
-      {/* Collapsible Dropbox Sync Section - Hidden during search and on mobile */}
+      {/* Dropbox Sync Section - Desktop accordion */}
       {!searchTerm && (
-        <Card className="overflow-hidden hidden sm:block">
+        <Card className="overflow-hidden hidden lg:block">
           <div 
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
             onClick={() => {
@@ -377,6 +379,38 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           )}
         </Card>
       )}
+
+      {/* Dropbox Sync Section - Mobile/Tablet button */}
+      {!searchTerm && (
+        <Card className="overflow-hidden lg:hidden">
+          <div 
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => setIsDropboxDrawerOpen(true)}
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
+                <Box className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium text-primary">Dropbox Sync</h3>
+                <p className="text-sm text-muted-foreground">
+                  Browse and import music from Dropbox
+                </p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm">
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Mobile Dropbox Drawer */}
+      <DropboxSyncDrawer
+        isOpen={isDropboxDrawerOpen}
+        onOpenChange={setIsDropboxDrawerOpen}
+        onPendingTracksChange={onPendingTracksChange}
+      />
 
       {/* Dropbox Sync Section */}
 
