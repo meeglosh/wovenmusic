@@ -480,7 +480,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           <div className="flex items-center space-x-3">
             <Button 
               size="lg" 
-              className="rounded-full"
               disabled={playlistTracks.length === 0}
               onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0], playlistTracks)}
             >
