@@ -45,22 +45,68 @@ const App = () => (
               </>
             } />
             
-            {/* All other routes wrapped in AuthProvider */}
-            <Route path="/*" element={
+            {/* Protected routes with AuthProvider wrapper */}
+            <Route path="/auth" element={
               <AuthProvider>
                 <Toaster />
                 <Sonner />
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/auth/verify" element={<AuthVerify />} />
-                  <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-                  <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
-                  <Route path="/dropbox-callback" element={<DropboxCallback />} />
-                  <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
-                  <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
-                  <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <Auth />
+              </AuthProvider>
+            } />
+            <Route path="/auth/verify" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <AuthVerify />
+              </AuthProvider>
+            } />
+            <Route path="/profile-setup" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <ProtectedRoute><ProfileSetup /></ProtectedRoute>
+              </AuthProvider>
+            } />
+            <Route path="/members" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <ProfileProtectedRoute><Members /></ProfileProtectedRoute>
+              </AuthProvider>
+            } />
+            <Route path="/dropbox-callback" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <DropboxCallback />
+              </AuthProvider>
+            } />
+            <Route path="/track/:trackId" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>
+              </AuthProvider>
+            } />
+            <Route path="/privacy-settings" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>
+              </AuthProvider>
+            } />
+            <Route path="/" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <ProfileProtectedRoute><Index /></ProfileProtectedRoute>
+              </AuthProvider>
+            } />
+            <Route path="*" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <NotFound />
               </AuthProvider>
             } />
           </Routes>
