@@ -63,10 +63,19 @@ const PublicPlaylist = () => {
       isLoading,
       error: error?.message,
       playlist: playlist?.name,
+      trackCount: playlist?.tracks?.length,
       userLoading,
       hasUser: !!user,
       currentUrl: window.location.href
     });
+    
+    // Log raw data for debugging
+    if (playlist) {
+      console.log("Full playlist data:", playlist);
+    }
+    if (error) {
+      console.log("Full error:", error);
+    }
   }, [playlistId, shareToken, shouldUseToken, isLoading, error, playlist, userLoading, user]);
 
   // Audio player functionality
@@ -120,32 +129,52 @@ const PublicPlaylist = () => {
     return formatSecondsToDuration(totalSeconds);
   };
 
-  // Show loading state
+  // Show loading state with timeout warning
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md mx-auto px-4">
           <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-white font-bold text-sm">W</span>
           </div>
-          <p className="text-muted-foreground">Loading playlist...</p>
+          <h2 className="text-lg font-semibold mb-2">Loading playlist...</h2>
+          <p className="text-muted-foreground text-sm mb-4">
+            This may take a few seconds
+          </p>
+          <p className="text-xs text-muted-foreground">
+            If this takes longer than 15 seconds, there may be a connection issue.
+          </p>
         </div>
       </div>
     );
   }
 
-  // Show error state
+  // Show error state with detailed debugging
   if (error || !playlist) {
+    const errorMessage = error?.message || "Unknown error occurred";
+    const isTimeout = errorMessage.includes("timeout") || errorMessage.includes("522");
+    
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-xl">!</span>
           </div>
-          <h1 className="text-xl font-semibold mb-2">Playlist Not Found</h1>
-          <p className="text-muted-foreground mb-6">
-            This playlist doesn't exist, isn't public, or has been removed.
+          <h1 className="text-xl font-semibold mb-2">
+            {isTimeout ? "Connection Timeout" : "Playlist Not Found"}
+          </h1>
+          <p className="text-muted-foreground mb-4">
+            {isTimeout 
+              ? "The request timed out. This may be due to a database connection issue."
+              : "This playlist doesn't exist, isn't public, or has been removed."
+            }
           </p>
+          <div className="text-xs text-muted-foreground mb-6 p-2 bg-muted rounded text-left">
+            <p><strong>Debug info:</strong></p>
+            <p>Error: {errorMessage}</p>
+            <p>Token: {shareToken || "none"}</p>
+            <p>Playlist ID: {playlistId || "none"}</p>
+          </div>
           <Button onClick={() => navigate("/")} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Home
