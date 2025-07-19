@@ -29,8 +29,20 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes - NO AuthProvider wrapper */}
-            <Route path="/playlist/shared" element={<TestPublicPlaylist />} />
-            <Route path="/playlist/:playlistId" element={<TestPublicPlaylist />} />
+            <Route path="/playlist/shared" element={
+              <>
+                <Toaster />
+                <Sonner />
+                <PublicPlaylist />
+              </>
+            } />
+            <Route path="/playlist/:playlistId" element={
+              <>
+                <Toaster />
+                <Sonner />
+                <PublicPlaylist />
+              </>
+            } />
             
             {/* All other routes wrapped in AuthProvider */}
             <Route path="/*" element={
