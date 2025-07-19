@@ -120,7 +120,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
                   readOnly
                   className="flex-1"
                 />
-                <Button onClick={copyShareLink} size="icon" variant="outline">
+                <Button onClick={copyShareLink} size="icon" variant="outline" className="text-primary hover:text-primary">
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
