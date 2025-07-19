@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import TrackView from "./pages/TrackView";
 import PrivacySettings from "./pages/PrivacySettings";
 import PublicPlaylist from "./pages/PublicPlaylist";
+import TestPublicPlaylist from "./pages/TestPublicPlaylist";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfileProtectedRoute from "./components/ProfileProtectedRoute";
 
@@ -28,20 +29,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes - NO AuthProvider wrapper */}
-            <Route path="/playlist/:playlistId" element={
-              <>
-                <Toaster />
-                <Sonner />
-                <PublicPlaylist />
-              </>
-            } />
-            <Route path="/playlist/shared" element={
-              <>
-                <Toaster />
-                <Sonner />
-                <PublicPlaylist />
-              </>
-            } />
+            <Route path="/playlist/:playlistId" element={<TestPublicPlaylist />} />
+            <Route path="/playlist/shared" element={<TestPublicPlaylist />} />
             
             {/* All other routes wrapped in AuthProvider */}
             <Route path="/*" element={
