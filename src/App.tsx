@@ -31,6 +31,7 @@ const App = () => (
             {/* Public routes - NO AuthProvider wrapper */}
             <Route path="/playlist/shared" element={
               <>
+                {console.log("Route matched: /playlist/shared")}
                 <Toaster />
                 <Sonner />
                 <PublicPlaylist />
