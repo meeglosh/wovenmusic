@@ -156,6 +156,17 @@ const Index = () => {
     );
   }
 
+  // Handle playlist share token in URL
+  const playlistToken = searchParams.get('playlist');
+  
+  // Redirect to public playlist page if playlist token is present
+  useEffect(() => {
+    if (playlistToken) {
+      // Navigate to the PublicPlaylist component with the token as a query param
+      navigate(`/playlist/shared?token=${playlistToken}`, { replace: true });
+    }
+  }, [playlistToken, navigate]);
+
   // Check if we should show empty state or main library
   const hasNoContent = tracks.length === 0 && playlists.length === 0;
   const isDropboxRoute = searchParams.get('dropbox') === 'true';

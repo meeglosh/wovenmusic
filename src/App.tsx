@@ -15,6 +15,7 @@ import DropboxCallback from "./pages/DropboxCallback";
 import NotFound from "./pages/NotFound";
 import TrackView from "./pages/TrackView";
 import PrivacySettings from "./pages/PrivacySettings";
+import PublicPlaylist from "./pages/PublicPlaylist";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfileProtectedRoute from "./components/ProfileProtectedRoute";
 
@@ -34,6 +35,8 @@ const App = () => (
               <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
               <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
               <Route path="/dropbox-callback" element={<DropboxCallback />} />
+              <Route path="/playlist/:playlistId" element={<PublicPlaylist />} />
+              <Route path="/playlist/shared" element={<PublicPlaylist />} />
               <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
               <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
               <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
