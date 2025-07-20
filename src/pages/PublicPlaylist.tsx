@@ -16,6 +16,7 @@ import { User } from "@supabase/supabase-js";
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
   console.log("Rendering PublicPlaylist", { pathname: window.location.pathname, href: window.location.href });
+  console.log("Current search params:", window.location.search);
   
   const { playlistId } = useParams<{ playlistId: string }>();
   const [searchParams] = useSearchParams();
