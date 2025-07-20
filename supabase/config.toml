@@ -1,0 +1,11 @@
+project_id = "woakvdhlpludrttjixxq"
+
+[functions.send-invitation]
+verify_jwt = false
+
+[functions.refresh-dropbox-token]
+verify_jwt = false
+
+[functions.transcode-audio]
+runtime = "node"
+verify_jwt = false

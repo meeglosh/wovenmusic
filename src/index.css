@@ -1,0 +1,468 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-1: 231 89% 27%;
+    --color-2: 78 86% 54%;
+    --color-3: 259 39% 29%;
+    --color-4: 57 90% 83%;
+    --color-5: 217 67% 37%;
+    --color-6: 190 80% 100%;
+    --color-7: 230 87% 29%;
+    --color-8: 44 91% 80%;
+    --color-9: 235 20% 33%;
+    --color-10: 35 78% 96%;
+    --color-11: 313 84% 26%;
+    --color-12: 64 94% 78%;
+    --color-13: 30 11% 4%;
+    --color-14: 60 9% 98%;
+    --color-15: 252 66% 20%;
+    --color-16: 58 92% 52%;
+    
+    --background: var(--color-2);
+    --foreground: var(--color-1);
+
+    --card: var(--color-2);
+    --card-foreground: var(--color-1);
+
+    --popover: var(--color-2);
+    --popover-foreground: var(--color-1);
+
+    --primary: var(--color-1);
+    --primary-foreground: var(--color-2);
+
+    --secondary: var(--color-2);
+    --secondary-foreground: var(--color-1);
+
+    --muted: var(--color-2);
+    --muted-foreground: var(--color-1);
+
+    --accent: var(--color-1);
+    --accent-foreground: var(--color-2);
+
+    --destructive: 0 80% 50%;
+    --destructive-foreground: var(--color-2);
+
+    --border: var(--color-1);
+    --input: var(--color-2);
+    --ring: var(--color-1);
+
+    --radius: 0.75rem;
+  }
+
+  /* Neon Garden - navy text on yellow-green background */
+  .neon-garden {
+    color: var(--color-1);
+    background-color: var(--color-2);
+    --background: var(--color-2);
+    --foreground: var(--color-1);
+    --card: var(--color-2);
+    --card-foreground: var(--color-1);
+    --popover: var(--color-2);
+    --popover-foreground: var(--color-1);
+    --primary: var(--color-1);
+    --primary-foreground: var(--color-2);
+    --secondary: var(--color-2);
+    --secondary-foreground: var(--color-1);
+    --muted: var(--color-2);
+    --muted-foreground: var(--color-1);
+    --accent: var(--color-1);
+    --accent-foreground: var(--color-2);
+    --border: var(--color-1);
+    --input: var(--color-2);
+    --ring: var(--color-1);
+  }
+
+  /* Midnight Glow - yellow-green text on navy background */
+  .midnight-glow {
+    color: var(--color-2);
+    background-color: var(--color-1);
+    --background: var(--color-1);
+    --foreground: var(--color-2);
+    --card: var(--color-1);
+    --card-foreground: var(--color-2);
+    --popover: var(--color-1);
+    --popover-foreground: var(--color-2);
+    --primary: var(--color-2);
+    --primary-foreground: var(--color-1);
+    --secondary: var(--color-1);
+    --secondary-foreground: var(--color-2);
+    --muted: var(--color-1);
+    --muted-foreground: var(--color-2);
+    --accent: var(--color-2);
+    --accent-foreground: var(--color-1);
+    --border: var(--color-2);
+    --input: var(--color-1);
+    --ring: var(--color-2);
+  }
+
+  /* Royal Parchment - purple text on cream background */
+  .royal-parchment {
+    color: var(--color-3);
+    background-color: var(--color-4);
+    --background: var(--color-4);
+    --foreground: var(--color-3);
+    --card: var(--color-4);
+    --card-foreground: var(--color-3);
+    --popover: var(--color-4);
+    --popover-foreground: var(--color-3);
+    --primary: var(--color-3);
+    --primary-foreground: var(--color-4);
+    --secondary: var(--color-4);
+    --secondary-foreground: var(--color-3);
+    --muted: var(--color-4);
+    --muted-foreground: var(--color-3);
+    --accent: var(--color-3);
+    --accent-foreground: var(--color-4);
+    --border: var(--color-3);
+    --input: var(--color-4);
+    --ring: var(--color-3);
+  }
+
+  /* Violet Dreams - cream text on purple background */
+  .violet-dreams {
+    color: var(--color-4);
+    background-color: var(--color-3);
+    --background: var(--color-3);
+    --foreground: var(--color-4);
+    --card: var(--color-3);
+    --card-foreground: var(--color-4);
+    --popover: var(--color-3);
+    --popover-foreground: var(--color-4);
+    --primary: var(--color-4);
+    --primary-foreground: var(--color-3);
+    --secondary: var(--color-3);
+    --secondary-foreground: var(--color-4);
+    --muted: var(--color-3);
+    --muted-foreground: var(--color-4);
+    --accent: var(--color-4);
+    --accent-foreground: var(--color-3);
+    --border: var(--color-4);
+    --input: var(--color-3);
+    --ring: var(--color-4);
+  }
+
+  /* Glacial Syntax - blue text on cyan-white background */
+  .glacial-syntax {
+    color: var(--color-5);
+    background-color: var(--color-6);
+    --background: var(--color-6);
+    --foreground: var(--color-5);
+    --card: var(--color-6);
+    --card-foreground: var(--color-5);
+    --popover: var(--color-6);
+    --popover-foreground: var(--color-5);
+    --primary: var(--color-5);
+    --primary-foreground: var(--color-6);
+    --secondary: var(--color-6);
+    --secondary-foreground: var(--color-5);
+    --muted: var(--color-6);
+    --muted-foreground: var(--color-5);
+    --accent: var(--color-5);
+    --accent-foreground: var(--color-6);
+    --border: var(--color-5);
+    --input: var(--color-6);
+    --ring: var(--color-5);
+  }
+
+  /* Cryogenic Resonance - cyan-white text on blue background */
+  .cryogenic-resonance {
+    color: var(--color-6);
+    background-color: var(--color-5);
+    --background: var(--color-5);
+    --foreground: var(--color-6);
+    --card: var(--color-5);
+    --card-foreground: var(--color-6);
+    --popover: var(--color-5);
+    --popover-foreground: var(--color-6);
+    --primary: var(--color-6);
+    --primary-foreground: var(--color-5);
+    --secondary: var(--color-5);
+    --secondary-foreground: var(--color-6);
+    --muted: var(--color-5);
+    --muted-foreground: var(--color-6);
+    --accent: var(--color-6);
+    --accent-foreground: var(--color-5);
+    --border: var(--color-6);
+    --input: var(--color-5);
+    --ring: var(--color-6);
+  }
+
+  /* Aureate Membrane - deep blue text on cream background */
+  .aureate-membrane {
+    color: var(--color-7);
+    background-color: var(--color-8);
+    --background: var(--color-8);
+    --foreground: var(--color-7);
+    --card: var(--color-8);
+    --card-foreground: var(--color-7);
+    --popover: var(--color-8);
+    --popover-foreground: var(--color-7);
+    --primary: var(--color-7);
+    --primary-foreground: var(--color-8);
+    --secondary: var(--color-8);
+    --secondary-foreground: var(--color-7);
+    --muted: var(--color-8);
+    --muted-foreground: var(--color-7);
+    --accent: var(--color-7);
+    --accent-foreground: var(--color-8);
+    --border: var(--color-7);
+    --input: var(--color-8);
+    --ring: var(--color-7);
+  }
+
+  /* Liminal Aureole - cream text on deep blue background */
+  .liminal-aureole {
+    color: var(--color-8);
+    background-color: var(--color-7);
+    --background: var(--color-7);
+    --foreground: var(--color-8);
+    --card: var(--color-7);
+    --card-foreground: var(--color-8);
+    --popover: var(--color-7);
+    --popover-foreground: var(--color-8);
+    --primary: var(--color-8);
+    --primary-foreground: var(--color-7);
+    --secondary: var(--color-7);
+    --secondary-foreground: var(--color-8);
+    --muted: var(--color-7);
+    --muted-foreground: var(--color-8);
+    --accent: var(--color-8);
+    --accent-foreground: var(--color-7);
+    --border: var(--color-8);
+    --input: var(--color-7);
+    --ring: var(--color-8);
+  }
+
+  /* Umbral Manuscript - gray-blue text on off-white background */
+  .umbral-manuscript {
+    color: var(--color-9);
+    background-color: var(--color-10);
+    --background: var(--color-10);
+    --foreground: var(--color-9);
+    --card: var(--color-10);
+    --card-foreground: var(--color-9);
+    --popover: var(--color-10);
+    --popover-foreground: var(--color-9);
+    --primary: var(--color-9);
+    --primary-foreground: var(--color-10);
+    --secondary: var(--color-10);
+    --secondary-foreground: var(--color-9);
+    --muted: var(--color-10);
+    --muted-foreground: var(--color-9);
+    --accent: var(--color-9);
+    --accent-foreground: var(--color-10);
+    --border: var(--color-9);
+    --input: var(--color-10);
+    --ring: var(--color-9);
+  }
+
+  /* Spectral Palimpsest - off-white text on gray-blue background */
+  .spectral-palimpsest {
+    color: var(--color-10);
+    background-color: var(--color-9);
+    --background: var(--color-9);
+    --foreground: var(--color-10);
+    --card: var(--color-9);
+    --card-foreground: var(--color-10);
+    --popover: var(--color-9);
+    --popover-foreground: var(--color-10);
+    --primary: var(--color-10);
+    --primary-foreground: var(--color-9);
+    --secondary: var(--color-9);
+    --secondary-foreground: var(--color-10);
+    --muted: var(--color-9);
+    --muted-foreground: var(--color-10);
+    --accent: var(--color-10);
+    --accent-foreground: var(--color-9);
+    --border: var(--color-10);
+    --input: var(--color-9);
+    --ring: var(--color-10);
+  }
+
+  /* Chromatic Nexus - magenta text on yellow background */
+  .chromatic-nexus {
+    color: var(--color-11);
+    background-color: var(--color-12);
+    --background: var(--color-12);
+    --foreground: var(--color-11);
+    --card: var(--color-12);
+    --card-foreground: var(--color-11);
+    --popover: var(--color-12);
+    --popover-foreground: var(--color-11);
+    --primary: var(--color-11);
+    --primary-foreground: var(--color-12);
+    --secondary: var(--color-12);
+    --secondary-foreground: var(--color-11);
+    --muted: var(--color-12);
+    --muted-foreground: var(--color-11);
+    --accent: var(--color-11);
+    --accent-foreground: var(--color-12);
+    --border: var(--color-11);
+    --input: var(--color-12);
+    --ring: var(--color-11);
+  }
+
+  /* Magenta Oscillation - yellow text on magenta background */
+  .magenta-oscillation {
+    color: var(--color-12);
+    background-color: var(--color-11);
+    --background: var(--color-11);
+    --foreground: var(--color-12);
+    --card: var(--color-11);
+    --card-foreground: var(--color-12);
+    --popover: var(--color-11);
+    --popover-foreground: var(--color-12);
+    --primary: var(--color-12);
+    --primary-foreground: var(--color-11);
+    --secondary: var(--color-11);
+    --secondary-foreground: var(--color-12);
+    --muted: var(--color-11);
+    --muted-foreground: var(--color-12);
+    --accent: var(--color-12);
+    --accent-foreground: var(--color-11);
+    --border: var(--color-12);
+    --input: var(--color-11);
+    --ring: var(--color-12);
+  }
+
+  /* Silurian Threshold - dark stone text on light stone background */
+  .silurian-threshold {
+    color: var(--color-13);
+    background-color: var(--color-14);
+    --background: var(--color-14);
+    --foreground: var(--color-13);
+    --card: var(--color-14);
+    --card-foreground: var(--color-13);
+    --popover: var(--color-14);
+    --popover-foreground: var(--color-13);
+    --primary: var(--color-13);
+    --primary-foreground: var(--color-14);
+    --secondary: var(--color-14);
+    --secondary-foreground: var(--color-13);
+    --muted: var(--color-14);
+    --muted-foreground: var(--color-13);
+    --accent: var(--color-13);
+    --accent-foreground: var(--color-14);
+    --border: var(--color-13);
+    --input: var(--color-14);
+    --ring: var(--color-13);
+  }
+
+  /* Cambrian Resonance - light stone text on dark stone background */
+  .cambrian-resonance {
+    color: var(--color-14);
+    background-color: var(--color-13);
+    --background: var(--color-13);
+    --foreground: var(--color-14);
+    --card: var(--color-13);
+    --card-foreground: var(--color-14);
+    --popover: var(--color-13);
+    --popover-foreground: var(--color-14);
+    --primary: var(--color-14);
+    --primary-foreground: var(--color-13);
+    --secondary: var(--color-13);
+    --secondary-foreground: var(--color-14);
+    --muted: var(--color-13);
+    --muted-foreground: var(--color-14);
+    --accent: var(--color-14);
+    --accent-foreground: var(--color-13);
+    --border: var(--color-14);
+    --input: var(--color-13);
+    --ring: var(--color-14);
+  }
+
+  /* Psychedelic Membrane - dark indigo text on electric yellow background */
+  .psychedelic-membrane {
+    color: var(--color-15);
+    background-color: var(--color-16);
+    --background: var(--color-16);
+    --foreground: var(--color-15);
+    --card: var(--color-16);
+    --card-foreground: var(--color-15);
+    --popover: var(--color-16);
+    --popover-foreground: var(--color-15);
+    --primary: var(--color-15);
+    --primary-foreground: var(--color-16);
+    --secondary: var(--color-16);
+    --secondary-foreground: var(--color-15);
+    --muted: var(--color-16);
+    --muted-foreground: var(--color-15);
+    --accent: var(--color-15);
+    --accent-foreground: var(--color-16);
+    --border: var(--color-15);
+    --input: var(--color-16);
+    --ring: var(--color-15);
+  }
+
+  /* Voltaic Sublimation - electric yellow text on dark indigo background */
+  .voltaic-sublimation {
+    color: var(--color-16);
+    background-color: var(--color-15);
+    --background: var(--color-15);
+    --foreground: var(--color-16);
+    --card: var(--color-15);
+    --card-foreground: var(--color-16);
+    --popover: var(--color-15);
+    --popover-foreground: var(--color-16);
+    --primary: var(--color-16);
+    --primary-foreground: var(--color-15);
+    --secondary: var(--color-15);
+    --secondary-foreground: var(--color-16);
+    --muted: var(--color-15);
+    --muted-foreground: var(--color-16);
+    --accent: var(--color-16);
+    --accent-foreground: var(--color-15);
+    --border: var(--color-16);
+    --input: var(--color-15);
+    --ring: var(--color-16);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Global heading styles - use REM light font for all headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-rem font-light;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/20;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted/80;
+  }
+}
+
+/* Audio waveform animation */
+@keyframes wave {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+.wave-bar {
+  animation: wave 1.5s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { animation-delay: 0.4s; }
