@@ -159,7 +159,7 @@ const PublicPlaylist = () => {
           <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-white font-bold text-sm">W</span>
           </div>
-          <h2 className="text-lg font-semibold mb-2">Loading playlist...</h2>
+          <h2 className="text-lg font-semibold mb-2 text-primary">Loading playlist...</h2>
           <p className="text-muted-foreground text-sm mb-4">
             This may take a few seconds
           </p>
