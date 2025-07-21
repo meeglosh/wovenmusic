@@ -631,20 +631,6 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
-              
-              {files.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                    className="mr-1"
-                    data-indeterminate={isIndeterminate}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {selectedFiles.size} of {files.length} selected
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </DrawerHeader>
@@ -656,6 +642,20 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
             </div>
           ) : (
             <div className="space-y-2">
+              {/* Select All Checkbox */}
+              {files.length > 0 && (
+                <div className="flex items-center gap-2 pb-2 mb-2 border-b">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    className="mr-1"
+                    data-indeterminate={isIndeterminate}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {selectedFiles.size} of {files.length} selected
+                  </span>
+                </div>
+              )}
               {/* Folders */}
               {folders.map((folder) => (
                 <div
