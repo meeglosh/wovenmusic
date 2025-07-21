@@ -13,6 +13,8 @@ import { formatSecondsToDuration, parseDurationToSeconds, getCleanTitle } from "
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import Player from "@/components/Player";
+import { useClosedBeta } from "@/hooks/useClosedBeta";
+import ClosedBetaSplash from "@/components/ClosedBetaSplash";
 
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
@@ -29,6 +31,9 @@ const PublicPlaylist = () => {
   const [userLoading, setUserLoading] = useState(true);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [shareButtonCopied, setShareButtonCopied] = useState(false);
+  const [showClosedBetaSplash, setShowClosedBetaSplash] = useState(false);
+  
+  const { isClosedBeta } = useClosedBeta();
 
   // Check for authenticated user without redirecting
   useEffect(() => {
@@ -132,7 +137,11 @@ const PublicPlaylist = () => {
   };
 
   const handleSignIn = () => {
-    navigate("/auth");
+    if (isClosedBeta) {
+      setShowClosedBetaSplash(true);
+    } else {
+      navigate("/auth");
+    }
   };
 
   const handleSharePlaylist = async () => {
@@ -214,6 +223,11 @@ const PublicPlaylist = () => {
         </div>
       </div>
     );
+  }
+
+  // Show closed beta splash if triggered by sign-in attempt
+  if (showClosedBetaSplash) {
+    return <ClosedBetaSplash />;
   }
 
   return (

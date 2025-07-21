@@ -54,21 +54,9 @@ const ClosedBetaChecker = ({ isClosedBeta, isRouteAllowed, location }: { isClose
 const AppRoutes = ({ isClosedBeta }: { isClosedBeta: boolean }) => {
   return (
     <Routes>
-      {/* Public routes during closed beta become protected */}
-      <Route path="/playlist/shared" element={
-        isClosedBeta ? (
-          <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
-        ) : (
-          <PublicPlaylist />
-        )
-      } />
-      <Route path="/playlist/:playlistId" element={
-        isClosedBeta ? (
-          <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
-        ) : (
-          <PublicPlaylist />
-        )
-      } />
+      {/* Public playlist routes - always accessible */}
+      <Route path="/playlist/shared" element={<PublicPlaylist />} />
+      <Route path="/playlist/:playlistId" element={<PublicPlaylist />} />
       
       {/* Protected routes */}
       <Route path="/auth" element={<Auth />} />
