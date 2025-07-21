@@ -13,7 +13,10 @@ import {
   Music,
   Loader2,
   X,
-  CheckCircle2
+  CheckCircle2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
@@ -58,6 +61,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const [lastAuthError, setLastAuthError] = useState<number>(0);
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -251,6 +255,20 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       setSelectedFiles(new Set(files.map(file => file.path_lower)));
     }
   };
+
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const sortedFolders = [...folders].sort((a, b) => {
+    const comparison = a.name.localeCompare(b.name);
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+
+  const sortedFiles = [...files].sort((a, b) => {
+    const comparison = a.name.localeCompare(b.name);
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
 
   const checkConnection = async () => {
     try {
@@ -631,6 +649,23 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
+              
+              {/* Sort Button */}
+              {(folders.length > 0 || files.length > 0) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSortOrder}
+                  disabled={isLoading}
+                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  {sortOrder === 'asc' ? (
+                    <ArrowUp className="w-4 h-4" />
+                  ) : (
+                    <ArrowDown className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
             </div>
           )}
         </DrawerHeader>
@@ -656,8 +691,8 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   </span>
                 </div>
               )}
-              {/* Folders */}
-              {folders.map((folder) => (
+               {/* Folders */}
+              {sortedFolders.map((folder) => (
                 <div
                   key={folder.path_lower}
                   className="flex items-center p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer"
@@ -672,7 +707,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               ))}
 
               {/* Files */}
-              {files.map((file) => {
+              {sortedFiles.map((file) => {
                 const isSelected = selectedFiles.has(file.path_lower);
                 const isLoadingDuration = loadingDurations.has(file.path_lower);
                 const progress = importProgress[file.path_lower];
