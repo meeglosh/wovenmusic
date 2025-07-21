@@ -913,7 +913,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
               size="sm"
               onClick={() => loadFolders(currentPath)}
               disabled={isLoading}
-              className="w-full"
+              className="w-full max-w-[343px]"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
