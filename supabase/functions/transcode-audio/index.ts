@@ -56,7 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Downloaded audio file, size:', audioData.length, 'bytes');
 
     // Create temporary files for input and output
-    const inputPath = `/tmp/input_${Date.now()}.aif`;
+    // Detect input file extension from original filename
+    const inputExtension = fileName.toLowerCase().split('.').pop() || 'audio';
+    const inputPath = `/tmp/input_${Date.now()}.${inputExtension}`;
     const outputExtension = outputFormat === 'aac' ? 'm4a' : 'mp3';
     const outputPath = `/tmp/output_${Date.now()}.${outputExtension}`;
 
@@ -134,7 +136,6 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate storage path
     const timestamp = Date.now();
     const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const outputExtension = outputFormat === 'aac' ? 'm4a' : 'mp3';
     const storagePath = `${timestamp}_${safeName}.${outputExtension}`;
 
     console.log('Uploading to storage:', storagePath);
