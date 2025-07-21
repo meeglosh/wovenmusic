@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, ExternalLink, LogIn } from "lucide-react";
+import { Play, Pause, ExternalLink, LogIn, Share2, Check, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Track } from "@/types/music";
 import { formatSecondsToDuration, parseDurationToSeconds, getCleanTitle } from "@/types/music";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
+import Player from "@/components/Player";
 
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
@@ -27,6 +28,7 @@ const PublicPlaylist = () => {
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [shareButtonCopied, setShareButtonCopied] = useState(false);
 
   // Check for authenticated user without redirecting
   useEffect(() => {
@@ -121,6 +123,24 @@ const PublicPlaylist = () => {
     navigate("/auth");
   };
 
+  const handleSharePlaylist = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      setShareButtonCopied(true);
+      toast({
+        title: "Link copied!",
+        description: "Playlist link has been copied to your clipboard"
+      });
+      setTimeout(() => setShareButtonCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually from your browser"
+      });
+    }
+  };
+
   const calculateTotalDuration = () => {
     if (!playlist?.tracks) return "0:00";
     
@@ -194,23 +214,8 @@ const PublicPlaylist = () => {
       <div className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => window.location.href = "/"}
-              className="text-primary hover:text-primary/80"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
+            <span className="font-thin text-xl text-primary">Wovenmusic</span>
             
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-to-br from-primary to-purple-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-xs">W</span>
-              </div>
-              <span className="font-semibold text-primary">Woven Music</span>
-            </div>
-
             {!user && (
               <Button onClick={handleSignIn} size="sm" className="bg-primary hover:bg-primary/90">
                 <LogIn className="w-4 h-4 mr-2" />
@@ -243,7 +248,24 @@ const PublicPlaylist = () => {
           
           <div className="flex-1 space-y-4">
             <div>
-              <Badge variant="secondary" className="mb-2">Public Playlist</Badge>
+              <div className="flex items-center justify-between mb-2">
+                <Badge variant="secondary" className="text-left">Public Playlist</Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSharePlaylist}
+                  className="border-2"
+                >
+                  {shareButtonCopied ? (
+                    <Check className="w-4 h-4 mr-2 text-primary" />
+                  ) : (
+                    <Share2 className="w-4 h-4 mr-2 text-primary" />
+                  )}
+                  <span className="text-primary">
+                    {shareButtonCopied ? "Copied!" : "Share"}
+                  </span>
+                </Button>
+              </div>
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
                 {playlist.name}
               </h1>
@@ -266,10 +288,10 @@ const PublicPlaylist = () => {
               <Button 
                 variant="outline" 
                 onClick={handleRestrictedAction}
-                className="border-primary/20 hover:border-primary"
+                className="border-2 border-primary/20 hover:border-primary"
               >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Open in App
+                <ExternalLink className="w-4 h-4 mr-2 text-primary" />
+                <span className="text-primary">Open in App</span>
               </Button>
             </div>
           </div>
@@ -279,7 +301,7 @@ const PublicPlaylist = () => {
 
         {/* Track List */}
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold mb-4">Tracks</h2>
+          <h2 className="text-xl font-semibold mb-4 text-primary">Tracks</h2>
           
           {playlist.tracks.length === 0 ? (
             <Card>
@@ -356,6 +378,21 @@ const PublicPlaylist = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Sticky Media Player */}
+      {currentTrack && (
+        <Player
+          track={currentTrack}
+          isPlaying={isPlaying}
+          currentTime={0} // You'll need to track this in useAudioPlayer
+          duration={parseDurationToSeconds(currentTrack.duration)}
+          volume={1} // You'll need to track this in useAudioPlayer
+          onPlayPause={togglePlayPause}
+          onSeek={() => {}} // You'll need to implement seek in useAudioPlayer
+          onVolumeChange={() => {}} // You'll need to implement volume in useAudioPlayer
+          formatTime={(time: number) => formatSecondsToDuration(time)}
+        />
       )}
     </div>
   );
