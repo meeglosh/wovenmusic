@@ -103,6 +103,27 @@ export type Database = {
         }
         Relationships: []
       }
+      early_access_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           created_at: string
@@ -247,6 +268,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          closed_beta_enabled: boolean | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -260,6 +282,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          closed_beta_enabled?: boolean | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -273,6 +296,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          closed_beta_enabled?: boolean | null
           created_at?: string
           email?: string | null
           full_name?: string | null
