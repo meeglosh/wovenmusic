@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,122 +24,9 @@ import { useClosedBeta } from "./hooks/useClosedBeta";
 
 const queryClient = new QueryClient();
 
-// Wrapper component to handle closed beta logic
-const AppContent = () => {
-  const location = useLocation();
-  const { isClosedBeta, isRouteAllowed } = useClosedBeta();
-
-  // During closed beta, check if route should be protected
-  if (isClosedBeta && !isRouteAllowed(location.pathname)) {
-    return (
-      <>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <ClosedBetaProtectedRoute />
-        </AuthProvider>
-      </>
-    );
-  }
-
-  return (
-    <Routes>
-      {/* Public routes during closed beta become protected */}
-      <Route path="/playlist/shared" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          {isClosedBeta ? (
-            <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
-          ) : (
-            <PublicPlaylist />
-          )}
-        </AuthProvider>
-      } />
-      <Route path="/playlist/:playlistId" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          {isClosedBeta ? (
-            <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
-          ) : (
-            <PublicPlaylist />
-          )}
-        </AuthProvider>
-      } />
-      
-      {/* Protected routes with AuthProvider wrapper */}
-      <Route path="/auth" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <Auth />
-        </AuthProvider>
-      } />
-      <Route path="/auth/verify" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <AuthVerify />
-        </AuthProvider>
-      } />
-      <Route path="/profile-setup" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <ProtectedRoute><ProfileSetup /></ProtectedRoute>
-        </AuthProvider>
-      } />
-      <Route path="/members" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <ProfileProtectedRoute><Members /></ProfileProtectedRoute>
-        </AuthProvider>
-      } />
-      <Route path="/dropbox-callback" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <DropboxCallback />
-        </AuthProvider>
-      } />
-      <Route path="/track/:trackId" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>
-        </AuthProvider>
-      } />
-      <Route path="/privacy-settings" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>
-        </AuthProvider>
-      } />
-      <Route path="/" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <ProfileProtectedRoute><Index /></ProfileProtectedRoute>
-        </AuthProvider>
-      } />
-      <Route path="*" element={
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <NotFound />
-        </AuthProvider>
-      } />
-    </Routes>
-  );
-};
-
-// Component to handle showing splash screen vs redirecting authenticated users
-const ClosedBetaProtectedRoute = () => {
+// Component to handle closed beta logic with authentication awareness
+const ClosedBetaChecker = ({ isClosedBeta, isRouteAllowed, location }: { isClosedBeta: boolean, isRouteAllowed: (pathname: string, isAuthenticated?: boolean) => boolean, location: any }) => {
   const { user, loading } = useAuth();
-  const location = useLocation();
 
   if (loading) {
     return (
@@ -155,13 +41,61 @@ const ClosedBetaProtectedRoute = () => {
     );
   }
 
-  // If user is authenticated, redirect them to the main app
-  if (user) {
-    return <ProfileProtectedRoute><Index /></ProfileProtectedRoute>;
+  // During closed beta, check if route should be protected
+  if (isClosedBeta && !isRouteAllowed(location.pathname, !!user)) {
+    // Show closed beta splash for non-authenticated users
+    return <ClosedBetaSplash />;
   }
 
-  // Show closed beta splash for non-authenticated users
-  return <ClosedBetaSplash />;
+  return <AppRoutes isClosedBeta={isClosedBeta} />;
+};
+
+// Main routing component
+const AppRoutes = ({ isClosedBeta }: { isClosedBeta: boolean }) => {
+  return (
+    <Routes>
+      {/* Public routes during closed beta become protected */}
+      <Route path="/playlist/shared" element={
+        isClosedBeta ? (
+          <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
+        ) : (
+          <PublicPlaylist />
+        )
+      } />
+      <Route path="/playlist/:playlistId" element={
+        isClosedBeta ? (
+          <ProtectedRoute><PublicPlaylist /></ProtectedRoute>
+        ) : (
+          <PublicPlaylist />
+        )
+      } />
+      
+      {/* Protected routes */}
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/verify" element={<AuthVerify />} />
+      <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
+      <Route path="/members" element={<ProfileProtectedRoute><Members /></ProfileProtectedRoute>} />
+      <Route path="/dropbox-callback" element={<DropboxCallback />} />
+      <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
+      <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
+      <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
+// Wrapper component to handle closed beta logic
+const AppContent = () => {
+  const location = useLocation();
+  const { isClosedBeta, isRouteAllowed } = useClosedBeta();
+
+  return (
+    <AuthProvider>
+      <Toaster />
+      <Sonner />
+      <ClosedBetaChecker isClosedBeta={isClosedBeta} isRouteAllowed={isRouteAllowed} location={location} />
+    </AuthProvider>
+  );
 };
 
 const App = () => (

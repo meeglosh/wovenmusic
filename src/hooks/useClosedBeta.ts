@@ -20,7 +20,12 @@ export const useClosedBeta = () => {
   }, [searchParams]);
 
   // Check if current route should be allowed during closed beta
-  const isRouteAllowed = (pathname: string) => {
+  const isRouteAllowed = (pathname: string, isAuthenticated = false) => {
+    // If user is authenticated, allow all routes
+    if (isAuthenticated) {
+      return true;
+    }
+    
     const allowedRoutes = [
       '/auth',
       '/auth/verify', 
