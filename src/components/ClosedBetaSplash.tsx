@@ -5,11 +5,13 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ClosedBetaSplash = () => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleEarlyAccessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +116,20 @@ const ClosedBetaSplash = () => {
             )}
           </Button>
         </form>
+
+        {/* Sign In Link */}
+        <div className="pt-4 border-t">
+          <p className="text-sm text-muted-foreground mb-3">
+            Already have an invitation?
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/auth")}
+            className="w-full"
+          >
+            Sign In
+          </Button>
+        </div>
 
         {/* Value Proposition */}
         <div className="pt-4 border-t space-y-3">
