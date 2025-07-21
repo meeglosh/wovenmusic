@@ -490,12 +490,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </Card>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3">
             <Button 
               size="lg" 
               disabled={playlistTracks.length === 0}
               onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0], playlistTracks)}
-              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
+              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
             >
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
@@ -504,7 +504,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowAddTracksModal(true)}
-              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
+              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
             >
               <Plus className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Add Tracks</span>
@@ -513,7 +513,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowShareModal(true)}
-              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
+              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
             >
               <Share2 className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Share</span>
@@ -572,8 +572,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             <div className="sm:hidden">
               <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="lg" className="min-h-[44px] flex-1 justify-center">
-                    More
+                  <Button variant="outline" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
+                    <span className="text-primary">More</span>
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-auto">
