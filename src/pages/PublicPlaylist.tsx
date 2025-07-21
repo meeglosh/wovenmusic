@@ -191,24 +191,22 @@ const PublicPlaylist = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">!</span>
+          <div className="flex justify-center mx-auto mb-4">
+            <img 
+              src="/lovable-uploads/72581c98-2f3b-4984-8aba-04e8a3ef7820.png" 
+              alt="Error" 
+              className="w-32 h-32 object-contain"
+            />
           </div>
           <h1 className="text-xl font-semibold mb-2 text-primary">
             {isTimeout ? "Connection Timeout" : "Playlist Not Found"}
           </h1>
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground mb-6">
             {isTimeout 
               ? "The request timed out. This may be due to a database connection issue."
               : "This weave is absent, veiled, or softly erased."
             }
           </p>
-          <div className="text-xs text-muted-foreground mb-6 p-2 bg-muted rounded text-left">
-            <p><strong>Debug info:</strong></p>
-            <p>Error: {errorMessage}</p>
-            <p>Token: {shareToken || "none"}</p>
-            <p>Playlist ID: {playlistId || "none"}</p>
-          </div>
           <Button onClick={() => navigate("/")} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2 text-primary" />
             <span className="text-primary">Go Home</span>
