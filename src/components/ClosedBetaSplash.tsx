@@ -63,11 +63,11 @@ const ClosedBetaSplash = () => {
       <Card className="max-w-md w-full p-8 text-center space-y-6">
         {/* Logo/Branding */}
         <div className="space-y-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center mx-auto">
-            <span className="text-white font-bold text-2xl">W</span>
+          <div className="w-16 h-16 flex items-center justify-center mx-auto">
+            <img src="/lovable-uploads/3d40f12c-991e-4011-ab75-298ff325bf8a.png" alt="Wovenmusic" className="w-full h-full object-contain" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-primary">Woven Music</h1>
+            <h1 className="text-2xl font-bold text-primary">Wovenmusic</h1>
             <p className="text-muted-foreground text-sm">Collaborative Music Platform</p>
           </div>
         </div>
@@ -79,7 +79,7 @@ const ClosedBetaSplash = () => {
           </div>
           <h2 className="text-xl font-semibold">We're invite-only right now</h2>
           <p className="text-muted-foreground">
-            Woven Music is currently in closed beta as we refine the experience with select users. 
+            Wovenmusic is currently in closed beta as we refine the experience with select users. 
             Join our early access list to be notified when we open up!
           </p>
         </div>
@@ -114,19 +114,19 @@ const ClosedBetaSplash = () => {
 
         {/* Value Proposition */}
         <div className="pt-4 border-t space-y-3">
-          <h3 className="font-medium">What makes Woven special?</h3>
+          <h3 className="font-medium">What makes Wovenmusic special?</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Collaborative music creation and sharing</span>
+              <span>Curating sonic offerings in the shared chamber</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Real-time commenting and feedback</span>
+              <span>Instant ripple-casting across the sonic weave</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Seamless Dropbox integration</span>
+              <span>Dropbox, folded invisibly into the lattice</span>
             </div>
           </div>
         </div>
