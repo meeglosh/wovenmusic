@@ -31,8 +31,8 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
             )}
             onClick={() => onViewChange("library")}
           >
-            <Library className="w-4 h-4 mr-3 text-primary" />
-            <span className="text-base font-semibold text-primary">{libraryTitle}</span>
+            <Library className={`w-4 h-4 mr-3 ${currentView === "library" ? "" : "text-primary"}`} />
+            <span className={`text-base font-semibold ${currentView === "library" ? "" : "text-primary"}`}>{libraryTitle}</span>
           </Button>
         </nav>
       </div>
@@ -86,12 +86,12 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                           className="w-full h-full object-cover rounded"
                         />
                       ) : (
-                        <List className="w-4 h-4 text-primary" />
+                        <List className={`w-4 h-4 ${isSelected ? "" : "text-primary"}`} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <p className="text-base font-semibold text-primary break-words whitespace-normal leading-tight">{playlist.name}</p>
+                        <p className={`text-base font-semibold ${isSelected ? "" : "text-primary"} break-words whitespace-normal leading-tight`}>{playlist.name}</p>
                         <div title={playlist.isPublic ? "Public playlist" : "Private playlist"}>
                           {playlist.isPublic ? (
                             <Globe className="h-3 w-3 text-green-600" />
