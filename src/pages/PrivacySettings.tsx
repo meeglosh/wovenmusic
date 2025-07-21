@@ -152,48 +152,6 @@ export default function PrivacySettings() {
       </div>
 
       <div className="space-y-8">
-        {/* Transcoding Preferences Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Audio Transcoding Preferences
-            </CardTitle>
-            <CardDescription>
-              Choose your preferred format for audio transcoding. This affects how .aif/.aiff files are converted for browser playback.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="transcoding-format"
-                  checked={preferences.outputFormat === 'aac'}
-                  onCheckedChange={(checked) => updateOutputFormat(checked ? 'aac' : 'mp3')}
-                />
-                <Label htmlFor="transcoding-format" className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {preferences.outputFormat === 'aac' ? 'AAC (High Quality)' : 'MP3 (Compatible)'}
-                    </span>
-                    <Badge variant="secondary" className="ml-2">
-                      {preferences.outputFormat.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {preferences.outputFormat === 'aac' 
-                      ? 'Better audio quality at the same bitrate (320kbps)' 
-                      : 'Most compatible with browsers and devices (256kbps)'}
-                  </p>
-                </Label>
-              </div>
-              <div className="text-xs text-muted-foreground p-3 bg-muted rounded-lg">
-                <strong>Note:</strong> This setting only affects future uploads of .aif/.aiff files. 
-                Existing files and other formats are not affected.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Tracks Section */}
         <Card>

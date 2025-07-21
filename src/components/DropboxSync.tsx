@@ -9,6 +9,7 @@ import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { useAddTrack } from "@/hooks/useTracks";
+import { useTranscodingPreferences } from "@/hooks/useTranscodingPreferences";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -71,6 +72,7 @@ const DropboxSync = () => {
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
+  const { preferences } = useTranscodingPreferences();
 
   // Only show privacy browser warning if there's actually an error
   const shouldShowPrivacyWarning = connectionError.includes('blocked') || connectionError.includes('privacy');
@@ -303,8 +305,8 @@ const DropboxSync = () => {
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        // Only include supported formats, exclude .aif/.aiff files
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        // Include all supported formats including .aif/.aiff files that can be transcoded
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
         return supportedExtensions.some(ext => fileName.endsWith(ext));
       });
        
@@ -430,8 +432,8 @@ const DropboxSync = () => {
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        // Only include supported formats, exclude .aif/.aiff files
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        // Include all supported formats including .aif/.aiff files that can be transcoded
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
         const isSupported = supportedExtensions.some(ext => fileName.endsWith(ext));
         
         console.log(`File: ${item.name}, isFile: ${item[".tag"] === "file"}, isSupported: ${isSupported}`);
@@ -573,25 +575,14 @@ const DropboxSync = () => {
     
     filesToSync.forEach(file => {
       const fileName = file.name.toLowerCase();
-      if (fileName.endsWith('.aif') || fileName.endsWith('.aiff')) {
-        unsupportedAifFiles.push(file.name);
-      } else {
-        // Only include truly supported formats
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
-        if (supportedExtensions.some(ext => fileName.endsWith(ext))) {
-          supportedFiles.push(file);
-        }
+      // All formats are now supported including .aif/.aiff files with transcoding
+      const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
+      if (supportedExtensions.some(ext => fileName.endsWith(ext))) {
+        supportedFiles.push(file);
       }
     });
     
-    // Show modal if there are unsupported .aif files
-    if (unsupportedAifFiles.length > 0) {
-      setUnsupportedFiles(unsupportedAifFiles);
-      setSupportedImportCount(supportedFiles.length);
-      setShowUnsupportedModal(true);
-    }
-    
-    // If no supported files, just show modal and return
+    // If no supported files, return early
     if (supportedFiles.length === 0) {
       return;
     }
@@ -678,7 +669,7 @@ const DropboxSync = () => {
           const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
           
           // Transcode and store in Supabase Storage
-          const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
+          const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, fileName, preferences.outputFormat);
           
           // Extract duration from transcoded file
           let finalDuration = '--:--';

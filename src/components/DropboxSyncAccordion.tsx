@@ -30,6 +30,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { FileImportStatus, ImportProgress } from "@/types/fileImport";
+import { useTranscodingPreferences } from "@/hooks/useTranscodingPreferences";
 
 interface DropboxFile {
   name: string;
@@ -61,6 +62,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
+  const { preferences } = useTranscodingPreferences();
 
   const sortItems = (items: DropboxFile[]) => {
     return [...items].sort((a, b) => {
@@ -393,7 +395,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         updateProgress('processing', undefined, 50);
         
         // Transcode with retry logic built into the service
-        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name, preferences.outputFormat);
         finalUrl = transcodeResult.publicUrl;
         updateProgress('processing', undefined, 70);
         

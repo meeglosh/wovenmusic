@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
@@ -110,6 +110,10 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/transcoding-settings")} className="text-primary">
+                <Music className="w-4 h-4 mr-2" />
+                Transcoding
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -156,6 +160,10 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               <DropdownMenuItem onClick={() => navigate("/privacy-settings")} className="text-primary">
                 <Shield className="w-4 h-4 mr-2" />
                 <span className="text-sm">Privacy</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/transcoding-settings")} className="text-primary">
+                <Music className="w-4 h-4 mr-2" />
+                <span className="text-sm">Transcoding</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">

@@ -15,6 +15,7 @@ import DropboxCallback from "./pages/DropboxCallback";
 import NotFound from "./pages/NotFound";
 import TrackView from "./pages/TrackView";
 import PrivacySettings from "./pages/PrivacySettings";
+import TranscodingSettings from "./pages/TranscodingSettings";
 import PublicPlaylist from "./pages/PublicPlaylist";
 import TestPublicPlaylist from "./pages/TestPublicPlaylist";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -66,6 +67,7 @@ const AppRoutes = ({ isClosedBeta }: { isClosedBeta: boolean }) => {
       <Route path="/dropbox-callback" element={<DropboxCallback />} />
       <Route path="/track/:trackId" element={<ProfileProtectedRoute><TrackView /></ProfileProtectedRoute>} />
       <Route path="/privacy-settings" element={<ProfileProtectedRoute><PrivacySettings /></ProfileProtectedRoute>} />
+      <Route path="/transcoding-settings" element={<ProfileProtectedRoute><TranscodingSettings /></ProfileProtectedRoute>} />
       <Route path="/" element={<ProfileProtectedRoute><Index /></ProfileProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
