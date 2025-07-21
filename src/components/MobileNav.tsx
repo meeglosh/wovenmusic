@@ -57,8 +57,8 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                   className="w-full justify-start"
                   onClick={() => handleViewChange("library")}
                 >
-                  <Music className="w-4 h-4 mr-3 text-primary" />
-                  <span className="text-base font-semibold text-primary">{libraryTitle}</span>
+                  <Music className={`w-4 h-4 mr-3 ${currentView === "library" ? "" : "text-primary"}`} />
+                  <span className={`text-base font-semibold ${currentView === "library" ? "" : "text-primary"}`}>{libraryTitle}</span>
                 </Button>
 
                 {/* Playlists */}
@@ -83,8 +83,8 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                              className="w-full justify-start text-left"
                              onClick={() => handlePlaylistSelect(playlist)}
                            >
-                             <ListMusic className="w-4 h-4 mr-3 flex-shrink-0 text-primary" />
-                             <span className="truncate text-base font-semibold text-primary">{playlist.name}</span>
+                             <ListMusic className={`w-4 h-4 mr-3 flex-shrink-0 ${isSelected ? "" : "text-primary"}`} />
+                             <span className={`truncate text-base font-semibold ${isSelected ? "" : "text-primary"}`}>{playlist.name}</span>
                            </Button>
                          );
                        })}
