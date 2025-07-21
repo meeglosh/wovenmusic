@@ -488,11 +488,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </Card>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Button 
               size="lg" 
               disabled={playlistTracks.length === 0}
               onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0], playlistTracks)}
+              className="flex-1 sm:flex-none"
             >
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
@@ -501,6 +502,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowAddTracksModal(true)}
+              className="flex-1 sm:flex-none"
             >
               <Plus className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Add Tracks</span>
@@ -509,6 +511,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowShareModal(true)}
+              className="flex-1 sm:flex-none"
             >
               <Share2 className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Share</span>
