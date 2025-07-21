@@ -54,8 +54,11 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
               <div className="p-4 space-y-4">
                 {/* Library */}
                 <Button
-                  variant={currentView === "library" ? "default" : "ghost"}
-                  className="w-full justify-start"
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    currentView === "library" && "bg-primary/50"
+                  )}
                   onClick={() => handleViewChange("library")}
                 >
                   <Music className={`w-4 h-4 mr-3 ${currentView === "library" ? "" : "text-primary"}`} />
