@@ -572,8 +572,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             <div className="sm:hidden">
               <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
-                    <span className="text-primary">More</span>
+                  <Button variant="ghost" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
+                    <span className="text-primary underline">More</span>
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-auto">
