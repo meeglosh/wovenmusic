@@ -9,7 +9,7 @@ import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Tra
 import { Track, Playlist, getCleanTitle, calculatePlaylistDuration } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
-import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage } from "@/hooks/usePlaylists";
+import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage, useDeletePlaylistImage } from "@/hooks/usePlaylists";
 import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -216,6 +216,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const updatePlaylistVisibility = useUpdatePlaylistVisibility();
   const deletePlaylistMutation = useDeletePlaylist();
   const uploadImageMutation = useUploadPlaylistImage();
+  const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
 
   // Fetch fresh data directly in this component
@@ -391,6 +392,23 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handleDeleteImage = async () => {
+    try {
+      await deleteImageMutation.mutateAsync(playlist.id);
+      
+      toast({
+        title: "Image deleted",
+        description: "Playlist image has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error deleting image",
+        description: "Could not delete image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <Button
@@ -539,6 +557,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     <Image className="w-4 h-4 mr-2" />
                     Change image
                   </DropdownMenuItem>
+                  {playlist.imageUrl && (
+                    <DropdownMenuItem onClick={handleDeleteImage}>
+                      <X className="w-4 h-4 mr-2" />
+                      Delete image
+                    </DropdownMenuItem>
+                  )}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -601,6 +625,19 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                       <Image className="w-4 h-4 mr-3 text-primary" />
                       Change image
                     </Button>
+                    {playlist.imageUrl && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          handleDeleteImage();
+                          setShowMobileOptionsSheet(false);
+                        }}
+                        className="justify-start h-12 text-primary hover:text-primary"
+                      >
+                        <X className="w-4 h-4 mr-3 text-primary" />
+                        Delete image
+                      </Button>
+                    )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button

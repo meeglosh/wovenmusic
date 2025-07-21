@@ -244,3 +244,50 @@ export const useUploadPlaylistImage = () => {
     }
   });
 };
+
+export const useDeletePlaylistImage = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (playlistId: string) => {
+      // First get the current playlist to get the image URL
+      const { data: playlist, error: fetchError } = await supabase
+        .from("playlists")
+        .select("image_url")
+        .eq("id", playlistId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // If there's an image URL, extract the filename and delete it from storage
+      if (playlist.image_url) {
+        const url = new URL(playlist.image_url);
+        const pathParts = url.pathname.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        
+        const { error: deleteError } = await supabase.storage
+          .from('playlist-images')
+          .remove([fileName]);
+        
+        if (deleteError) {
+          console.error('Error deleting image from storage:', deleteError);
+          // Continue with updating the database even if storage deletion fails
+        }
+      }
+      
+      // Update playlist to remove image URL
+      const { data, error } = await supabase
+        .from("playlists")
+        .update({ image_url: null })
+        .eq("id", playlistId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    }
+  });
+};
