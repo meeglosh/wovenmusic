@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -205,6 +206,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [showAddTracksModal, setShowAddTracksModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [showMobileOptionsSheet, setShowMobileOptionsSheet] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -493,7 +495,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               size="lg" 
               disabled={playlistTracks.length === 0}
               onClick={() => playlistTracks.length > 0 && onPlayTrack(playlistTracks[0], playlistTracks)}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
             >
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
@@ -502,7 +504,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowAddTracksModal(true)}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
             >
               <Plus className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Add Tracks</span>
@@ -511,57 +513,129 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               variant="outline" 
               size="lg"
               onClick={() => setShowShareModal(true)}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
             >
               <Share2 className="w-4 h-4 mr-2 text-primary" />
               <span className="text-primary">Share</span>
             </Button>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="lg">
-                  <MoreHorizontal className="w-5 h-5 text-primary" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  setNewPlaylistName(playlist.name);
-                  setShowRenameDialog(true);
-                }}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Rename playlist
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <Image className="w-4 h-4 mr-2" />
-                  Change image
-                </DropdownMenuItem>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete playlist
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDeletePlaylist}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
+            {/* Desktop Dropdown Menu */}
+            <div className="hidden sm:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="lg">
+                    <MoreHorizontal className="w-5 h-5 text-primary" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setNewPlaylistName(playlist.name);
+                    setShowRenameDialog(true);
+                  }}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Rename playlist
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    <Image className="w-4 h-4 mr-2" />
+                    Change image
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Trash2 className="w-4 h-4 mr-2" />
                         Delete playlist
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeletePlaylist}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete playlist
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Mobile Sheet */}
+            <div className="sm:hidden">
+              <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="lg" className="min-h-[44px] hover:bg-transparent">
+                    <MoreHorizontal className="w-5 h-5 text-primary" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-auto">
+                  <div className="flex flex-col space-y-4 py-6">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setNewPlaylistName(playlist.name);
+                        setShowRenameDialog(true);
+                        setShowMobileOptionsSheet(false);
+                      }}
+                      className="justify-start h-12"
+                    >
+                      <Edit className="w-4 h-4 mr-3" />
+                      Rename playlist
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setShowMobileOptionsSheet(false);
+                      }}
+                      className="justify-start h-12"
+                    >
+                      <Image className="w-4 h-4 mr-3" />
+                      Change image
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="justify-start h-12 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-3" />
+                          Delete playlist
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel onClick={() => setShowMobileOptionsSheet(false)}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              handleDeletePlaylist();
+                              setShowMobileOptionsSheet(false);
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete playlist
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>
