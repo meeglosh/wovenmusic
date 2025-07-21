@@ -274,60 +274,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           )}
         </div>
         <div className="flex items-center space-x-4">
-          {isSelectionMode && (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground">
-                 {selectedTrackIds.size} selected
-               </span>
-               <Button
-                 variant="default"
-                 size="sm"
-                 onClick={() => setIsBulkAddModalOpen(true)}
-               >
-                 <Plus className="w-4 h-4 mr-2" />
-                 Add to Playlist
-               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={bulkDeleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove Selected
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
-                     <AlertDialogDescription>
-                       Are you sure you want to remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''} from your library?
-                       Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
-                     </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleBulkDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearSelection}
-                className="text-primary"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Clear Selection
-              </Button>
-            </div>
-          )}
           <div className="text-sm text-muted-foreground">
             {tracks.length} track{tracks.length !== 1 ? 's' : ''}
           </div>
@@ -411,6 +357,64 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         onOpenChange={setIsDropboxDrawerOpen}
         onPendingTracksChange={onPendingTracksChange}
       />
+
+      {/* Selection Actions - appears after Dropbox sync */}
+      {isSelectionMode && (
+        <div className="flex items-center justify-center">
+          <div className="flex items-center space-x-2 bg-muted/50 rounded-lg p-3 border">
+            <span className="text-sm text-muted-foreground">
+               {selectedTrackIds.size} selected
+            </span>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsBulkAddModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add to Playlist
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={bulkDeleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remove Selected
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
+                   <AlertDialogDescription>
+                     Are you sure you want to remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''} from your library?
+                     Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
+                   </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearSelection}
+              className="text-primary"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Dropbox Sync Section */}
 
