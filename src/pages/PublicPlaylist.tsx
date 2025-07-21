@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Play, Pause, ExternalLink, LogIn, Share2, Check, ArrowLeft } from "lucide-react";
+import { Play, Pause, ExternalLink, LogIn, Share2, Check, ArrowLeft, Globe, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -347,6 +347,15 @@ const PublicPlaylist = () => {
                       <p className="text-sm text-muted-foreground truncate">
                         {track.artist}
                       </p>
+                    </div>
+                    
+                    {/* Privacy indicator */}
+                    <div className="flex-shrink-0" title={track.is_public ? "Public track" : "Private track"}>
+                      {track.is_public ? (
+                        <Globe className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                      )}
                     </div>
                     
                     <div className="flex-shrink-0 text-sm text-muted-foreground">
