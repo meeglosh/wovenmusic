@@ -875,12 +875,12 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
                 )}
 
                 {selectedFiles.size > 0 && (
-                  <div className="flex items-center gap-2 pt-2 border-t">
+                  <div className="flex justify-center items-center gap-2 pt-2 border-t">
                     <Button
                       onClick={syncSelectedFiles}
                       disabled={isSyncing}
                       size="sm"
-                      className="flex-1 max-w-[343px]"
+                      className="max-w-[343px]"
                     >
                       {isSyncing ? (
                         <>
@@ -908,16 +908,18 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             )}
 
             {/* Refresh button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadFolders(currentPath)}
-              disabled={isLoading}
-              className="w-full max-w-[343px]"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadFolders(currentPath)}
+                disabled={isLoading}
+                className="max-w-[343px]"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </AccordionContent>
       </AccordionItem>
