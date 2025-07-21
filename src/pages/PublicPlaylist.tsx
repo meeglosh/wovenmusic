@@ -86,9 +86,21 @@ const PublicPlaylist = () => {
   const {
     currentTrack,
     isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isShuffleMode,
+    isRepeatMode,
     audioRef,
     playPlaylist,
-    togglePlayPause
+    togglePlayPause,
+    seekTo,
+    setVolume,
+    playNext,
+    playPrevious,
+    toggleShuffle,
+    toggleRepeat,
+    formatTime
   } = useAudioPlayer();
 
   const handlePlayTrack = (track: Track, trackList?: Track[]) => {
@@ -385,13 +397,19 @@ const PublicPlaylist = () => {
         <Player
           track={currentTrack}
           isPlaying={isPlaying}
-          currentTime={0} // You'll need to track this in useAudioPlayer
-          duration={parseDurationToSeconds(currentTrack.duration)}
-          volume={1} // You'll need to track this in useAudioPlayer
+          currentTime={currentTime}
+          duration={duration}
+          volume={volume}
+          isShuffleMode={isShuffleMode}
+          isRepeatMode={isRepeatMode}
           onPlayPause={togglePlayPause}
-          onSeek={() => {}} // You'll need to implement seek in useAudioPlayer
-          onVolumeChange={() => {}} // You'll need to implement volume in useAudioPlayer
-          formatTime={(time: number) => formatSecondsToDuration(time)}
+          onSeek={seekTo}
+          onVolumeChange={setVolume}
+          onNext={playNext}
+          onPrevious={playPrevious}
+          onShuffle={toggleShuffle}
+          onRepeat={toggleRepeat}
+          formatTime={formatTime}
         />
       )}
     </div>
