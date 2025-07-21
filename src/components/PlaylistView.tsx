@@ -153,15 +153,6 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
         </div>
       </div>
 
-      {/* Privacy Icon */}
-      <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
-        {track.is_public ? (
-          <Globe className="h-3 w-3 text-green-600" />
-        ) : (
-          <Lock className="h-3 w-3 text-muted-foreground" />
-        )}
-      </div>
-
       {/* Duration */}
       <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
         {track.duration}
