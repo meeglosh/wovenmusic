@@ -194,13 +194,13 @@ const PublicPlaylist = () => {
           <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-xl">!</span>
           </div>
-          <h1 className="text-xl font-semibold mb-2 text-primary">
+          <h1 className="text-xl font-semibold mb-2">
             {isTimeout ? "Connection Timeout" : "Playlist Not Found"}
           </h1>
           <p className="text-muted-foreground mb-4">
             {isTimeout 
               ? "The request timed out. This may be due to a database connection issue."
-              : "This weave is absent, veiled, or softly erased."
+              : "This playlist doesn't exist, isn't public, or has been removed."
             }
           </p>
           <div className="text-xs text-muted-foreground mb-6 p-2 bg-muted rounded text-left">
@@ -210,8 +210,8 @@ const PublicPlaylist = () => {
             <p>Playlist ID: {playlistId || "none"}</p>
           </div>
           <Button onClick={() => navigate("/")} variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2 text-primary" />
-            <span className="text-primary">Go Home</span>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Go Home
           </Button>
         </div>
       </div>
