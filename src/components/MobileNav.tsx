@@ -61,8 +61,8 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                   )}
                   onClick={() => handleViewChange("library")}
                 >
-                  <Music className={`w-4 h-4 mr-3 ${currentView === "library" ? "" : "text-primary"}`} />
-                  <span className={`text-base font-semibold ${currentView === "library" ? "" : "text-primary"}`}>{libraryTitle}</span>
+                  <Music className="w-4 h-4 mr-3 text-primary" />
+                  <span className="text-base font-semibold text-primary">{libraryTitle}</span>
                 </Button>
 
                 {/* Playlists */}
@@ -81,18 +81,18 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                        {playlists.map((playlist) => {
                          const isSelected = currentView === "playlist" && selectedPlaylist?.id === playlist.id;
                          return (
-                            <Button
-                              key={playlist.id}
-                              variant={isSelected ? "secondary" : "ghost"}
-                              className={cn(
-                                "w-full justify-start text-left",
-                                isSelected && "bg-primary/50"
-                              )}
-                              onClick={() => handlePlaylistSelect(playlist)}
-                            >
-                             <ListMusic className={`w-4 h-4 mr-3 flex-shrink-0 ${isSelected ? "" : "text-primary"}`} />
-                             <span className={`truncate text-base font-semibold ${isSelected ? "" : "text-primary"}`}>{playlist.name}</span>
-                           </Button>
+                             <Button
+                               key={playlist.id}
+                               variant="ghost"
+                               className={cn(
+                                 "w-full justify-start text-left",
+                                 isSelected && "bg-primary/50"
+                               )}
+                               onClick={() => handlePlaylistSelect(playlist)}
+                             >
+                              <ListMusic className="w-4 h-4 mr-3 flex-shrink-0 text-primary" />
+                              <span className="truncate text-base font-semibold text-primary">{playlist.name}</span>
+                            </Button>
                          );
                        })}
                      </div>
