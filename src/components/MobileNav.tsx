@@ -10,9 +10,11 @@ interface MobileNavProps {
   currentView: "library" | "playlist";
   onViewChange: (view: "library" | "playlist") => void;
   onPlaylistSelect: (playlist: Playlist) => void;
+  libraryTitle?: string;
+  selectedPlaylist?: Playlist | null;
 }
 
-const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect }: MobileNavProps) => {
+const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist }: MobileNavProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleViewChange = (view: "library" | "playlist") => {
@@ -55,8 +57,8 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect }: M
                   className="w-full justify-start"
                   onClick={() => handleViewChange("library")}
                 >
-                  <Music className="w-4 h-4 mr-3" />
-                  Music Library
+                  <Music className="w-4 h-4 mr-3 text-primary" />
+                  <span className="text-base font-semibold text-primary">{libraryTitle}</span>
                 </Button>
 
                 {/* Playlists */}
@@ -71,19 +73,22 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect }: M
                       No playlists yet
                     </p>
                   ) : (
-                    <div className="space-y-1">
-                      {playlists.map((playlist) => (
-                        <Button
-                          key={playlist.id}
-                          variant="ghost"
-                          className="w-full justify-start text-left"
-                          onClick={() => handlePlaylistSelect(playlist)}
-                        >
-                          <ListMusic className="w-4 h-4 mr-3 flex-shrink-0" />
-                          <span className="truncate text-primary">{playlist.name}</span>
-                        </Button>
-                      ))}
-                    </div>
+                     <div className="space-y-1">
+                       {playlists.map((playlist) => {
+                         const isSelected = currentView === "playlist" && selectedPlaylist?.id === playlist.id;
+                         return (
+                           <Button
+                             key={playlist.id}
+                             variant={isSelected ? "default" : "ghost"}
+                             className="w-full justify-start text-left"
+                             onClick={() => handlePlaylistSelect(playlist)}
+                           >
+                             <ListMusic className="w-4 h-4 mr-3 flex-shrink-0 text-primary" />
+                             <span className="truncate text-base font-semibold text-primary">{playlist.name}</span>
+                           </Button>
+                         );
+                       })}
+                     </div>
                   )}
                 </div>
               </div>
