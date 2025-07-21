@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Music, ListMusic, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Playlist } from "@/types/music";
+import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
   playlists: Playlist[];
@@ -77,12 +78,15 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                        {playlists.map((playlist) => {
                          const isSelected = currentView === "playlist" && selectedPlaylist?.id === playlist.id;
                          return (
-                           <Button
-                             key={playlist.id}
-                             variant={isSelected ? "default" : "ghost"}
-                             className="w-full justify-start text-left"
-                             onClick={() => handlePlaylistSelect(playlist)}
-                           >
+                            <Button
+                              key={playlist.id}
+                              variant={isSelected ? "secondary" : "ghost"}
+                              className={cn(
+                                "w-full justify-start text-left",
+                                isSelected && "bg-primary/50"
+                              )}
+                              onClick={() => handlePlaylistSelect(playlist)}
+                            >
                              <ListMusic className={`w-4 h-4 mr-3 flex-shrink-0 ${isSelected ? "" : "text-primary"}`} />
                              <span className={`truncate text-base font-semibold ${isSelected ? "" : "text-primary"}`}>{playlist.name}</span>
                            </Button>
