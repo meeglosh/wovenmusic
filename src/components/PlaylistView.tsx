@@ -585,9 +585,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                         setShowRenameDialog(true);
                         setShowMobileOptionsSheet(false);
                       }}
-                      className="justify-start h-12"
+                      className="justify-start h-12 text-primary hover:text-primary"
                     >
-                      <Edit className="w-4 h-4 mr-3" />
+                      <Edit className="w-4 h-4 mr-3 text-primary" />
                       Rename playlist
                     </Button>
                     <Button
@@ -596,9 +596,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                         fileInputRef.current?.click();
                         setShowMobileOptionsSheet(false);
                       }}
-                      className="justify-start h-12"
+                      className="justify-start h-12 text-primary hover:text-primary"
                     >
-                      <Image className="w-4 h-4 mr-3" />
+                      <Image className="w-4 h-4 mr-3 text-primary" />
                       Change image
                     </Button>
                     <AlertDialog>
