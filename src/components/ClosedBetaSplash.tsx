@@ -63,7 +63,7 @@ const ClosedBetaSplash = () => {
       <Card className="max-w-md w-full p-8 text-center space-y-6">
         {/* Logo/Branding */}
         <div className="space-y-4">
-          <div className="w-16 h-16 mx-auto">
+          <div className="w-32 h-32 mx-auto">
             <img 
               src="/lovable-uploads/8a8ac791-c106-4f64-a3ba-d346be1eebd2.png" 
               alt="Wovenmusic App Icon" 
