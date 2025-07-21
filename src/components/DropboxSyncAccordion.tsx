@@ -910,7 +910,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             {/* Refresh button */}
             <div className="flex justify-center">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => loadFolders(currentPath)}
                 disabled={isLoading}
