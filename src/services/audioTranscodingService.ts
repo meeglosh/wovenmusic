@@ -128,7 +128,7 @@ class AudioTranscodingService {
   }
 
   needsTranscoding(audioUrl: string): boolean {
-    // Only .aif/.aiff files need transcoding - .wav and .mp3 play natively
+    // .aif/.aiff files need transcoding - other formats play natively
     const url = audioUrl.toLowerCase();
     return url.includes('.aif') || url.includes('.aiff');
   }
