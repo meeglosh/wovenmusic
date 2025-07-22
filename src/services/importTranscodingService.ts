@@ -7,94 +7,100 @@ export interface TranscodeResult {
 }
 
 export class ImportTranscodingService {
-  
-  async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3', retries = 3): Promise<TranscodeResult> {
-    let lastError: Error | null = null;
+  async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
+    console.log(`Starting client-side transcoding for: ${fileName}`);
     
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        console.log(`Starting server-side ${outputFormat.toUpperCase()} transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
-        
-        // Determine bitrate based on output format
-        let bitrate = outputFormat === 'aac' ? '320k' : '256k';
+    try {
+      // Fetch the audio file
+      const audioResponse = await fetch(audioUrl);
+      const audioArrayBuffer = await audioResponse.arrayBuffer();
       
-        try {
-          // Quick audio analysis to determine bitrate for large files
-          const response = await fetch(audioUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          
-          // Use Web Audio API to get duration for bitrate estimation
-          const audioContext = new AudioContext();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          const duration = audioBuffer.duration;
-          
-          // Estimate file size: duration * bitrate / 8 (convert bits to bytes)
-          const estimatedSize = duration * (outputFormat === 'aac' ? 320000 : 256000) / 8;
-          
-          // If estimated size > 10MB, reduce bitrate
-          if (estimatedSize > 10 * 1024 * 1024) {
-            bitrate = outputFormat === 'aac' ? '256k' : '128k';
-            console.log(`Large file detected (${duration.toFixed(1)}s), using ${bitrate} for compression`);
-          } else {
-            console.log(`Standard file (${duration.toFixed(1)}s), using ${bitrate} for high quality`);
-          }
-          
-          audioContext.close();
-        } catch (analysisError) {
-          console.warn(`Could not analyze audio for bitrate selection, using default ${bitrate}:`, analysisError);
-        }
-        
-        // Use Supabase edge function for transcoding
-        const { data, error } = await supabase.functions.invoke('transcode-audio', {
-          body: {
-            audioUrl,
-            fileName,
-            bitrate,
-            outputFormat
-          }
+      // Create audio context
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Decode audio data
+      const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
+      
+      // Convert to WAV format (browser compatible)
+      const wavArrayBuffer = this.audioBufferToWav(audioBuffer);
+      const wavBlob = new Blob([wavArrayBuffer], { type: 'audio/wav' });
+      
+      // Generate filename for storage
+      const timestamp = Date.now();
+      const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `transcoded/${timestamp}_${safeName}.wav`;
+      
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('transcoded-audio')
+        .upload(storagePath, wavBlob, {
+          contentType: 'audio/wav',
+          cacheControl: '3600'
         });
 
-        console.log('Transcoding response:', data, error);
-        
-        if (error) {
-          console.error('Transcoding function error:', error);
-          throw new Error(`Transcoding failed: ${error.message}`);
-        }
-
-      if (!data?.publicUrl) {
-        throw new Error('No public URL returned from transcoding service');
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
       }
 
-      console.log(`Server-side ${outputFormat.toUpperCase()} transcoding complete (${bitrate}):`, data.publicUrl);
-      if (data.originalSize && data.transcodedSize) {
-        const compressionRatio = ((data.originalSize - data.transcodedSize) / data.originalSize * 100).toFixed(1);
-        console.log(`Compression: ${(data.originalSize / 1024 / 1024).toFixed(1)}MB → ${(data.transcodedSize / 1024 / 1024).toFixed(1)}MB (${compressionRatio}% reduction)`);
-      }
-      
-      // If the server returned the original filename, log it
-      if (data.originalFilename) {
-        console.log(`Original filename preserved by transcoding service: ${data.originalFilename}`);
-      }
-      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('transcoded-audio')
+        .getPublicUrl(uploadData.path);
+
+      console.log(`Client-side transcoding completed for: ${fileName}`);
+      audioContext.close();
+
       return {
-        publicUrl: data.publicUrl,
-        originalFilename: data.originalFilename
+        publicUrl: urlData.publicUrl,
+        originalFilename: fileName
       };
-      
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        console.error(`Transcoding attempt ${attempt}/${retries} failed for ${fileName}:`, lastError.message);
-        
-        if (attempt < retries) {
-          const delayMs = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
-          console.log(`Retrying transcoding in ${delayMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
+    } catch (error: any) {
+      console.error(`Transcoding failed for ${fileName}:`, error.message);
+      throw new Error(`Transcoding failed: ${error.message}`);
+    }
+  }
+
+  private audioBufferToWav(audioBuffer: AudioBuffer): ArrayBuffer {
+    const numberOfChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const length = audioBuffer.length * numberOfChannels * 2; // 16-bit samples
+    const arrayBuffer = new ArrayBuffer(44 + length);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length, true);
+    
+    // Convert float samples to 16-bit PCM
+    let offset = 44;
+    for (let i = 0; i < audioBuffer.length; i++) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sample = audioBuffer.getChannelData(channel)[i];
+        const int16Sample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+        view.setInt16(offset, int16Sample, true);
+        offset += 2;
       }
     }
     
-    console.error(`All ${retries} transcoding attempts failed for ${fileName}`);
-    throw lastError || new Error('Transcoding failed after all retry attempts');
+    return arrayBuffer;
   }
   
   needsTranscoding(filePath: string): boolean {
