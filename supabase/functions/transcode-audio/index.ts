@@ -29,10 +29,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('=== NODE RUNTIME FFMPEG TRANSCODING STARTED ===');
-    console.log('Function running on Node.js runtime with FFmpeg support');
+    console.log('=== TRANSCODING FUNCTION STARTED ===');
+    console.log('Environment check - Deno version:', Deno.version);
     
-    const { audioUrl, fileName, bitrate = '256k', outputFormat = 'mp3' }: TranscodeRequest = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', requestBody);
+    
+    const { audioUrl, fileName, bitrate = '256k', outputFormat = 'mp3' }: TranscodeRequest = requestBody;
     console.log('Transcoding request for:', fileName);
     console.log('Source URL:', audioUrl);
     console.log('Target bitrate:', bitrate);
