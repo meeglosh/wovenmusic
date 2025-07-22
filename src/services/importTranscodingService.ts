@@ -8,51 +8,33 @@ export interface TranscodeResult {
 
 export class ImportTranscodingService {
   async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
-    console.log(`Starting client-side transcoding for: ${fileName}`);
+    console.log(`Starting server-side ${outputFormat.toUpperCase()} transcoding for: ${fileName}`);
     
     try {
-      // Fetch the audio file
-      const audioResponse = await fetch(audioUrl);
-      const audioArrayBuffer = await audioResponse.arrayBuffer();
-      
-      // Create audio context
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Decode audio data
-      const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
-      
-      // Convert to WAV format (browser compatible)
-      const wavArrayBuffer = this.audioBufferToWav(audioBuffer);
-      const wavBlob = new Blob([wavArrayBuffer], { type: 'audio/wav' });
-      
-      // Generate filename for storage
-      const timestamp = Date.now();
-      const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `transcoded/${timestamp}_${safeName}.wav`;
-      
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('transcoded-audio')
-        .upload(storagePath, wavBlob, {
-          contentType: 'audio/wav',
-          cacheControl: '3600'
-        });
+      // Use server-side Edge Function for proper transcoding
+      const { data, error } = await supabase.functions.invoke('transcode-audio', {
+        body: {
+          audioUrl,
+          fileName,
+          outputFormat,
+          bitrate: '320k'
+        }
+      });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
+      console.log('Transcoding response:', data);
+
+      if (error) {
+        console.error('Transcoding function error:', error);
+        throw new Error(`Transcoding failed: ${error.message}`);
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('transcoded-audio')
-        .getPublicUrl(uploadData.path);
+      if (!data?.success || !data?.publicUrl) {
+        throw new Error('Transcoding function returned invalid response');
+      }
 
-      console.log(`Client-side transcoding completed for: ${fileName}`);
-      audioContext.close();
-
+      console.log(`Server-side transcoding completed for: ${fileName}`);
       return {
-        publicUrl: urlData.publicUrl,
+        publicUrl: data.publicUrl,
         originalFilename: fileName
       };
     } catch (error: any) {
