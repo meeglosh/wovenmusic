@@ -43,60 +43,32 @@ export class ImportTranscodingService {
         console.warn('Could not analyze audio for bitrate selection, using default 320kbps:', analysisError);
       }
       
-      // External transcoding service deployed on Render
-      const EXTERNAL_TRANSCODING_URL = 'https://transcode-server.onrender.com/transcode';
-      
-      // Download the audio file from Dropbox
-      const audioResponse = await fetch(audioUrl);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to download audio file: ${audioResponse.status}`);
-      }
-      const audioBlob = await audioResponse.blob();
-      
-      // Create FormData with the audio file
-      const formData = new FormData();
-      formData.append('audio', audioBlob, fileName);
-      formData.append('bitrate', bitrate);
-      formData.append('outputFormat', outputFormat);
-      
-      console.log('Sending transcoding request:', {
-        url: EXTERNAL_TRANSCODING_URL,
+      // Use Supabase edge function for transcoding with AAC support
+      console.log('Sending transcoding request to Supabase edge function:', {
         fileName,
         bitrate,
-        blobSize: audioBlob.size,
-        blobType: audioBlob.type,
+        outputFormat,
         attempt
       });
       
-      const response = await fetch(EXTERNAL_TRANSCODING_URL, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Origin': 'https://wovenmusic.app'
+      const { data: response, error } = await supabase.functions.invoke('transcode-audio', {
+        body: {
+          audioUrl,
+          fileName,
+          bitrate,
+          outputFormat
         }
       });
 
-      console.log('Transcoding response status:', response.status, response.statusText);
-      
-      // Log full error details for debugging
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Transcoding function error:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
-        console.error('Request details:', {
-          url: EXTERNAL_TRANSCODING_URL,
-          fileName,
-          bitrate,
-          blobSize: audioBlob.size,
-          blobType: audioBlob.type
-        });
-        throw new Error(`Transcoding failed: ${response.status} ${response.statusText} - ${errorText}`);
+      if (error) {
+        console.error('Transcoding function error:', error);
+        throw new Error(`Transcoding failed: ${error.message}`);
       }
 
-      const data = await response.json();
+      const data = response;
 
       if (!data?.publicUrl) {
-        throw new Error('No public URL returned from transcoding service');
+        throw new Error('No public URL returned from transcoding function');
       }
 
       console.log(`Server-side ${outputFormat.toUpperCase()} transcoding complete (${bitrate}):`, data.publicUrl);
