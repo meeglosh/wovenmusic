@@ -115,7 +115,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               <div className="px-2 py-1.5">
                 <div className="flex items-center mb-2">
                   <Volume2 className="w-4 h-4 mr-2 text-primary" />
-                  <span className="text-sm font-medium text-primary">Audio Quality:</span>
+                  <span className="text-sm font-medium text-primary">Conversion Quality:</span>
                 </div>
                 <DropdownMenuRadioGroup value={audioQuality} onValueChange={setAudioQuality}>
                   <DropdownMenuRadioItem value="mp3-320" className="text-sm ml-6">
@@ -180,7 +180,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               <div className="px-2 py-1.5">
                 <div className="flex items-center mb-1">
                   <Volume2 className="w-3 h-3 mr-1 text-primary" />
-                  <span className="text-xs font-medium text-primary">Audio Quality:</span>
+                  <span className="text-xs font-medium text-primary">Conversion Quality:</span>
                 </div>
                 <DropdownMenuRadioGroup value={audioQuality} onValueChange={setAudioQuality}>
                   <DropdownMenuRadioItem value="mp3-320" className="text-xs ml-4">
