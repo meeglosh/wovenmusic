@@ -93,25 +93,15 @@ const handler = async (req: Request): Promise<Response> => {
       ? ['-codec:a', 'aac', '-b:a', bitrate]  // Use built-in AAC encoder
       : ['-codec:a', 'libmp3lame', '-b:a', bitrate];  // Use LAME MP3 encoder
     
-    const ffmpegArgs = [
-      '-i', inputPath,           // Input file
-      ...codecArgs,              // Codec and bitrate args
-      '-ar', '44100',            // Set sample rate to 44.1kHz
-      '-ac', '2',                // Set to stereo
-      '-y',                      // Overwrite output file
-      outputPath                 // Output file
-    ];
-    
-    console.log('=== FFMPEG COMMAND DEBUG ===');
-    console.log('Full FFmpeg command:', `ffmpeg ${ffmpegArgs.join(' ')}`);
-    console.log('Codec args being used:', codecArgs);
-    console.log('Input path:', inputPath);
-    console.log('Output path:', outputPath);
-    console.log('Expected output format:', outputFormat);
-    console.log('Expected file extension:', outputExtension);
-    
     const ffmpegProcess = new Deno.Command('ffmpeg', {
-      args: ffmpegArgs,
+      args: [
+        '-i', inputPath,           // Input file
+        ...codecArgs,              // Codec and bitrate args
+        '-ar', '44100',            // Set sample rate to 44.1kHz
+        '-ac', '2',                // Set to stereo
+        '-y',                      // Overwrite output file
+        outputPath                 // Output file
+      ],
       stdout: 'piped',
       stderr: 'piped',
     });
