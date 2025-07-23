@@ -303,8 +303,8 @@ const DropboxSync = () => {
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        // Only include supported formats, exclude .aif/.aiff files
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        // Include .aif/.aiff files now that transcoding is supported
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
         return supportedExtensions.some(ext => fileName.endsWith(ext));
       });
        
@@ -430,8 +430,8 @@ const DropboxSync = () => {
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        // Only include supported formats, exclude .aif/.aiff files
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        // Include .aif/.aiff files now that transcoding is supported
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
         const isSupported = supportedExtensions.some(ext => fileName.endsWith(ext));
         
         console.log(`File: ${item.name}, isFile: ${item[".tag"] === "file"}, isSupported: ${isSupported}`);
@@ -573,14 +573,10 @@ const DropboxSync = () => {
     
     filesToSync.forEach(file => {
       const fileName = file.name.toLowerCase();
-      if (fileName.endsWith('.aif') || fileName.endsWith('.aiff')) {
-        unsupportedAifFiles.push(file.name);
-      } else {
-        // Only include truly supported formats
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
-        if (supportedExtensions.some(ext => fileName.endsWith(ext))) {
-          supportedFiles.push(file);
-        }
+      // Now include .aif/.aiff files as supported since transcoding is available
+      const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
+      if (supportedExtensions.some(ext => fileName.endsWith(ext))) {
+        supportedFiles.push(file);
       }
     });
     

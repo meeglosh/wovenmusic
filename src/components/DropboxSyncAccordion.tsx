@@ -219,7 +219,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
         return supportedExtensions.some(ext => fileName.endsWith(ext));
       });
        
