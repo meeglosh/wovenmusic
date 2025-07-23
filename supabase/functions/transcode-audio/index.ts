@@ -33,10 +33,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Function running on Node.js runtime with FFmpeg support');
     
     const { audioUrl, fileName, bitrate = '320k', outputFormat = 'mp3' }: TranscodeRequest = await req.json();
+    console.log('=== TRANSCODING REQUEST DETAILS ===');
     console.log('Transcoding request for:', fileName);
     console.log('Source URL:', audioUrl);
     console.log('Target bitrate:', bitrate);
-    console.log('Output format:', outputFormat);
+    console.log('Output format received:', outputFormat);
+    console.log('Output format type:', typeof outputFormat);
+    console.log('Will use AAC?', outputFormat === 'aac');
 
     // Initialize Supabase client
     const supabase = createClient(
