@@ -1,4 +1,9 @@
-// ...imports and interfaces unchanged...
+import { TranscodingFormat } from '@/hooks/useTranscodingPreferences';
+
+export interface TranscodeResult {
+  publicUrl: string;
+  originalFilename?: string;
+}
 
 export class ImportTranscodingService {
   async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
