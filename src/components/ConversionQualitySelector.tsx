@@ -9,9 +9,9 @@ interface ConversionQualitySelectorProps {
 
 const ConversionQualitySelector = ({ value, onChange, size = "default" }: ConversionQualitySelectorProps) => {
   const options = [
-    { value: "mp3-320", label: size === "mobile" ? "Good" : "Good (MP3 320kbps)" },
-    { value: "aac-320", label: size === "mobile" ? "Better" : "Better (AAC 320kbps)" },
-    { value: "lossless", label: size === "mobile" ? "Best" : "Best (Apple Lossless)" },
+    { value: "mp3-320", label: size === "mobile" ? "Good (MP3)" : "Good (MP3)" },
+    { value: "aac-320", label: size === "mobile" ? "Better (AAC)" : "Better (AAC)" },
+    { value: "lossless", label: size === "mobile" ? "Best (Lossless)" : "Best (Lossless)" },
   ];
 
   const isMobile = size === "mobile";
