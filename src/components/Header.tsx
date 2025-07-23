@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
 import UploadModal from "./UploadModal";
+import ConversionQualitySelector from "./ConversionQualitySelector";
 import MobileNav from "./MobileNav";
 import { Playlist } from "@/types/music";
 
@@ -112,23 +113,11 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 Privacy
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1.5">
-                <div className="flex items-center mb-2">
-                  <Volume2 className="w-4 h-4 mr-2 text-primary" />
-                  <span className="text-sm font-medium text-primary">Conversion Quality:</span>
-                </div>
-                <DropdownMenuRadioGroup value={audioQuality} onValueChange={setAudioQuality}>
-                  <DropdownMenuRadioItem value="mp3-320" className="text-sm ml-6">
-                    Good (MP3 320kbps)
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="aac-320" className="text-sm ml-6">
-                    Better (AAC 320kbps)
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="lossless" className="text-sm ml-6">
-                    Best (Apple Lossless)
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </div>
+              <ConversionQualitySelector 
+                value={audioQuality} 
+                onChange={setAudioQuality} 
+                size="default"
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -177,23 +166,11 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <span className="text-sm">Privacy</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1.5">
-                <div className="flex items-center mb-1">
-                  <Volume2 className="w-3 h-3 mr-1 text-primary" />
-                  <span className="text-xs font-medium text-primary">Conversion Quality:</span>
-                </div>
-                <DropdownMenuRadioGroup value={audioQuality} onValueChange={setAudioQuality}>
-                  <DropdownMenuRadioItem value="mp3-320" className="text-xs ml-4">
-                    Good (MP3 320k)
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="aac-320" className="text-xs ml-4">
-                    Better (AAC 320k)
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="lossless" className="text-xs ml-4">
-                    Best (Lossless)
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </div>
+              <ConversionQualitySelector 
+                value={audioQuality} 
+                onChange={setAudioQuality} 
+                size="mobile"
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
