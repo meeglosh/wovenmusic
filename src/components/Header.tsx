@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -27,6 +27,20 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
   const { theme, setTheme, themes } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [audioQuality, setAudioQuality] = useState("mp3-320");
+
+  // Load saved conversion quality from localStorage on mount
+  useEffect(() => {
+    const savedQuality = localStorage.getItem('conversionQuality');
+    if (savedQuality) {
+      setAudioQuality(savedQuality);
+    }
+  }, []);
+
+  // Save conversion quality to localStorage when it changes
+  const handleQualityChange = (quality: string) => {
+    setAudioQuality(quality);
+    localStorage.setItem('conversionQuality', quality);
+  };
 
   const currentThemeLabel = themes.find(t => t.value === theme)?.label || 'Theme';
 
@@ -115,7 +129,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               <DropdownMenuSeparator />
               <ConversionQualitySelector 
                 value={audioQuality} 
-                onChange={setAudioQuality} 
+                onChange={handleQualityChange} 
                 size="default"
               />
               <DropdownMenuSeparator />
@@ -168,7 +182,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               <DropdownMenuSeparator />
               <ConversionQualitySelector 
                 value={audioQuality} 
-                onChange={setAudioQuality} 
+                onChange={handleQualityChange} 
                 size="mobile"
               />
               <DropdownMenuSeparator />
