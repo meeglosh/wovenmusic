@@ -673,8 +673,12 @@ const DropboxSync = () => {
           // Get temporary link for the original file
           const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
           
+          // Get conversion quality setting from localStorage
+          const conversionQuality = localStorage.getItem('conversionQuality') || 'mp3-320';
+          const outputFormat = conversionQuality === 'aac-320' ? 'aac' : 'mp3';
+          
           // Transcode and store in Supabase Storage
-          const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, fileName);
+          const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, fileName, outputFormat);
           
           // Extract duration from transcoded file
           let finalDuration = '--:--';

@@ -195,7 +195,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
         </div>
       </div>
       
-      <UploadModal open={showUploadModal} onOpenChange={setShowUploadModal} />
+      <UploadModal open={showUploadModal} onOpenChange={setShowUploadModal} audioQuality={audioQuality} />
     </header>
   );
 };

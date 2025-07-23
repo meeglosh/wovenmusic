@@ -8,6 +8,7 @@ import { Upload, X, AlertTriangle, CheckCircle, Music, FileX } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useToast } from "@/hooks/use-toast";
+import { importTranscodingService } from "@/services/importTranscodingService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  audioQuality: string;
 }
 
 interface UploadFile {
@@ -35,7 +37,7 @@ interface UploadFile {
 const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
 const UNSUPPORTED_FORMATS = ['.aif', '.aiff'];
 
-export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
+export default function UploadModal({ open, onOpenChange, audioQuality }: UploadModalProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showUnsupportedDialog, setShowUnsupportedDialog] = useState(false);
@@ -261,10 +263,32 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         .from('audio-files')
         .getPublicUrl(fileName);
 
-      // Get file duration from the uploaded file URL
-      const duration = await getDurationFromUrl(urlData.publicUrl);
-      const formattedDuration = formatDuration(duration);
+      let finalUrl = urlData.publicUrl;
+      let duration = 0;
 
+      // Check if file needs transcoding
+      const needsTranscoding = importTranscodingService.needsTranscoding(fileName);
+      
+      if (needsTranscoding) {
+        console.log(`File ${fileName} needs transcoding, starting transcoding...`);
+        
+        // Determine output format from audioQuality setting
+        const outputFormat = audioQuality === 'aac-320' ? 'aac' : 'mp3';
+        
+        // Transcode the file
+        const transcodeResult = await importTranscodingService.transcodeAndStore(
+          urlData.publicUrl, 
+          fileName, 
+          outputFormat
+        );
+        
+        finalUrl = transcodeResult.publicUrl;
+        console.log(`Transcoding complete, new URL: ${finalUrl}`);
+      }
+
+      // Get file duration from the final URL
+      duration = await getDurationFromUrl(finalUrl);
+      const formattedDuration = formatDuration(duration);
 
       // Extract metadata from filename
       const { artist, title } = extractMetadata(file.name);
@@ -274,7 +298,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
         title,
         artist,
         duration: formattedDuration,
-        fileUrl: urlData.publicUrl,
+        fileUrl: finalUrl,
         source_folder: 'Direct Upload'
       };
 

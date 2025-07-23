@@ -12,6 +12,7 @@ interface TranscodeRequest {
   audioUrl: string;
   fileName: string;
   bitrate?: string; // Optional bitrate specification
+  outputFormat?: 'mp3' | 'aac'; // Optional output format
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,10 +32,11 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('=== NODE RUNTIME FFMPEG TRANSCODING STARTED ===');
     console.log('Function running on Node.js runtime with FFmpeg support');
     
-    const { audioUrl, fileName, bitrate = '256k' }: TranscodeRequest = await req.json();
+    const { audioUrl, fileName, bitrate = '320k', outputFormat = 'mp3' }: TranscodeRequest = await req.json();
     console.log('Transcoding request for:', fileName);
     console.log('Source URL:', audioUrl);
     console.log('Target bitrate:', bitrate);
+    console.log('Output format:', outputFormat);
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -55,7 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create temporary files for input and output
     const inputPath = `/tmp/input_${Date.now()}.aif`;
-    const outputPath = `/tmp/output_${Date.now()}.mp3`;
+    const outputExtension = outputFormat === 'aac' ? 'm4a' : 'mp3';
+    const outputPath = `/tmp/output_${Date.now()}.${outputExtension}`;
 
     // Write input file
     await Deno.writeFile(inputPath, audioData);
@@ -80,12 +83,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Run FFmpeg transcoding
-    console.log('Starting FFmpeg transcoding...');
+    console.log(`Starting FFmpeg transcoding to ${outputFormat.toUpperCase()}...`);
+    
+    // Configure codec and args based on output format
+    const codecArgs = outputFormat === 'aac' 
+      ? ['-codec:a', 'aac', '-b:a', bitrate]  // Use built-in AAC encoder
+      : ['-codec:a', 'libmp3lame', '-b:a', bitrate];  // Use LAME MP3 encoder
+    
     const ffmpegProcess = new Deno.Command('ffmpeg', {
       args: [
         '-i', inputPath,           // Input file
-        '-codec:a', 'libmp3lame',  // Use LAME MP3 encoder
-        '-b:a', bitrate,           // Dynamic bitrate (256k or 128k)
+        ...codecArgs,              // Codec and bitrate args
         '-ar', '44100',            // Set sample rate to 44.1kHz
         '-ac', '2',                // Set to stereo
         '-y',                      // Overwrite output file
@@ -115,15 +123,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate storage path
     const timestamp = Date.now();
     const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `${timestamp}_${safeName}.mp3`;
+    const fileExtension = outputFormat === 'aac' ? 'm4a' : 'mp3';
+    const storagePath = `${timestamp}_${safeName}.${fileExtension}`;
 
     console.log('Uploading to storage:', storagePath);
 
     // Upload to Supabase Storage
+    const contentType = outputFormat === 'aac' ? 'audio/mp4' : 'audio/mpeg';
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('transcoded-audio')
       .upload(storagePath, transcodedData, {
-        contentType: 'audio/mpeg',
+        contentType,
         cacheControl: '3600'
       });
 

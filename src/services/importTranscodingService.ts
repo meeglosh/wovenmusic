@@ -7,15 +7,15 @@ export interface TranscodeResult {
 
 export class ImportTranscodingService {
   
-  async transcodeAndStore(audioUrl: string, fileName: string, retries = 3): Promise<TranscodeResult> {
+  async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: 'mp3' | 'aac' = 'mp3', retries = 3): Promise<TranscodeResult> {
     let lastError: Error | null = null;
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`Starting server-side MP3 transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
+        console.log(`Starting server-side ${outputFormat.toUpperCase()} transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
         
         // Estimate duration and determine optimal bitrate
-        let bitrate = '256k'; // Default to high quality
+        let bitrate = '320k'; // Default to high quality for AAC/MP3
       
       try {
         // Quick audio analysis to determine bitrate
@@ -27,20 +27,20 @@ export class ImportTranscodingService {
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         const duration = audioBuffer.duration;
         
-        // Estimate MP3 file size at 256kbps: duration * bitrate / 8 (convert bits to bytes)
-        const estimated256kbpsSize = duration * 256000 / 8; // ~32KB per second at 256kbps
+        // Estimate file size at 320kbps: duration * bitrate / 8 (convert bits to bytes)  
+        const estimated320kbpsSize = duration * 320000 / 8; // ~40KB per second at 320kbps
         
-        // If estimated size > 10MB, use 128kbps instead
-        if (estimated256kbpsSize > 10 * 1024 * 1024) {
-          bitrate = '128k';
-          console.log(`Large file detected (${duration.toFixed(1)}s), using 128kbps for compression`);
+        // If estimated size > 10MB, use 256kbps instead
+        if (estimated320kbpsSize > 10 * 1024 * 1024) {
+          bitrate = '256k';
+          console.log(`Large file detected (${duration.toFixed(1)}s), using 256kbps for compression`);
         } else {
-          console.log(`Standard file (${duration.toFixed(1)}s), using 256kbps for high quality`);
+          console.log(`Standard file (${duration.toFixed(1)}s), using 320kbps for high quality`);
         }
         
         audioContext.close();
       } catch (analysisError) {
-        console.warn('Could not analyze audio for bitrate selection, using default 256kbps:', analysisError);
+        console.warn('Could not analyze audio for bitrate selection, using default 320kbps:', analysisError);
       }
       
       // External transcoding service deployed on Render
@@ -57,6 +57,7 @@ export class ImportTranscodingService {
       const formData = new FormData();
       formData.append('audio', audioBlob, fileName);
       formData.append('bitrate', bitrate);
+      formData.append('outputFormat', outputFormat);
       
       console.log('Sending transcoding request:', {
         url: EXTERNAL_TRANSCODING_URL,
@@ -98,7 +99,7 @@ export class ImportTranscodingService {
         throw new Error('No public URL returned from transcoding service');
       }
 
-      console.log(`Server-side MP3 transcoding complete (${bitrate}):`, data.publicUrl);
+      console.log(`Server-side ${outputFormat.toUpperCase()} transcoding complete (${bitrate}):`, data.publicUrl);
       if (data.originalSize && data.transcodedSize) {
         const compressionRatio = ((data.originalSize - data.transcodedSize) / data.originalSize * 100).toFixed(1);
         console.log(`Compression: ${(data.originalSize / 1024 / 1024).toFixed(1)}MB → ${(data.transcodedSize / 1024 / 1024).toFixed(1)}MB (${compressionRatio}% reduction)`);

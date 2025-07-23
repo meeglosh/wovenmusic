@@ -392,8 +392,12 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         console.log(`Extracted metadata for ${file.name}:`, metadata);
         updateProgress('processing', undefined, 50);
         
+        // Get conversion quality setting from localStorage
+        const conversionQuality = localStorage.getItem('conversionQuality') || 'mp3-320';
+        const outputFormat = conversionQuality === 'aac-320' ? 'aac' : 'mp3';
+        
         // Transcode with retry logic built into the service
-        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
+        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name, outputFormat);
         finalUrl = transcodeResult.publicUrl;
         updateProgress('processing', undefined, 70);
         

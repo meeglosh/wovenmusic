@@ -89,6 +89,7 @@ const EmptyLibraryState = ({ onDropboxConnected }: EmptyLibraryStateProps) => {
       <UploadModal 
         open={showUploadModal} 
         onOpenChange={setShowUploadModal} 
+        audioQuality="mp3-320"
       />
       
       <DropboxConnectModal
