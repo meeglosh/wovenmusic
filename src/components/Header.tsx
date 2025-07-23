@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
@@ -101,7 +101,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <ChevronDown className="w-3 h-3 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+            <DropdownMenuContent align="end" className="w-52 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
               <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 Members
@@ -110,6 +110,18 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5">
+                <div className="flex items-center mb-2">
+                  <Volume2 className="w-4 h-4 mr-2 text-primary" />
+                  <span className="text-sm font-medium text-primary">Audio Quality:</span>
+                </div>
+                <div className="ml-6 space-y-1">
+                  <div className="text-xs text-muted-foreground">• Good (MP3 320kbps)</div>
+                  <div className="text-xs text-muted-foreground">• Better (AAC 320kbps)</div>
+                  <div className="text-xs text-muted-foreground">• Best (Apple Lossless)</div>
+                </div>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -148,7 +160,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Settings className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+            <DropdownMenuContent align="end" className="w-44 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
               <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 <span className="text-sm">Members</span>
@@ -157,6 +169,18 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Shield className="w-4 h-4 mr-2" />
                 <span className="text-sm">Privacy</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5">
+                <div className="flex items-center mb-1">
+                  <Volume2 className="w-3 h-3 mr-1 text-primary" />
+                  <span className="text-xs font-medium text-primary">Audio Quality:</span>
+                </div>
+                <div className="ml-4 space-y-0.5">
+                  <div className="text-xs text-muted-foreground">• Good (MP3 320k)</div>
+                  <div className="text-xs text-muted-foreground">• Better (AAC 320k)</div>
+                  <div className="text-xs text-muted-foreground">• Best (Lossless)</div>
+                </div>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-primary">
                 <LogOut className="w-4 h-4 mr-2" />
