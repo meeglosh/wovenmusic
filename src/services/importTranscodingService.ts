@@ -11,7 +11,7 @@ export class ImportTranscodingService {
     
     try {
       // Call Render server transcoding endpoint
-      const response = await fetch('https://transcode-server.onrender.com/api/transcode', {
+      const response = await fetch('https://transcode-server.onrender.com/transcode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
