@@ -5,12 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Lock, Globe, Music, ListMusic, Search, ArrowLeft, Eye, EyeOff, Settings } from "lucide-react";
+import { Lock, Globe, Music, ListMusic, Search, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useTracks, useUpdateTrack } from "@/hooks/useTracks";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
-import { useTranscodingPreferences, TranscodingFormat } from "@/hooks/useTranscodingPreferences";
 import { Track } from "@/types/music";
 import { getFileName } from "@/types/music";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +20,6 @@ export default function PrivacySettings() {
   const { data: playlists = [] } = usePlaylists();
   const updateTrackMutation = useUpdateTrack();
   const updatePlaylistVisibility = useUpdatePlaylistVisibility();
-  const { preferences, updateOutputFormat } = useTranscodingPreferences();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -152,7 +150,6 @@ export default function PrivacySettings() {
       </div>
 
       <div className="space-y-8">
-
         {/* Tracks Section */}
         <Card>
           <CardHeader>

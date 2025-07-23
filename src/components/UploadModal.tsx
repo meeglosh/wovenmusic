@@ -32,8 +32,8 @@ interface UploadFile {
   trackId?: string;
 }
 
-const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.aif', '.aiff'];
-const UNSUPPORTED_FORMATS: string[] = []; // All formats now supported with transcoding
+const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
+const UNSUPPORTED_FORMATS = ['.aif', '.aiff'];
 
 export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
@@ -373,7 +373,7 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
           <DialogHeader>
             <DialogTitle className="text-primary">Cast waveforms into the current</DialogTitle>
             <DialogDescription>
-              Upload audio files to your library. Supports MP3, WAV, M4A, AAC, OGG, FLAC, AIF, and AIFF formats.
+              Upload audio files to your library. Supports MP3, WAV, M4A, AAC, OGG, and FLAC formats.
             </DialogDescription>
           </DialogHeader>
 

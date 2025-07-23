@@ -26,7 +26,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { FileImportStatus, ImportProgress } from "@/types/fileImport";
-import { useTranscodingPreferences } from "@/hooks/useTranscodingPreferences";
 import {
   Drawer,
   DrawerContent,
@@ -66,7 +65,6 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
-  const { preferences } = useTranscodingPreferences();
 
   const formatDuration = (seconds: number): string => {
     if (seconds === 0) return '--:--';
@@ -184,7 +182,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         if (item[".tag"] !== "file") return false;
         
         const fileName = item.name.toLowerCase();
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
+        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma'];
         return supportedExtensions.some(ext => fileName.endsWith(ext));
       });
        
@@ -374,7 +372,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         updateProgress('processing', undefined, 50);
         
         // Transcode with retry logic built into the service
-        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name, preferences.outputFormat);
+        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name);
         finalUrl = transcodeResult.publicUrl;
         updateProgress('processing', undefined, 70);
         

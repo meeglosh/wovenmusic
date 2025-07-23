@@ -1,4 +1,4 @@
-import { TranscodingFormat } from '@/hooks/useTranscodingPreferences';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TranscodeResult {
   publicUrl: string;
@@ -6,89 +6,133 @@ export interface TranscodeResult {
 }
 
 export class ImportTranscodingService {
-  async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
-    console.log(`Starting Render server transcoding for: ${fileName}`);
+  
+  async transcodeAndStore(audioUrl: string, fileName: string, retries = 3): Promise<TranscodeResult> {
+    let lastError: Error | null = null;
     
-    try {
-      // Call Render server transcoding endpoint
-      const response = await fetch('https://transcode-server.onrender.com/api/transcode', {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`Starting server-side MP3 transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
+        
+        // Estimate duration and determine optimal bitrate
+        let bitrate = '256k'; // Default to high quality
+      
+      try {
+        // Quick audio analysis to determine bitrate
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        // Use Web Audio API to get duration for bitrate estimation
+        const audioContext = new AudioContext();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const duration = audioBuffer.duration;
+        
+        // Estimate MP3 file size at 256kbps: duration * bitrate / 8 (convert bits to bytes)
+        const estimated256kbpsSize = duration * 256000 / 8; // ~32KB per second at 256kbps
+        
+        // If estimated size > 10MB, use 128kbps instead
+        if (estimated256kbpsSize > 10 * 1024 * 1024) {
+          bitrate = '128k';
+          console.log(`Large file detected (${duration.toFixed(1)}s), using 128kbps for compression`);
+        } else {
+          console.log(`Standard file (${duration.toFixed(1)}s), using 256kbps for high quality`);
+        }
+        
+        audioContext.close();
+      } catch (analysisError) {
+        console.warn('Could not analyze audio for bitrate selection, using default 256kbps:', analysisError);
+      }
+      
+      // External transcoding service deployed on Render
+      const EXTERNAL_TRANSCODING_URL = 'https://transcode-server.onrender.com/transcode';
+      
+      // Download the audio file from Dropbox
+      const audioResponse = await fetch(audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio file: ${audioResponse.status}`);
+      }
+      const audioBlob = await audioResponse.blob();
+      
+      // Create FormData with the audio file
+      const formData = new FormData();
+      formData.append('audio', audioBlob, fileName);
+      formData.append('bitrate', bitrate);
+      
+      console.log('Sending transcoding request:', {
+        url: EXTERNAL_TRANSCODING_URL,
+        fileName,
+        bitrate,
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type,
+        attempt
+      });
+      
+      const response = await fetch(EXTERNAL_TRANSCODING_URL, {
         method: 'POST',
+        body: formData,
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          audioUrl,
-          fileName,
-          outputFormat: 'mp3', // Force mp3 for now since that was working
-          bitrate: '320k'
-        })
+          'Origin': 'https://wovenmusic.app'
+        }
       });
 
+      console.log('Transcoding response status:', response.status, response.statusText);
+      
+      // Log full error details for debugging
       if (!response.ok) {
-        throw new Error(`Transcoding server returned ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Transcoding function error:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        console.error('Request details:', {
+          url: EXTERNAL_TRANSCODING_URL,
+          fileName,
+          bitrate,
+          blobSize: audioBlob.size,
+          blobType: audioBlob.type
+        });
+        throw new Error(`Transcoding failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Transcoding response:', data);
 
-      if (!data?.success || !data?.publicUrl) {
-        throw new Error('Transcoding server returned invalid response');
+      if (!data?.publicUrl) {
+        throw new Error('No public URL returned from transcoding service');
       }
 
-      console.log(`Render server transcoding completed for: ${fileName}`);
+      console.log(`Server-side MP3 transcoding complete (${bitrate}):`, data.publicUrl);
+      if (data.originalSize && data.transcodedSize) {
+        const compressionRatio = ((data.originalSize - data.transcodedSize) / data.originalSize * 100).toFixed(1);
+        console.log(`Compression: ${(data.originalSize / 1024 / 1024).toFixed(1)}MB → ${(data.transcodedSize / 1024 / 1024).toFixed(1)}MB (${compressionRatio}% reduction)`);
+      }
+      
+      // If the server returned the original filename, log it
+      if (data.originalFilename) {
+        console.log(`Original filename preserved by transcoding service: ${data.originalFilename}`);
+      }
+      
       return {
         publicUrl: data.publicUrl,
-        originalFilename: fileName
+        originalFilename: data.originalFilename
       };
-    } catch (error: any) {
-      console.error(`Transcoding failed for ${fileName}:`, error.message);
-      throw new Error(`Transcoding failed: ${error.message}`);
-    }
-  }
-
-  private audioBufferToWav(audioBuffer: AudioBuffer): ArrayBuffer {
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const sampleRate = audioBuffer.sampleRate;
-    const length = audioBuffer.length * numberOfChannels * 2; // 16-bit samples
-    const arrayBuffer = new ArrayBuffer(44 + length);
-    const view = new DataView(arrayBuffer);
-    
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + length, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numberOfChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-    view.setUint16(32, numberOfChannels * 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, 'data');
-    view.setUint32(40, length, true);
-    
-    // Convert float samples to 16-bit PCM
-    let offset = 44;
-    for (let i = 0; i < audioBuffer.length; i++) {
-      for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sample = audioBuffer.getChannelData(channel)[i];
-        const int16Sample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
-        view.setInt16(offset, int16Sample, true);
-        offset += 2;
+      
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Transcoding attempt ${attempt}/${retries} failed for ${fileName}:`, lastError.message);
+        
+        if (attempt < retries) {
+          const delayMs = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Retrying transcoding in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
       }
     }
     
-    return arrayBuffer;
+    console.error(`All ${retries} transcoding attempts failed for ${fileName}`);
+    throw lastError || new Error('Transcoding failed after all retry attempts');
   }
   
   needsTranscoding(filePath: string): boolean {
+    // Check if file needs server-side MP3 transcoding
+    // WAV and AIF files should be transcoded for better compression
     const ext = filePath.toLowerCase().split('.').pop();
     return ext === 'wav' || ext === 'aif' || ext === 'aiff';
   }
