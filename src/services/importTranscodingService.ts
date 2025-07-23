@@ -8,31 +8,35 @@ export interface TranscodeResult {
 
 export class ImportTranscodingService {
   async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
-    console.log(`Starting server-side ${outputFormat.toUpperCase()} transcoding for: ${fileName}`);
+    console.log(`Starting Render server transcoding for: ${fileName}`);
     
     try {
-      // Use server-side Edge Function for proper transcoding
-      const { data, error } = await supabase.functions.invoke('transcode-audio', {
-        body: {
+      // Call Render server transcoding endpoint
+      const response = await fetch('/api/transcode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           audioUrl,
           fileName,
-          outputFormat,
+          outputFormat: 'mp3', // Force mp3 for now since that was working
           bitrate: '320k'
-        }
+        })
       });
 
+      if (!response.ok) {
+        throw new Error(`Transcoding server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       console.log('Transcoding response:', data);
 
-      if (error) {
-        console.error('Transcoding function error:', error);
-        throw new Error(`Transcoding failed: ${error.message}`);
-      }
-
       if (!data?.success || !data?.publicUrl) {
-        throw new Error('Transcoding function returned invalid response');
+        throw new Error('Transcoding server returned invalid response');
       }
 
-      console.log(`Server-side transcoding completed for: ${fileName}`);
+      console.log(`Render server transcoding completed for: ${fileName}`);
       return {
         publicUrl: data.publicUrl,
         originalFilename: fileName
