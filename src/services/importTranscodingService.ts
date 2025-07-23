@@ -1,10 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
-import { TranscodingFormat } from '@/hooks/useTranscodingPreferences';
-
-export interface TranscodeResult {
-  publicUrl: string;
-  originalFilename?: string;
-}
+// ...imports and interfaces unchanged...
 
 export class ImportTranscodingService {
   async transcodeAndStore(audioUrl: string, fileName: string, outputFormat: TranscodingFormat = 'mp3'): Promise<TranscodeResult> {
@@ -12,7 +6,7 @@ export class ImportTranscodingService {
     
     try {
       // Call Render server transcoding endpoint
-      const response = await fetch('/api/transcode', {
+      const response = await fetch('https://transcode-server.onrender.com/api/transcode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,8 +84,6 @@ export class ImportTranscodingService {
   }
   
   needsTranscoding(filePath: string): boolean {
-    // Check if file needs server-side MP3 transcoding
-    // WAV and AIF files should be transcoded for better compression
     const ext = filePath.toLowerCase().split('.').pop();
     return ext === 'wav' || ext === 'aif' || ext === 'aiff';
   }
