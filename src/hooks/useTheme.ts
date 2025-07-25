@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 
-export type Theme = 'midnight-glow' | 'neon-garden' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'liminal-aureole' | 'umbral-manuscript' | 'spectral-palimpsest' | 'magenta-oscillation' | 'silurian-threshold' | 'cambrian-resonance' | 'voltaic-sublimation';
+export type Theme = 'midnight-glow' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'liminal-aureole' | 'spectral-palimpsest' | 'magenta-oscillation' | 'silurian-threshold' | 'cambrian-resonance' | 'voltaic-sublimation';
 
 export const THEMES = [
   { value: 'midnight-glow', label: 'Abyssal Phosphene', description: 'Bioluminescent signals in deep current' },
-  { value: 'neon-garden', label: 'Xerophyte Resonance', description: 'Electric frequencies on luminous void' },
   { value: 'violet-dreams', label: 'Oneiric Spectrum', description: 'Dream particles in chromatic suspension' },
   { value: 'glacial-syntax', label: 'Cryogenic Whisper', description: 'Frozen algorithms in crystalline matrix' },
   { value: 'cryogenic-resonance', label: 'Glacial Syntax', description: 'Sub-zero frequencies in thermal void' },
   { value: 'liminal-aureole', label: 'Aureate Membrane', description: 'Threshold barriers in gilded essence' },
-  { value: 'umbral-manuscript', label: 'Spectral Palimpsest', description: 'Ghostly text on shadow parchment' },
   { value: 'spectral-palimpsest', label: 'Umbral Manuscript', description: 'Overwritten shadows in phantom ink' },
   { value: 'magenta-oscillation', label: 'Chromatic Nexus', description: 'Color intersections in frequency space' },
   { value: 'silurian-threshold', label: 'Paleozoic Stratum', description: 'Ancient sediments in temporal layers' },
