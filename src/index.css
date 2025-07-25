@@ -21,10 +21,12 @@
     --color-14: 60 9% 98%;
     --color-15: 252 66% 20%;
     --color-16: 58 92% 52%;
-    --color-17: 335 100% 32%;
-    --color-18: 210 100% 30%;
+    --color-17: 230 99% 33%;
+    --color-18: 61 98% 52%;
     --color-19: 224 71% 4%;
     --color-20: 142 69% 58%;
+    --color-21: 226 62% 4%;
+    --color-22: 191 76% 66%;
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -334,8 +336,8 @@
     --ring: var(--color-16);
   }
   
-    /* Blau Grana - Mes que un club */
-  .blau-grana {
+    /* Sunblind Oracle - Mes que un club */
+  .sunblind-oracle {
     color: var(--color-18);
     background-color: var(--color-17);
     --background: var(--color-17);
@@ -378,6 +380,29 @@
     --border: var(--color-20);
     --input: var(--color-19);
     --ring: var(--color-20);
+  }
+
+    /* Abyss Current - Midnight depth charged with electric tide */  
+    .abyss-current {
+    color: var(--color-22);
+    background-color: var(--color-21);
+    --background: var(--color-21);
+    --foreground: var(--color-22);
+    --card: var(--color-21);
+    --card-foreground: var(--color-22);
+    --popover: var(--color-21);
+    --popover-foreground: var(--color-22);
+    --primary: var(--color-22);
+    --primary-foreground: var(--color-21);
+    --secondary: var(--color-21);
+    --secondary-foreground: var(--color-22);
+    --muted: var(--color-21);
+    --muted-foreground: var(--color-22);
+    --accent: var(--color-22);
+    --accent-foreground: var(--color-21);
+    --border: var(--color-22);
+    --input: var(--color-21);
+    --ring: var(--color-22);
   }
 
   * {
