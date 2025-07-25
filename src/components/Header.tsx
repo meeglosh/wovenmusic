@@ -72,7 +72,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input 
-              placeholder="Search tracks, playlists..." 
+              placeholder="Scour the drift..." 
               className="pl-10 bg-muted/30 border border-border text-primary"
               value={searchTerm}
               onChange={(e) => onSearchChange?.(e.target.value)}
