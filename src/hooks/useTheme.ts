@@ -12,8 +12,9 @@ export const THEMES = [
   { value: 'magenta-oscillation', label: 'Chromatic Nexus', description: 'Color intersections in frequency space' },
   { value: 'cambrian-resonance', label: 'Primordial Echo', description: 'Fossil vibrations in stone matrix' },
   { value: 'voltaic-sublimation', label: 'Voltaic Sublimation', description: 'Electric transmutation in neural darkness' },
-  { value: 'blau-grana', label: 'Blau Grana', description: 'Mes que un club' },
+  { value: 'sunblind-oracle', label: 'Sunblind Oracle', description: 'Beamed in from an overexposed future' },
   { value: 'matrix-undulations', label: 'Matrix Undulations', description: 'Operator, I need an exit' },
+  { value: 'abyss-current', label: 'Abyss Current', description: 'Midnight depth charged with electric tide' },
 ] as const;
 
 export const useTheme = () => {
