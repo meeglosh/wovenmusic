@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type Theme = 'midnight-glow' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'liminal-aureole' | 'spectral-palimpsest' | 'magenta-oscillation' | 'silurian-threshold' | 'cambrian-resonance' | 'voltaic-sublimation';
+export type Theme = 'midnight-glow' | 'violet-dreams' | 'glacial-syntax' | 'cryogenic-resonance' | 'liminal-aureole' | 'spectral-palimpsest' | 'magenta-oscillation' | 'cambrian-resonance' | 'voltaic-sublimation' | 'blau-grana' | 'matrix-undulations' ;
 
 export const THEMES = [
   { value: 'midnight-glow', label: 'Abyssal Phosphene', description: 'Bioluminescent signals in deep current' },
@@ -10,9 +10,10 @@ export const THEMES = [
   { value: 'liminal-aureole', label: 'Aureate Membrane', description: 'Threshold barriers in gilded essence' },
   { value: 'spectral-palimpsest', label: 'Umbral Manuscript', description: 'Overwritten shadows in phantom ink' },
   { value: 'magenta-oscillation', label: 'Chromatic Nexus', description: 'Color intersections in frequency space' },
-  { value: 'silurian-threshold', label: 'Paleozoic Stratum', description: 'Ancient sediments in temporal layers' },
   { value: 'cambrian-resonance', label: 'Primordial Echo', description: 'Fossil vibrations in stone matrix' },
   { value: 'voltaic-sublimation', label: 'Voltaic Sublimation', description: 'Electric transmutation in neural darkness' },
+  { value: 'blau-grana', label: 'Blau Grana', description: 'Mes que un club' },
+  { value: 'matrix-undulations', label: 'Matrix Undulations', description: 'Operator, I need an exit' },
 ] as const;
 
 export const useTheme = () => {
