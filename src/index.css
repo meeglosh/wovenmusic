@@ -21,6 +21,10 @@
     --color-14: 60 9% 98%;
     --color-15: 252 66% 20%;
     --color-16: 58 92% 52%;
+    --color-17: 210 100% 30%;
+    --color-18: 335 100% 32%;
+    --color-19: 224 71% 4%;
+    --color-20: 142 69% 58%;
     
     --background: var(--color-2);
     --foreground: var(--color-1);
@@ -53,28 +57,6 @@
     --radius: 0.75rem;
   }
 
-  /* Neon Garden - navy text on yellow-green background */
-  .neon-garden {
-    color: var(--color-1);
-    background-color: var(--color-2);
-    --background: var(--color-2);
-    --foreground: var(--color-1);
-    --card: var(--color-2);
-    --card-foreground: var(--color-1);
-    --popover: var(--color-2);
-    --popover-foreground: var(--color-1);
-    --primary: var(--color-1);
-    --primary-foreground: var(--color-2);
-    --secondary: var(--color-2);
-    --secondary-foreground: var(--color-1);
-    --muted: var(--color-2);
-    --muted-foreground: var(--color-1);
-    --accent: var(--color-1);
-    --accent-foreground: var(--color-2);
-    --border: var(--color-1);
-    --input: var(--color-2);
-    --ring: var(--color-1);
-  }
 
   /* Midnight Glow - yellow-green text on navy background */
   .midnight-glow {
@@ -97,29 +79,6 @@
     --border: var(--color-2);
     --input: var(--color-1);
     --ring: var(--color-2);
-  }
-
-  /* Royal Parchment - purple text on cream background */
-  .royal-parchment {
-    color: var(--color-3);
-    background-color: var(--color-4);
-    --background: var(--color-4);
-    --foreground: var(--color-3);
-    --card: var(--color-4);
-    --card-foreground: var(--color-3);
-    --popover: var(--color-4);
-    --popover-foreground: var(--color-3);
-    --primary: var(--color-3);
-    --primary-foreground: var(--color-4);
-    --secondary: var(--color-4);
-    --secondary-foreground: var(--color-3);
-    --muted: var(--color-4);
-    --muted-foreground: var(--color-3);
-    --accent: var(--color-3);
-    --accent-foreground: var(--color-4);
-    --border: var(--color-3);
-    --input: var(--color-4);
-    --ring: var(--color-3);
   }
 
   /* Violet Dreams - cream text on purple background */
@@ -329,29 +288,6 @@
     --ring: var(--color-12);
   }
 
-  /* Silurian Threshold - dark stone text on light stone background */
-  .silurian-threshold {
-    color: var(--color-13);
-    background-color: var(--color-14);
-    --background: var(--color-14);
-    --foreground: var(--color-13);
-    --card: var(--color-14);
-    --card-foreground: var(--color-13);
-    --popover: var(--color-14);
-    --popover-foreground: var(--color-13);
-    --primary: var(--color-13);
-    --primary-foreground: var(--color-14);
-    --secondary: var(--color-14);
-    --secondary-foreground: var(--color-13);
-    --muted: var(--color-14);
-    --muted-foreground: var(--color-13);
-    --accent: var(--color-13);
-    --accent-foreground: var(--color-14);
-    --border: var(--color-13);
-    --input: var(--color-14);
-    --ring: var(--color-13);
-  }
-
   /* Cambrian Resonance - light stone text on dark stone background */
   .cambrian-resonance {
     color: var(--color-14);
@@ -375,29 +311,6 @@
     --ring: var(--color-14);
   }
 
-  /* Psychedelic Membrane - dark indigo text on electric yellow background */
-  .psychedelic-membrane {
-    color: var(--color-15);
-    background-color: var(--color-16);
-    --background: var(--color-16);
-    --foreground: var(--color-15);
-    --card: var(--color-16);
-    --card-foreground: var(--color-15);
-    --popover: var(--color-16);
-    --popover-foreground: var(--color-15);
-    --primary: var(--color-15);
-    --primary-foreground: var(--color-16);
-    --secondary: var(--color-16);
-    --secondary-foreground: var(--color-15);
-    --muted: var(--color-16);
-    --muted-foreground: var(--color-15);
-    --accent: var(--color-15);
-    --accent-foreground: var(--color-16);
-    --border: var(--color-15);
-    --input: var(--color-16);
-    --ring: var(--color-15);
-  }
-
   /* Voltaic Sublimation - electric yellow text on dark indigo background */
   .voltaic-sublimation {
     color: var(--color-16);
@@ -419,6 +332,52 @@
     --border: var(--color-16);
     --input: var(--color-15);
     --ring: var(--color-16);
+  }
+  
+    /* Blau Grana - Mes que un club */
+  .blau-grana {
+    color: var(--color-18);
+    background-color: var(--color-17);
+    --background: var(--color-17);
+    --foreground: var(--color-18);
+    --card: var(--color-17);
+    --card-foreground: var(--color-18);
+    --popover: var(--color-17);
+    --popover-foreground: var(--color-18);
+    --primary: var(--color-18);
+    --primary-foreground: var(--color-17);
+    --secondary: var(--color-17);
+    --secondary-foreground: var(--color-18);
+    --muted: var(--color-17);
+    --muted-foreground: var(--color-18);
+    --accent: var(--color-18);
+    --accent-foreground: var(--color-17);
+    --border: var(--color-18);
+    --input: var(--color-17);
+    --ring: var(--color-18);
+  }
+  
+    /* Matrix Undulations - operator, I need an exit */
+  .matrix-undulations {
+    color: var(--color-20);
+    background-color: var(--color-19);
+    --background: var(--color-19);
+    --foreground: var(--color-20);
+    --card: var(--color-19);
+    --card-foreground: var(--color-20);
+    --popover: var(--color-19);
+    --popover-foreground: var(--color-20);
+    --primary: var(--color-20);
+    --primary-foreground: var(--color-19);
+    --secondary: var(--color-19);
+    --secondary-foreground: var(--color-20);
+    --muted: var(--color-19);
+    --muted-foreground: var(--color-20);
+    --accent: var(--color-20);
+    --accent-foreground: var(--color-19);
+    --border: var(--color-20);
+    --input: var(--color-19);
+    --ring: var(--color-20);
   }
 
   * {
