@@ -262,19 +262,19 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     }
   };
   return (
-    <div className="p-comfortable sm:p-generous space-y-comfortable">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-display font-rem text-primary">{randomLibraryTitle.title}</h2>
-          <p className="text-subtitle font-rem text-muted-foreground mt-tight">{randomLibraryTitle.subtitle}</p>
+          <h2 className="text-3xl font-bold text-primary">{randomLibraryTitle.title}</h2>
+          <p className="text-muted-foreground mt-1 font-rem font-thin">{randomLibraryTitle.subtitle}</p>
           {searchTerm && (
-            <p className="text-caption text-muted-foreground mt-snug">
+            <p className="text-sm text-muted-foreground mt-2">
               Showing {tracks.length} result{tracks.length !== 1 ? 's' : ''} for "{searchTerm}"
             </p>
           )}
         </div>
-        <div className="flex items-center space-x-comfortable">
-          <div className="text-caption text-muted-foreground">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-muted-foreground">
             {tracks.length} track{tracks.length !== 1 ? 's' : ''}
           </div>
         </div>
