@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2, X, ChevronUp } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2, ChevronDown, ChevronUp } from "lucide-react";
 import { Track, getCleanTitle } from "@/types/music";
 
 interface PlayerProps {
@@ -76,6 +76,18 @@ const Player = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md p-3 sm:p-4 shadow-lg">
+      {/* Minimize button - top-right corner */}
+      {onMinimize && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onMinimize}
+          className="absolute top-2 right-2 z-10"
+        >
+          <ChevronDown className="w-4 h-4 text-primary" />
+        </Button>
+      )}
+      
       <div className="flex flex-col sm:flex-row items-center justify-between max-w-screen-xl mx-auto space-y-3 sm:space-y-0">
         {/* Track Info */}
         <div className="flex items-center space-x-3 sm:space-x-4 flex-1 w-full sm:w-auto">
@@ -167,7 +179,7 @@ const Player = ({
           </div>
         </div>
 
-        {/* Volume and Close - Hidden on mobile */}
+        {/* Volume - Hidden on mobile */}
         <div className="hidden sm:flex items-center space-x-2 flex-1 justify-end">
           <Volume2 className="w-4 h-4 text-primary" />
           <Slider
@@ -177,20 +189,6 @@ const Player = ({
             className="w-20"
             onValueChange={handleVolumeChange}
           />
-          {onMinimize && (
-            <Button variant="ghost" size="sm" onClick={onMinimize}>
-              <X className="w-4 h-4 text-primary" />
-            </Button>
-          )}
-        </div>
-
-        {/* Mobile close button */}
-        <div className="sm:hidden">
-          {onMinimize && (
-            <Button variant="ghost" size="sm" onClick={onMinimize}>
-              <X className="w-4 h-4 text-primary" />
-            </Button>
-          )}
         </div>
       </div>
     </div>
