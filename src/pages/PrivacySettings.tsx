@@ -169,15 +169,15 @@ export default function PrivacySettings() {
                 </p>
               ) : (
                 filteredTracks.map((track) => (
-                  <div key={track.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Music className="h-4 w-4 text-muted-foreground" />
-                       <div>
-                         <p className="font-medium">{getCleanTitle(track)}</p>
-                       </div>
+                  <div key={track.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <Music className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{getCleanTitle(track)}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`track-${track.id}`} className="text-sm flex items-center gap-1">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      <Label htmlFor={`track-${track.id}`} className="text-xs sm:text-sm flex items-center gap-1 whitespace-nowrap">
                         {track.is_public ? (
                           <>
                             <Globe className="h-3 w-3" />
@@ -223,18 +223,18 @@ export default function PrivacySettings() {
                 </p>
               ) : (
                 filteredPlaylists.map((playlist) => (
-                  <div key={playlist.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <ListMusic className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{playlist.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div key={playlist.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <ListMusic className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{playlist.name}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`playlist-${playlist.id}`} className="text-sm flex items-center gap-1">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      <Label htmlFor={`playlist-${playlist.id}`} className="text-xs sm:text-sm flex items-center gap-1 whitespace-nowrap">
                         {playlist.isPublic ? (
                           <>
                             <Globe className="h-3 w-3" />
