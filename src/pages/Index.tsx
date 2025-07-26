@@ -44,6 +44,10 @@ const Index = () => {
   });
   const [lastDialogTime, setLastDialogTime] = useState(0);
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
+  const [isPlayerMinimized, setIsPlayerMinimized] = useState(() => {
+    const saved = localStorage.getItem('player-minimized');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   // Fetch real data from Supabase
   const { data: tracks = [], isLoading: tracksLoading, error: tracksError } = useTracks();
@@ -70,6 +74,26 @@ const Index = () => {
     setVolume,
     formatTime
   } = useAudioPlayer();
+
+  // Save minimized state to localStorage
+  useEffect(() => {
+    localStorage.setItem('player-minimized', JSON.stringify(isPlayerMinimized));
+  }, [isPlayerMinimized]);
+
+  // Auto-expand player when new track starts playing
+  useEffect(() => {
+    if (currentTrack && isPlayerMinimized) {
+      setIsPlayerMinimized(false);
+    }
+  }, [currentTrack]);
+
+  const handleMinimizePlayer = () => {
+    setIsPlayerMinimized(true);
+  };
+
+  const handleExpandPlayer = () => {
+    setIsPlayerMinimized(false);
+  };
 
   // Search functionality
   const filteredTracks = useMemo(() => {
@@ -267,6 +291,7 @@ const Index = () => {
           volume={volume}
           isShuffleMode={isShuffleMode}
           isRepeatMode={isRepeatMode}
+          isMinimized={isPlayerMinimized}
           onPlayPause={togglePlayPause}
           onSeek={seekTo}
           onVolumeChange={setVolume}
@@ -275,6 +300,8 @@ const Index = () => {
           onShuffle={toggleShuffle}
           onRepeat={toggleRepeat}
           onFullScreen={() => setShowFullScreen(true)}
+          onMinimize={handleMinimizePlayer}
+          onExpand={handleExpandPlayer}
           formatTime={formatTime}
         />
       )}

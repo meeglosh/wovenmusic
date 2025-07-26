@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2 } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Repeat, Shuffle, Maximize2, X, ChevronUp } from "lucide-react";
 import { Track, getCleanTitle } from "@/types/music";
 
 interface PlayerProps {
@@ -12,6 +12,7 @@ interface PlayerProps {
   volume: number;
   isShuffleMode?: boolean;
   isRepeatMode?: boolean;
+  isMinimized?: boolean;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (volume: number) => void;
@@ -20,6 +21,8 @@ interface PlayerProps {
   onShuffle?: () => void;
   onRepeat?: () => void;
   onFullScreen?: () => void;
+  onMinimize?: () => void;
+  onExpand?: () => void;
   formatTime: (time: number) => string;
 }
 
@@ -31,6 +34,7 @@ const Player = ({
   volume, 
   isShuffleMode = false,
   isRepeatMode = false,
+  isMinimized = false,
   onPlayPause, 
   onSeek, 
   onVolumeChange, 
@@ -39,6 +43,8 @@ const Player = ({
   onShuffle,
   onRepeat,
   onFullScreen,
+  onMinimize,
+  onExpand,
   formatTime 
 }: PlayerProps) => {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -51,6 +57,22 @@ const Player = ({
   const handleVolumeChange = (values: number[]) => {
     onVolumeChange(values[0] / 100);
   };
+
+  // Minimized view - floating button
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <Button
+          onClick={onExpand}
+          variant="default"
+          size="sm"
+          className="rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all duration-200"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md p-3 sm:p-4 shadow-lg">
@@ -145,7 +167,7 @@ const Player = ({
           </div>
         </div>
 
-        {/* Volume - Hidden on mobile */}
+        {/* Volume and Close - Hidden on mobile */}
         <div className="hidden sm:flex items-center space-x-2 flex-1 justify-end">
           <Volume2 className="w-4 h-4 text-primary" />
           <Slider
@@ -155,6 +177,20 @@ const Player = ({
             className="w-20"
             onValueChange={handleVolumeChange}
           />
+          {onMinimize && (
+            <Button variant="ghost" size="sm" onClick={onMinimize}>
+              <X className="w-4 h-4 text-primary" />
+            </Button>
+          )}
+        </div>
+
+        {/* Mobile close button */}
+        <div className="sm:hidden">
+          {onMinimize && (
+            <Button variant="ghost" size="sm" onClick={onMinimize}>
+              <X className="w-4 h-4 text-primary" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
