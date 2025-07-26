@@ -10,6 +10,7 @@ export interface Track {
   dropbox_path?: string;
   is_public?: boolean;
   play_count?: number;
+  created_by?: string;
 }
 
 export interface PendingTrack {
@@ -61,6 +62,7 @@ export interface Playlist {
   sharedWith: string[];
   isPublic?: boolean;
   shareToken?: string;
+  created_by?: string;
 }
 
 export interface BandMember {

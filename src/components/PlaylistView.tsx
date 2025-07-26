@@ -69,6 +69,7 @@ interface PlaylistViewProps {
 // Import the hooks we need
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useTracks } from "@/hooks/useTracks";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Sortable Track Item Component
 interface SortableTrackItemProps {
@@ -78,9 +79,10 @@ interface SortableTrackItemProps {
   onRemove: (trackId: string) => void;
   playlist: Track[];
   playlistImageUrl?: string;
+  canManagePlaylistTracks: boolean;
 }
 
-const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistImageUrl }: SortableTrackItemProps) => {
+const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistImageUrl, canManagePlaylistTracks }: SortableTrackItemProps) => {
   const {
     attributes,
     listeners,
@@ -104,11 +106,12 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
     >
       {/* Drag Handle */}
       <div 
-        {...attributes} 
-        {...listeners}
-        className="w-6 flex items-center cursor-grab active:cursor-grabbing"
+        {...(canManagePlaylistTracks ? { ...attributes, ...listeners } : {})}
+        className={`w-6 flex items-center ${canManagePlaylistTracks ? 'cursor-grab active:cursor-grabbing' : ''}`}
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity" />
+        {canManagePlaylistTracks && (
+          <GripVertical className="w-4 h-4 text-muted-foreground opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity" />
+        )}
       </div>
 
       {/* Track Number / Play Button */}
@@ -169,34 +172,36 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
 
       {/* Actions */}
       <div className="w-8 sm:w-12 flex items-center">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-            >
-              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remove track from playlist?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to remove "{getCleanTitle(track)}" from this playlist?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onRemove(track.id)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        {canManagePlaylistTracks ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
               >
-                Remove from playlist
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove track from playlist?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove "{getCleanTitle(track)}" from this playlist?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onRemove(track.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Remove from playlist
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
       </div>
     </div>
   );
@@ -218,6 +223,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const uploadImageMutation = useUploadPlaylistImage();
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
+  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy } = usePermissions();
 
   // Fetch fresh data directly in this component
   const { data: playlists = [] } = usePlaylists();
@@ -483,30 +489,32 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </div>
 
           {/* Privacy Controls */}
-          <div className="mb-6">
-            <Card className="p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="space-y-1 flex-1 min-w-0">
-                  <Label htmlFor="playlist-privacy" className="text-sm font-medium">
-                    Make playlist public
-                  </Label>
-                  <p className="text-xs text-muted-foreground break-words">
-                    {playlist.isPublic 
-                      ? "Anyone can discover and listen to this playlist" 
-                      : "Only you and shared members can access this playlist"
-                    }
-                  </p>
+          {canEditPlaylistPrivacy(playlist) && (
+            <div className="mb-6">
+              <Card className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <Label htmlFor="playlist-privacy" className="text-sm font-medium">
+                      Make playlist public
+                    </Label>
+                    <p className="text-xs text-muted-foreground break-words">
+                      {playlist.isPublic 
+                        ? "Anyone can discover and listen to this playlist" 
+                        : "Only you and shared members can access this playlist"
+                      }
+                    </p>
+                  </div>
+                  <Switch
+                    id="playlist-privacy"
+                    checked={playlist.isPublic || false}
+                    onCheckedChange={handlePrivacyChange}
+                    disabled={updatePlaylistVisibility.isPending}
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="playlist-privacy"
-                  checked={playlist.isPublic || false}
-                  onCheckedChange={handlePrivacyChange}
-                  disabled={updatePlaylistVisibility.isPending}
-                  className="flex-shrink-0"
-                />
-              </div>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3">
             <Button 
@@ -518,15 +526,17 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Play className="w-5 h-5 mr-2 fill-current" />
               Play All
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => setShowAddTracksModal(true)}
-              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
-            >
-              <Plus className="w-4 h-4 mr-2 text-primary" />
-              <span className="text-primary">Add Tracks</span>
-            </Button>
+            {canManagePlaylistTracks(playlist) && (
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => setShowAddTracksModal(true)}
+                className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
+              >
+                <Plus className="w-4 h-4 mr-2 text-primary" />
+                <span className="text-primary">Add Tracks</span>
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="lg"
@@ -546,48 +556,54 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    setNewPlaylistName(playlist.name);
-                    setShowRenameDialog(true);
-                  }}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Rename playlist
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <Image className="w-4 h-4 mr-2" />
-                    Change image
-                  </DropdownMenuItem>
-                  {playlist.imageUrl && (
+                  {canEditPlaylist(playlist) && (
+                    <DropdownMenuItem onClick={() => {
+                      setNewPlaylistName(playlist.name);
+                      setShowRenameDialog(true);
+                    }}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Rename playlist
+                    </DropdownMenuItem>
+                  )}
+                  {canEditPlaylist(playlist) && (
+                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                      <Image className="w-4 h-4 mr-2" />
+                      Change image
+                    </DropdownMenuItem>
+                  )}
+                  {canEditPlaylist(playlist) && playlist.imageUrl && (
                     <DropdownMenuItem onClick={handleDeleteImage}>
                       <X className="w-4 h-4 mr-2" />
                       Delete image
                     </DropdownMenuItem>
                   )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete playlist
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeletePlaylist}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
+                  {canDeletePlaylist(playlist) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Trash2 className="w-4 h-4 mr-2" />
                           Delete playlist
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeletePlaylist}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete playlist
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -600,54 +616,59 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     <span className="text-primary underline">More</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-auto">
-                  <div className="flex flex-col space-y-4 py-6">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setNewPlaylistName(playlist.name);
-                        setShowRenameDialog(true);
-                        setShowMobileOptionsSheet(false);
-                      }}
-                      className="justify-start h-12 text-primary hover:text-primary"
-                    >
-                      <Edit className="w-4 h-4 mr-3 text-primary" />
-                      Rename playlist
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        fileInputRef.current?.click();
-                        setShowMobileOptionsSheet(false);
-                      }}
-                      className="justify-start h-12 text-primary hover:text-primary"
-                    >
-                      <Image className="w-4 h-4 mr-3 text-primary" />
-                      Change image
-                    </Button>
-                    {playlist.imageUrl && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          handleDeleteImage();
-                          setShowMobileOptionsSheet(false);
-                        }}
-                        className="justify-start h-12 text-primary hover:text-primary"
-                      >
-                        <X className="w-4 h-4 mr-3 text-primary" />
-                        Delete image
-                      </Button>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="justify-start h-12 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4 mr-3" />
-                          Delete playlist
-                        </Button>
-                      </AlertDialogTrigger>
+                 <SheetContent side="bottom" className="h-auto">
+                   <div className="flex flex-col space-y-4 py-6">
+                     {canEditPlaylist(playlist) && (
+                       <Button
+                         variant="ghost"
+                         onClick={() => {
+                           setNewPlaylistName(playlist.name);
+                           setShowRenameDialog(true);
+                           setShowMobileOptionsSheet(false);
+                         }}
+                         className="justify-start h-12 text-primary hover:text-primary"
+                       >
+                         <Edit className="w-4 h-4 mr-3 text-primary" />
+                         Rename playlist
+                       </Button>
+                     )}
+                     {canEditPlaylist(playlist) && (
+                       <Button
+                         variant="ghost"
+                         onClick={() => {
+                           fileInputRef.current?.click();
+                           setShowMobileOptionsSheet(false);
+                         }}
+                         className="justify-start h-12 text-primary hover:text-primary"
+                       >
+                         <Image className="w-4 h-4 mr-3 text-primary" />
+                         Change image
+                       </Button>
+                     )}
+                     {canEditPlaylist(playlist) && playlist.imageUrl && (
+                       <Button
+                         variant="ghost"
+                         onClick={() => {
+                           handleDeleteImage();
+                           setShowMobileOptionsSheet(false);
+                         }}
+                         className="justify-start h-12 text-primary hover:text-primary"
+                       >
+                         <X className="w-4 h-4 mr-3 text-primary" />
+                         Delete image
+                       </Button>
+                     )}
+                     {canDeletePlaylist(playlist) && (
+                       <AlertDialog>
+                         <AlertDialogTrigger asChild>
+                           <Button
+                             variant="ghost"
+                             className="justify-start h-12 text-destructive hover:text-destructive"
+                           >
+                             <Trash2 className="w-4 h-4 mr-3" />
+                             Delete playlist
+                           </Button>
+                         </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
@@ -709,6 +730,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   onRemove={handleRemoveTrack}
                   playlist={playlistTracks}
                   playlistImageUrl={playlist.imageUrl}
+                  canManagePlaylistTracks={canManagePlaylistTracks(playlist)}
                 />
               ))}
             </SortableContext>

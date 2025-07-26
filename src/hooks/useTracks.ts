@@ -24,7 +24,8 @@ export const useTracks = () => {
         source_folder: track.source_folder,
         dropbox_path: track.dropbox_path,
         is_public: track.is_public,
-        play_count: track.play_count || 0
+        play_count: track.play_count || 0,
+        created_by: track.created_by
       })) as Track[];
     }
   });

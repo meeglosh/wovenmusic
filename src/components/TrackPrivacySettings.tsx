@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Lock, Globe } from "lucide-react";
 import { useUpdateTrack } from "@/hooks/useTracks";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface TrackPrivacySettingsProps {
   track: Track;
@@ -15,6 +16,12 @@ export function TrackPrivacySettings({ track }: TrackPrivacySettingsProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
+  const { canEditTrackPrivacy } = usePermissions();
+
+  // Don't render if user doesn't have permission
+  if (!canEditTrackPrivacy(track)) {
+    return null;
+  }
 
   const handlePrivacyChange = async (isPublic: boolean) => {
     setIsUpdating(true);

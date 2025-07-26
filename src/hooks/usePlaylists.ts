@@ -33,7 +33,8 @@ export const usePlaylists = () => {
         createdAt: new Date(playlist.created_at),
         sharedWith: playlist.playlist_shares?.map(share => share.email) || [],
         isPublic: playlist.is_public,
-        shareToken: playlist.share_token
+        shareToken: playlist.share_token,
+        created_by: playlist.created_by
       })) as Playlist[];
     }
   });

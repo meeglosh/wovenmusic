@@ -13,6 +13,7 @@ import { useDeleteTrack, useBulkDeleteTracks } from "@/hooks/useDeleteTrack";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateTrack } from "@/hooks/useTracks";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +136,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   const bulkDeleteMutation = useBulkDeleteTracks();
   const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
+  const { canDeleteTrack } = usePermissions();
 
   // Sort tracks based on current sort settings
   const sortedTracks = [...tracks].sort((a, b) => {
@@ -167,6 +169,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   });
 
   const selectedTracks = sortedTracks.filter(track => selectedTrackIds.has(track.id));
+  const deletableSelectedTracks = selectedTracks.filter(track => canDeleteTrack(track));
 
   const isSelectionMode = selectedTrackIds.size > 0;
   const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
@@ -234,9 +237,18 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   };
 
   const handleBulkDelete = async () => {
-    const selectedIds = Array.from(selectedTrackIds);
+    const deletableIds = deletableSelectedTracks.map(track => track.id);
+    if (deletableIds.length === 0) {
+      toast({
+        title: "No tracks to delete",
+        description: "You don't have permission to delete any of the selected tracks.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      const result = await bulkDeleteMutation.mutateAsync(selectedIds);
+      const result = await bulkDeleteMutation.mutateAsync(deletableIds);
       setSelectedTrackIds(new Set());
       
       // Create appropriate message based on what was deleted
@@ -376,37 +388,42 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <Plus className="w-4 h-4 mr-2" />
                   Add to Playlist
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={bulkDeleteMutation.isPending}
-                      className="flex-1 min-h-[40px]"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove Selected
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
-                       <AlertDialogDescription>
-                         Are you sure you want to remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''} from your library?
-                         Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
-                       </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleBulkDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                {deletableSelectedTracks.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={bulkDeleteMutation.isPending}
+                        className="flex-1 min-h-[40px]"
                       >
-                        Remove {selectedTrackIds.size} track{selectedTrackIds.size !== 1 ? 's' : ''}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove {deletableSelectedTracks.length > 0 ? `${deletableSelectedTracks.length} ` : ''}Selected
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
+                         <AlertDialogDescription>
+                           Are you sure you want to remove {deletableSelectedTracks.length} track{deletableSelectedTracks.length !== 1 ? 's' : ''} from your library?
+                           {selectedTrackIds.size > deletableSelectedTracks.length && 
+                             ` (${selectedTrackIds.size - deletableSelectedTracks.length} track${selectedTrackIds.size - deletableSelectedTracks.length !== 1 ? 's' : ''} will be skipped due to permissions)`
+                           }
+                           Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
+                         </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleBulkDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remove {deletableSelectedTracks.length} track{deletableSelectedTracks.length !== 1 ? 's' : ''}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
               <Button
                 variant="outline"
@@ -610,32 +627,39 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remove from library
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove "{track.title}" from your library?
-                              {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteTrack(track)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
+                      {canDeleteTrack(track) ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Trash2 className="w-4 h-4 mr-2" />
                               Remove from library
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove "{track.title}" from your library?
+                                {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteTrack(track)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Remove from library
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <DropdownMenuItem disabled>
+                          <Settings className="w-4 h-4 mr-2" />
+                          No actions available
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
