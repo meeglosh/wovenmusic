@@ -24,6 +24,11 @@ const Members = () => {
   
   const isAdmin = currentUserProfile?.is_admin || false;
   
+  // Debug logging
+  console.log('Current user profile:', currentUserProfile);
+  console.log('Is admin:', isAdmin);
+  console.log('All members data:', allMembers);
+  
   
   // Show all band members including admins
   const members = allMembers;
@@ -216,12 +221,15 @@ const Members = () => {
                     <div className="space-y-2">
                       <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                       <div className="flex flex-wrap gap-1 justify-center">
-                        {member.is_admin && (
-                          <Badge variant="destructive" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 pointer-events-none">
-                            <Crown className="w-3 h-3 mr-1" />
-                            Admin
-                          </Badge>
-                        )}
+                        {(() => {
+                          console.log(`Member ${member.email} is_admin:`, member.is_admin);
+                          return member.is_admin && (
+                            <Badge variant="destructive" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 pointer-events-none">
+                              <Crown className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          );
+                        })()}
                         {(member.roles && member.roles.length > 0 ? member.roles : [member.role]).filter(Boolean).map((role) => (
                           <Badge key={role} variant="secondary" className={`${getRoleColor(role)} pointer-events-none`}>
                             {role}
