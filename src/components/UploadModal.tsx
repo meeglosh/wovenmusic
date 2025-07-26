@@ -303,11 +303,14 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
       i === index ? { ...f, status: 'success', progress: 100, trackId: result.id } : f
     ));
 
+    return true;
+
   } catch (error: any) {
     console.error('Upload error:', error);
     setUploadFiles(prev => prev.map((f, i) =>
       i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
     ));
+    return false;
   }
 };
 
@@ -315,25 +318,22 @@ const startUpload = async () => {
   if (uploadFiles.length === 0) return;
   setIsUploading(true);
 
-  let successCount = 0;
+let successCount = 0;
 
-  try {
-    for (let i = 0; i < uploadFiles.length; i++) {
-      if (uploadFiles[i].status === 'pending') {
-        await uploadFile(uploadFiles[i], i);
-
-        // Check the most recent status after upload completes
-        const updatedFile = uploadFiles[i];
-        if (updatedFile.status === 'success') {
-          successCount++;
-        }
-      }
+for (let i = 0; i < uploadFiles.length; i++) {
+  if (uploadFiles[i].status === 'pending') {
+    const wasSuccessful = await uploadFile(uploadFiles[i], i);
+    if (wasSuccessful) {
+      successCount++;
     }
+  }
+}
 
-    toast({
-      title: "Upload complete",
-      description: `Successfully imported ${successCount}/${uploadFiles.length} audio file(s).`,
-    });
+toast({
+  title: "Upload complete",
+  description: `Successfully imported ${successCount}/${uploadFiles.length} audio file(s)`,
+});
+
 
   } catch (error) {
     toast({
@@ -425,9 +425,14 @@ const startUpload = async () => {
                         {getStatusIcon(uploadFile.status)}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{uploadFile.file.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {getStatusText(uploadFile)} • {(uploadFile.file.size / 1024 / 1024).toFixed(1)} MB
-                          </p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-2">
+  							{getStatusText(uploadFile)}
+  							{uploadFile.status === 'transcoding' && (
+    						   <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+  							)}
+  							• {(uploadFile.file.size / 1024 / 1024).toFixed(1)} MB
+						  </p>
+
                           {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
                             <Progress value={uploadFile.progress} className="h-1 mt-1" />
                           )}
