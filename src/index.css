@@ -409,16 +409,8 @@
     @apply border-border;
   }
 
-  html {
-    @apply bg-background;
-    min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile */
-  }
-
   body {
     @apply bg-background text-foreground font-sans;
-    min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile */
   }
 
   /* Global heading styles - use REM light font for all headings */
