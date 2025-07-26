@@ -230,100 +230,84 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     }
   };
 
-  const uploadFile = async (uploadFile: UploadFile, index: number) => {
-    const { file } = uploadFile;
-    // Replace spaces with underscores to avoid URL encoding issues
-    const fileName = file.name.replace(/\s+/g, '_');
-    
-    try {
-      // Update status to uploading
-      setUploadFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, status: 'uploading' as const } : f
-      ));
+const uploadFile = async (uploadFile: UploadFile, index: number) => {
+  const { file } = uploadFile;
+  const fileName = file.name.replace(/\s+/g, '_');
+  const needsTranscoding = importTranscodingService.needsTranscoding(fileName);
+  const outputFormat = audioQuality === 'aac-320' ? 'aac' : 'mp3';
 
-      // Upload file to Supabase Storage
+  try {
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'uploading', progress: 0 } : f
+    ));
+
+    let finalUrl = '';
+    let duration = 0;
+
+    if (needsTranscoding) {
+      console.log(`🌀 Transcoding ${fileName} before upload...`);
+
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('fileName', fileName);
+      formData.append('outputFormat', outputFormat);
+      formData.append('bitrate', '320k');
+
+      const res = await fetch('https://transcode-server.onrender.com/api/transcode', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error(`Transcoding failed with status ${res.status}`);
+
+      const data = await res.json();
+      finalUrl = data.publicUrl;
+      console.log(`✅ Transcoded file uploaded to: ${finalUrl}`);
+    } else {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio-files')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // Simulate progress for user feedback
-      setUploadFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, progress: 100 } : f
-      ));
-
-      // Update status to processing
-      setUploadFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, status: 'processing' as const, progress: 100 } : f
-      ));
-
-      // Get public URL first
       const { data: urlData } = supabase.storage
         .from('audio-files')
         .getPublicUrl(fileName);
 
-      let finalUrl = urlData.publicUrl;
-      let duration = 0;
-
-      // Check if file needs transcoding
-      const needsTranscoding = importTranscodingService.needsTranscoding(fileName);
-      
-      if (needsTranscoding) {
-        console.log(`File ${fileName} needs transcoding, starting transcoding...`);
-        
-        // Determine output format from audioQuality setting
-        const outputFormat = audioQuality === 'aac-320' ? 'aac' : 'mp3';
-        
-        // Transcode the file
-        const transcodeResult = await importTranscodingService.transcodeAndStore(
-          urlData.publicUrl, 
-          fileName, 
-          outputFormat
-        );
-        
-        finalUrl = transcodeResult.publicUrl;
-        console.log(`Transcoding complete, new URL: ${finalUrl}`);
-      }
-
-      // Get file duration from the final URL
-      duration = await getDurationFromUrl(finalUrl);
-      const formattedDuration = formatDuration(duration);
-
-      // Extract metadata from filename
-      const { artist, title } = extractMetadata(file.name);
-
-      // Add track to database
-      const trackData = {
-        title,
-        artist,
-        duration: formattedDuration,
-        fileUrl: finalUrl,
-        source_folder: 'Direct Upload'
-      };
-
-      const result = await addTrackMutation.mutateAsync(trackData);
-
-      // Update status to success
-      setUploadFiles(prev => prev.map((f, i) => 
-        i === index ? { 
-          ...f, 
-          status: 'success' as const, 
-          trackId: result.id 
-        } : f
-      ));
-
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      setUploadFiles(prev => prev.map((f, i) => 
-        i === index ? { 
-          ...f, 
-          status: 'error' as const, 
-          error: error.message || 'Upload failed' 
-        } : f
-      ));
+      finalUrl = urlData.publicUrl;
+      console.log(`📦 Uploaded compressed file directly: ${finalUrl}`);
     }
-  };
+
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, progress: 100, status: 'processing' } : f
+    ));
+
+    duration = await getDurationFromUrl(finalUrl);
+    const formattedDuration = formatDuration(duration);
+    const { artist, title } = extractMetadata(file.name);
+
+    const trackData = {
+      title,
+      artist,
+      duration: formattedDuration,
+      fileUrl: finalUrl,
+      source_folder: 'Direct Upload'
+    };
+
+    const result = await addTrackMutation.mutateAsync(trackData);
+
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'success', trackId: result.id } : f
+    ));
+
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
+    ));
+  }
+};
+
 
   const startUpload = async () => {
     if (uploadFiles.length === 0) return;
