@@ -494,7 +494,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             {sortedTracks.map((track, index) => (
               <div
                 key={track.id}
-                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 hover:bg-muted/30 transition-colors group ${
+                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-2 md:gap-4 p-3 md:p-4 hover:bg-muted/30 transition-colors group items-center ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
               >
@@ -571,21 +571,21 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   </div>
                 </div>
 
-                <div className="flex items-center text-muted-foreground">
+                <div className="flex items-center text-muted-foreground text-sm md:text-base">
                   {track.duration === 'Transcoding...' ? (
                     <div className="flex items-center space-x-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Transcoding...</span>
+                      <span className="text-xs md:text-sm">Transcoding...</span>
                     </div>
                   ) : track.duration === 'Failed' ? (
-                    <span className="text-destructive text-sm">Failed</span>
+                    <span className="text-destructive text-xs md:text-sm">Failed</span>
                   ) : (
-                    track.duration
+                    <span className="text-xs md:text-sm font-mono">{track.duration}</span>
                   )}
                 </div>
 
-                <div className="flex items-center text-sm text-muted-foreground">
-                  {track.addedAt.toLocaleDateString()}
+                <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                  <span className="truncate">{track.addedAt.toLocaleDateString()}</span>
                 </div>
 
                 <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
