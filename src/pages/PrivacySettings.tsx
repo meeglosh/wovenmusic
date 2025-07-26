@@ -11,7 +11,7 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
 import { Track } from "@/types/music";
-import { getFileName } from "@/types/music";
+import { getCleanTitle } from "@/types/music";
 import { useNavigate } from "react-router-dom";
 
 export default function PrivacySettings() {
@@ -24,7 +24,7 @@ export default function PrivacySettings() {
   const navigate = useNavigate();
 
   const filteredTracks = tracks.filter(track => 
-    getFileName(track).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getCleanTitle(track).toLowerCase().includes(searchQuery.toLowerCase()) ||
     track.artist.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -41,7 +41,7 @@ export default function PrivacySettings() {
       
       toast({
         title: "Privacy updated",
-        description: `"${getFileName(track)}" is now ${isPublic ? 'public' : 'private'}`,
+        description: `"${getCleanTitle(track)}" is now ${isPublic ? 'public' : 'private'}`,
       });
     } catch (error) {
       toast({
@@ -173,7 +173,7 @@ export default function PrivacySettings() {
                     <div className="flex items-center gap-3">
                       <Music className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium">{getFileName(track)}</p>
+                        <p className="font-medium">{getCleanTitle(track)}</p>
                         <p className="text-sm text-muted-foreground">{track.artist}</p>
                       </div>
                     </div>
