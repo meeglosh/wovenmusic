@@ -351,7 +351,7 @@ const startUpload = async () => {
       case 'pending':
         return <Music className="h-4 w-4 text-muted-foreground" />;
       case 'uploading':
-      case 'processing':
+      case 'transcoding':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -433,7 +433,7 @@ const startUpload = async () => {
   							• {(uploadFile.file.size / 1024 / 1024).toFixed(1)} MB
 						  </p>
 
-                          {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
+                          {(uploadFile.status === 'uploading' || uploadFile.status === 'transcoding') && (
                             <Progress value={uploadFile.progress} className="h-1 mt-1" />
                           )}
                         </div>

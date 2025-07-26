@@ -20,7 +20,9 @@ import {
   Loader2,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Link,
+  Unlink
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
@@ -58,6 +60,8 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
   const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
   const [lastAuthError, setLastAuthError] = useState<number>(0);
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
@@ -513,6 +517,83 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
     }
   };
 
+  // Check connection status
+  const checkConnection = async () => {
+    try {
+      const connected = await dropboxService.isAuthenticated();
+      setIsConnected(connected);
+      return connected;
+    } catch (error) {
+      setIsConnected(false);
+      return false;
+    }
+  };
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      // Set up message listener BEFORE starting auth
+      const handleAuthMessage = (event: MessageEvent) => {
+        if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
+          console.log('Received auth success message, refreshing auth state...');
+          window.removeEventListener('message', handleAuthMessage);
+          
+          // Refresh the dropbox service auth state
+          dropboxService.refreshAuthState();
+          setIsConnecting(false);
+          
+          // Check connection and load folders
+          setTimeout(() => {
+            checkConnection().then(connected => {
+              if (connected) {
+                setIsConnected(true);
+                loadFolders();
+              }
+            });
+          }, 1000);
+        } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
+          console.error('Auth failed:', event.data.error);
+          window.removeEventListener('message', handleAuthMessage);
+          setIsConnecting(false);
+        }
+      };
+      
+      window.addEventListener('message', handleAuthMessage);
+      
+      await dropboxService.authenticate();
+    } catch (error) {
+      console.error('Connection failed:', error);
+      setIsConnecting(false);
+      toast({
+        title: "Connection failed",
+        description: "Failed to connect to Dropbox. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      // Clear auth state
+      localStorage.removeItem('dropbox_access_token');
+      setIsConnected(false);
+      setFolders([]);
+      setFiles([]);
+      setSelectedFiles(new Set());
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from Dropbox.",
+      });
+    } catch (error) {
+      console.error('Disconnect failed:', error);
+      toast({
+        title: "Disconnect failed",
+        description: "Failed to disconnect from Dropbox.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
       toast({
@@ -606,8 +687,12 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
 
   // Load root folder when accordion is first expanded
   useEffect(() => {
-    if (isExpanded && files.length === 0 && folders.length === 0 && !isLoading) {
-      loadFolders();
+    if (isExpanded) {
+      checkConnection().then(connected => {
+        if (connected && files.length === 0 && folders.length === 0 && !isLoading) {
+          loadFolders();
+        }
+      });
     }
   }, [isExpanded]);
 
@@ -682,8 +767,52 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
         
         <AccordionContent className="px-4 pb-4">
           <div className="space-y-4">
+            {/* Connection Status and Controls */}
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+              <div className="flex items-center space-x-2">
+                {isConnected ? (
+                  <>
+                    <Link className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">Connected to Dropbox</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlink className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Not connected to Dropbox</span>
+                  </>
+                )}
+              </div>
+              {isConnected ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  className="text-destructive hover:text-destructive/80"
+                >
+                  Disconnect
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="flex items-center gap-2"
+                >
+                  {isConnecting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect to Dropbox'
+                  )}
+                </Button>
+              )}
+            </div>
+
             {/* Sorting Controls */}
-            {!isLoading && (folders.length > 0 || files.length > 0) && (
+            {isConnected && !isLoading && (folders.length > 0 || files.length > 0) && (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Sort all items:</span>
@@ -702,31 +831,43 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             )}
 
             {/* Navigation */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Folder className="w-4 h-4" />
-              <span>{currentPath || "/"}</span>
-              {folderHistory.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={navigateBack}
-                  className="ml-auto"
-                >
-                  Back
-                </Button>
-              )}
-            </div>
+            {isConnected && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Folder className="w-4 h-4" />
+                <span>{currentPath || "/"}</span>
+                {folderHistory.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={navigateBack}
+                    className="ml-auto"
+                  >
+                    Back
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Loading */}
-            {isLoading && (
+            {isConnected && isLoading && (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
                 Loading folders...
               </div>
             )}
 
+            {/* Not connected state */}
+            {!isConnected && (
+              <div className="flex items-center justify-center py-8 text-center">
+                <div>
+                  <Unlink className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Connect to Dropbox to browse your music files</p>
+                </div>
+              </div>
+            )}
+
             {/* Folders */}
-            {!isLoading && folders.length > 0 && (
+            {isConnected && !isLoading && folders.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-sm font-medium">Folders</h4>
@@ -749,7 +890,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             )}
 
             {/* Files */}
-            {!isLoading && files.length > 0 && (
+            {isConnected && !isLoading && files.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-medium">Music Files</h4>
@@ -904,7 +1045,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             )}
 
             {/* Empty state */}
-            {!isLoading && files.length === 0 && folders.length === 0 && (
+            {isConnected && !isLoading && files.length === 0 && folders.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p>No music files found in this folder</p>
@@ -912,18 +1053,20 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
             )}
 
             {/* Refresh button */}
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => loadFolders(currentPath)}
-                disabled={isLoading}
-                className="max-w-[343px]"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-            </div>
+            {isConnected && (
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadFolders(currentPath)}
+                  disabled={isLoading}
+                  className="max-w-[343px]"
+                >
+                  <RefreshCw className="w-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            )}
           </div>
         </AccordionContent>
       </AccordionItem>

@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Link,
+  Unlink
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
@@ -61,6 +63,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const [lastAuthError, setLastAuthError] = useState<number>(0);
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
@@ -272,10 +275,12 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
 
   const checkConnection = async () => {
     try {
-      await dropboxService.listFiles("");
-      setIsConnected(true);
+      const connected = await dropboxService.isAuthenticated();
+      setIsConnected(connected);
+      return connected;
     } catch (error) {
       setIsConnected(false);
+      return false;
     }
   };
 
@@ -473,6 +478,72 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       console.error(`Failed to process ${file.name}:`, errorMessage);
       updateProgress('error', errorMessage);
       return false;
+    }
+  };
+
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      // Set up message listener BEFORE starting auth
+      const handleAuthMessage = (event: MessageEvent) => {
+        if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
+          console.log('Received auth success message, refreshing auth state...');
+          window.removeEventListener('message', handleAuthMessage);
+          
+          // Refresh the dropbox service auth state
+          dropboxService.refreshAuthState();
+          setIsConnecting(false);
+          
+          // Check connection and load folders
+          setTimeout(() => {
+            checkConnection().then(connected => {
+              if (connected) {
+                setIsConnected(true);
+                loadFolders();
+              }
+            });
+          }, 1000);
+        } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
+          console.error('Auth failed:', event.data.error);
+          window.removeEventListener('message', handleAuthMessage);
+          setIsConnecting(false);
+        }
+      };
+      
+      window.addEventListener('message', handleAuthMessage);
+      
+      await dropboxService.authenticate();
+    } catch (error) {
+      console.error('Connection failed:', error);
+      setIsConnecting(false);
+      toast({
+        title: "Connection failed",
+        description: "Failed to connect to Dropbox. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      // Clear auth state
+      localStorage.removeItem('dropbox_access_token');
+      setIsConnected(false);
+      setFolders([]);
+      setFiles([]);
+      setSelectedFiles(new Set());
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from Dropbox.",
+      });
+    } catch (error) {
+      console.error('Disconnect failed:', error);
+      toast({
+        title: "Disconnect failed",
+        description: "Failed to disconnect from Dropbox.",
+        variant: "destructive",
+      });
     }
   };
 

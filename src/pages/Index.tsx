@@ -8,7 +8,7 @@ import PlaylistView from "@/components/PlaylistView";
 import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
 import EmptyLibraryState from "@/components/EmptyLibraryState";
-import { DropboxTokenExpiredDialog } from "@/components/DropboxTokenExpiredDialog";
+
 import { Track, Playlist, PendingTrack } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -293,14 +293,6 @@ const Index = () => {
         />
       )}
 
-      <DropboxTokenExpiredDialog
-        isOpen={showDropboxDialog}
-        onClose={() => setShowDropboxDialog(false)}
-        onReconnected={() => {
-          // Force a refresh of tracks and playlists data without full page reload
-          window.location.reload();
-        }}
-      />
     </div>
   );
 };
