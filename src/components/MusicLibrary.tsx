@@ -539,7 +539,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20 hidden md:flex">
                     <div className="flex space-x-px">
                       {[...Array(5)].map((_, i) => (
                         <div
@@ -657,7 +657,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-purple-600/10 rounded flex items-center justify-center border border-primary/10">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-purple-600/10 rounded flex items-center justify-center border border-primary/10 hidden md:flex">
                     <div className="flex space-x-px opacity-50">
                       {[...Array(5)].map((_, i) => (
                         <div
