@@ -236,6 +236,90 @@ const extractMetadata = (filename: string) => {
   }
 };
 
+const uploadFile = async (uploadFile: UploadFile, index: number) => {
+  const file = uploadFile.file;
+  const fileName = `${Date.now()}-${file.name}`;
+  const outputFormat = getOutputFormat(audioQuality);
+  const needsTranscoding = ['.wav', '.aif', '.aiff', '.flac'].some(ext =>
+    file.name.toLowerCase().endsWith(ext)
+  );
+
+  try {
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'uploading', progress: 10 } : f
+    ));
+
+    let finalUrl = '';
+    let duration = 0;
+
+    if (needsTranscoding) {
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, progress: 30 } : f
+      ));
+
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('fileName', fileName);
+      formData.append('outputFormat', outputFormat);
+      formData.append('bitrate', '320k');
+
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, status: 'transcoding', progress: 50 } : f
+      ));
+
+      const res = await fetch('https://transcode-server.onrender.com/api/transcode', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error(`Transcoding failed with status ${res.status}`);
+      const data = await res.json();
+      finalUrl = data.publicUrl;
+    } else {
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('audio-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('audio-files')
+        .getPublicUrl(fileName);
+
+      finalUrl = urlData.publicUrl;
+    }
+
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'importing', progress: 80 } : f
+    ));
+
+    duration = await getDurationFromUrl(finalUrl);
+    const formattedDuration = formatDuration(duration);
+    const { artist, title } = extractMetadata(file.name);
+
+    const trackData = {
+      title,
+      artist,
+      duration: formattedDuration,
+      fileUrl: finalUrl,
+      source_folder: 'Direct Upload'
+    };
+
+    const result = await addTrackMutation.mutateAsync(trackData);
+
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'success', progress: 100, trackId: result.id } : f
+    ));
+
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    setUploadFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
+    ));
+  }
+};
+
+
 const startUpload = async () => {
   if (uploadFiles.length === 0) return;
   setIsUploading(true);
