@@ -501,6 +501,10 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               if (connected) {
                 setIsConnected(true);
                 loadFolders();
+                toast({
+                  title: "Connected",
+                  description: "Successfully connected to Dropbox.",
+                });
               }
             });
           }, 1000);
@@ -508,20 +512,69 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
           console.error('Auth failed:', event.data.error);
           window.removeEventListener('message', handleAuthMessage);
           setIsConnecting(false);
+          toast({
+            title: "Connection failed",
+            description: "Failed to connect to Dropbox. Please try again.",
+            variant: "destructive",
+          });
         }
       };
       
       window.addEventListener('message', handleAuthMessage);
       
+      // Add timeout cleanup to prevent hanging
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener('message', handleAuthMessage);
+        setIsConnecting(false);
+        
+        // Check if connection was actually successful despite timeout
+        setTimeout(() => {
+          checkConnection().then(connected => {
+            if (connected) {
+              setIsConnected(true);
+              loadFolders();
+              toast({
+                title: "Connected",
+                description: "Successfully connected to Dropbox.",
+              });
+            } else {
+              toast({
+                title: "Connection failed",
+                description: "Failed to connect to Dropbox. Please try again.",
+                variant: "destructive",
+              });
+            }
+          });
+        }, 500);
+      }, 20000); // 20 second timeout
+      
       await dropboxService.authenticate();
+      
+      // Clean up timeout if auth completes normally
+      clearTimeout(timeoutId);
     } catch (error) {
       console.error('Connection failed:', error);
       setIsConnecting(false);
-      toast({
-        title: "Connection failed",
-        description: "Failed to connect to Dropbox. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Double-check connection state before showing error
+      setTimeout(() => {
+        checkConnection().then(connected => {
+          if (connected) {
+            setIsConnected(true);
+            loadFolders();
+            toast({
+              title: "Connected",
+              description: "Successfully connected to Dropbox.",
+            });
+          } else {
+            toast({
+              title: "Connection failed",
+              description: "Failed to connect to Dropbox. Please try again.",
+              variant: "destructive",
+            });
+          }
+        });
+      }, 1000);
     }
   };
 
