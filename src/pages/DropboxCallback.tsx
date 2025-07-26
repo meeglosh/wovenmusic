@@ -38,6 +38,17 @@ const DropboxCallback = () => {
       
       crossLog('=== DROPBOX CALLBACK PAGE LOADED ===');
       
+      // Detect if this is a popup window (desktop) or full-screen redirect (mobile)
+      const isPopupWindow = window.opener && !window.opener.closed;
+      const isMobileRedirect = !isPopupWindow;
+      
+      crossLog('=== WINDOW TYPE DETECTION ===', {
+        isPopupWindow,
+        isMobileRedirect,
+        hasOpener: !!window.opener,
+        openerClosed: window.opener ? window.opener.closed : 'no opener'
+      });
+      
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
@@ -61,11 +72,16 @@ const DropboxCallback = () => {
           variant: "destructive",
         });
         
-        // Notify parent and close
-        if (window.opener) {
+        if (isPopupWindow) {
+          // Desktop popup: notify parent and close
           window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
+          setTimeout(() => window.close(), 1000);
+        } else {
+          // Mobile redirect: go back to app after delay
+          setTimeout(() => {
+            window.location.href = window.location.origin;
+          }, 3000);
         }
-        setTimeout(() => window.close(), 1000);
         return;
       }
 
@@ -87,17 +103,26 @@ const DropboxCallback = () => {
             description: "You can now sync your music files.",
           });
           
-          // Send success message WITH the token to parent window
-          crossLog('=== POSTING SUCCESS WITH TOKEN TO PARENT ===');
-          if (window.opener) {
+          if (isPopupWindow) {
+            // Desktop popup: send success message to parent and close
+            crossLog('=== POSTING SUCCESS WITH TOKEN TO PARENT ===');
             window.opener.postMessage({ 
               type: 'DROPBOX_AUTH_SUCCESS', 
               token: accessToken 
             }, '*');
+            
+            crossLog('=== CLOSING POPUP WINDOW ===');
+            setTimeout(() => window.close(), 1000);
+          } else {
+            // Mobile redirect: show success message then redirect back to app
+            crossLog('=== MOBILE SUCCESS - REDIRECTING TO APP ===');
+            setTimeout(() => {
+              const returnUrl = localStorage.getItem('dropbox_auth_return_url') || window.location.origin;
+              localStorage.removeItem('dropbox_auth_return_url');
+              localStorage.removeItem('dropbox_auth_state');
+              window.location.href = returnUrl;
+            }, 3000);
           }
-          
-          crossLog('=== CLOSING POPUP WINDOW ===');
-          setTimeout(() => window.close(), 1000);
         } catch (error) {
           crossLog('=== TOKEN EXCHANGE FAILED ===', error);
           crossLog('Error details:', {
@@ -115,11 +140,16 @@ const DropboxCallback = () => {
             variant: "destructive",
           });
           
-          // Notify parent of failure
-          if (window.opener) {
+          if (isPopupWindow) {
+            // Desktop popup: notify parent and close
             window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
+            setTimeout(() => window.close(), 1000);
+          } else {
+            // Mobile redirect: go back to app after delay
+            setTimeout(() => {
+              window.location.href = window.location.origin;
+            }, 3000);
           }
-          setTimeout(() => window.close(), 1000);
         }
       } else {
         crossLog('=== NO AUTHORIZATION CODE RECEIVED ===');
@@ -130,11 +160,16 @@ const DropboxCallback = () => {
         const errorMessage = 'No authorization code received - check redirect URI configuration';
         crossLog('=== POSTING NO CODE ERROR TO PARENT ===', errorMessage);
         
-        // Notify parent and close
-        if (window.opener) {
+        if (isPopupWindow) {
+          // Desktop popup: notify parent and close
           window.opener.postMessage({ type: 'DROPBOX_AUTH_ERROR', error: errorMessage }, '*');
+          setTimeout(() => window.close(), 1000);
+        } else {
+          // Mobile redirect: go back to app after delay
+          setTimeout(() => {
+            window.location.href = window.location.origin;
+          }, 3000);
         }
-        setTimeout(() => window.close(), 1000);
       }
     };
 
