@@ -787,7 +787,7 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
                   variant="outline"
                   size="sm"
                   onClick={handleDisconnect}
-                  className="text-destructive hover:text-destructive/80"
+                  className="text-primary hover:text-primary/80"
                 >
                   Disconnect
                 </Button>
