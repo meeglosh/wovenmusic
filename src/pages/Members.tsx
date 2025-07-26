@@ -6,8 +6,9 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Mail, UserCheck, Trash2, Send, Settings, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBandMembers, useInvitations, useCustomRoles, useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
@@ -24,12 +25,8 @@ const Members = () => {
   const isAdmin = currentUserProfile?.is_admin || false;
   
   
-  // Filter out admin members and users with Admin role from the display
-  const members = allMembers.filter(member => 
-    !member.is_admin && 
-    member.role !== "Admin" && 
-    !member.roles?.includes("Admin")
-  );
+  // Show all band members including admins
+  const members = allMembers;
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvitation, setNewInvitation] = useState({
@@ -219,6 +216,12 @@ const Members = () => {
                     <div className="space-y-2">
                       <CardTitle className="text-base">{member.full_name || member.email}</CardTitle>
                       <div className="flex flex-wrap gap-1 justify-center">
+                        {member.is_admin && (
+                          <Badge variant="destructive" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 pointer-events-none">
+                            <Crown className="w-3 h-3 mr-1" />
+                            Admin
+                          </Badge>
+                        )}
                         {(member.roles && member.roles.length > 0 ? member.roles : [member.role]).filter(Boolean).map((role) => (
                           <Badge key={role} variant="secondary" className={`${getRoleColor(role)} pointer-events-none`}>
                             {role}
@@ -230,24 +233,46 @@ const Members = () => {
                   
                   {/* Action buttons in bottom right */}
                   <div className="absolute bottom-3 right-3 flex space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => navigate(`/profile-setup?userId=${member.id}`)}
-                    >
-                      <Settings className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
-                      disabled={member.id === user?.id || (!isAdmin && member.id !== user?.id)}
-                      title={member.id === user?.id ? "Cannot delete your own profile" : !isAdmin ? "Only admins can delete other profiles" : "Delete member"}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => navigate(`/profile-setup?userId=${member.id}`)}
+                      >
+                        <Settings className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove <strong>{member.full_name || member.email}</strong> from the band? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleRemoveMember(member.id, member.full_name || member.email || 'Unknown')}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remove Member
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </CardHeader>
                 
