@@ -837,7 +837,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                       checked={isAllSelected || isIndeterminate}
                       onCheckedChange={handleSelectAll}
                     />
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-primary">
                       {isAllSelected ? 'Deselect All' : 'Select All'}
                     </span>
                   </div>
