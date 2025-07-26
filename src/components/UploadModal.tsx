@@ -28,7 +28,7 @@ interface UploadModalProps {
 
 interface UploadFile {
   file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'transcoding' | 'importing' | 'success' | 'error';
   progress: number;
   error?: string;
   trackId?: string;
@@ -238,14 +238,16 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
 
   try {
     setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'uploading', progress: 0 } : f
+      i === index ? { ...f, status: 'uploading', progress: 10 } : f
     ));
 
     let finalUrl = '';
     let duration = 0;
 
     if (needsTranscoding) {
-      console.log(`🌀 Transcoding ${fileName} before upload...`);
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, progress: 30 } : f
+      ));
 
       const formData = new FormData();
       formData.append('audio', file);
@@ -253,16 +255,18 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
       formData.append('outputFormat', outputFormat);
       formData.append('bitrate', '320k');
 
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, status: 'transcoding', progress: 50 } : f
+      ));
+
       const res = await fetch('https://transcode-server.onrender.com/api/transcode', {
         method: 'POST',
         body: formData
       });
 
       if (!res.ok) throw new Error(`Transcoding failed with status ${res.status}`);
-
       const data = await res.json();
       finalUrl = data.publicUrl;
-      console.log(`✅ Transcoded file uploaded to: ${finalUrl}`);
     } else {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio-files')
@@ -275,11 +279,10 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
         .getPublicUrl(fileName);
 
       finalUrl = urlData.publicUrl;
-      console.log(`📦 Uploaded compressed file directly: ${finalUrl}`);
     }
 
     setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, progress: 100, status: 'processing' } : f
+      i === index ? { ...f, status: 'importing', progress: 80 } : f
     ));
 
     duration = await getDurationFromUrl(finalUrl);
@@ -297,7 +300,7 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
     const result = await addTrackMutation.mutateAsync(trackData);
 
     setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'success', trackId: result.id } : f
+      i === index ? { ...f, status: 'success', progress: 100, trackId: result.id } : f
     ));
 
   } catch (error: any) {
@@ -308,35 +311,40 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
   }
 };
 
+const startUpload = async () => {
+  if (uploadFiles.length === 0) return;
+  setIsUploading(true);
 
-  const startUpload = async () => {
-    if (uploadFiles.length === 0) return;
-    
-    setIsUploading(true);
-    
-    try {
-      // Upload files one by one to avoid overwhelming the server
-      for (let i = 0; i < uploadFiles.length; i++) {
-        if (uploadFiles[i].status === 'pending') {
-          await uploadFile(uploadFiles[i], i);
+  let successCount = 0;
+
+  try {
+    for (let i = 0; i < uploadFiles.length; i++) {
+      if (uploadFiles[i].status === 'pending') {
+        await uploadFile(uploadFiles[i], i);
+
+        // Check the most recent status after upload completes
+        const updatedFile = uploadFiles[i];
+        if (updatedFile.status === 'success') {
+          successCount++;
         }
       }
-      
-      toast({
-        title: "Upload complete",
-        description: `Successfully uploaded ${uploadFiles.filter(f => f.status === 'success').length} track(s)`,
-      });
-      
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Some files failed to upload. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
     }
-  };
+
+    toast({
+      title: "Upload complete",
+      description: `Successfully imported ${successCount}/${uploadFiles.length} audio file(s).`,
+    });
+
+  } catch (error) {
+    toast({
+      title: "Upload failed",
+      description: "Some files failed to upload. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const getStatusIcon = (status: UploadFile['status']) => {
     switch (status) {
@@ -355,21 +363,16 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
   };
 
   const getStatusText = (uploadFile: UploadFile) => {
-    switch (uploadFile.status) {
-      case 'pending':
-        return 'Ready to upload';
-      case 'uploading':
-        return `Uploading... ${Math.round(uploadFile.progress)}%`;
-      case 'processing':
-        return 'Processing...';
-      case 'success':
-        return 'Upload complete';
-      case 'error':
-        return uploadFile.error || 'Upload failed';
-      default:
-        return '';
-    }
-  };
+  switch (uploadFile.status) {
+    case 'pending': return 'Ready to upload';
+    case 'uploading': return 'Uploading file...';
+    case 'transcoding': return 'Transcoding audio...';
+    case 'importing': return 'Finalizing import...';
+    case 'success': return 'Upload complete';
+    case 'error': return uploadFile.error || 'Upload failed';
+    default: return '';
+  }
+};
 
   const allComplete = uploadFiles.length > 0 && uploadFiles.every(f => f.status === 'success' || f.status === 'error');
   const hasSuccessful = uploadFiles.some(f => f.status === 'success');
