@@ -646,8 +646,8 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         <DrawerHeader className="border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <DropboxIcon className="w-5 h-5" />
-              <DrawerTitle className="text-lg font-semibold">Dropbox Sync</DrawerTitle>
+              <DropboxIcon className="w-5 h-5 text-primary" />
+              <DrawerTitle className="text-lg font-semibold text-primary">Dropbox Sync</DrawerTitle>
             </div>
             {isConnected && (
               <div className="flex items-center gap-2">
@@ -696,7 +696,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                 variant="outline"
                 size="sm"
                 onClick={handleDisconnect}
-                className="text-destructive hover:text-destructive/80"
+                className="text-primary hover:text-primary/80"
               >
                 Disconnect
               </Button>
@@ -706,7 +706,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                 size="sm"
                 onClick={handleConnect}
                 disabled={isConnecting}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-primary hover:text-primary/80"
               >
                 {isConnecting ? (
                   <>
