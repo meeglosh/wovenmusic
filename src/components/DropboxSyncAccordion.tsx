@@ -813,10 +813,8 @@ export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPe
 
             {/* Sorting Controls */}
             {isConnected && !isLoading && (folders.length > 0 || files.length > 0) && (
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Sort all items:</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort all items:</span>
                 <Button
                   variant="outline"
                   size="sm"
