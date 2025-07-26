@@ -494,7 +494,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             {sortedTracks.map((track, index) => (
               <div
                 key={track.id}
-                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-2 md:gap-4 p-3 md:p-4 hover:bg-muted/30 transition-colors group items-center ${
+                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-2 md:gap-4 p-3 md:p-4 hover:bg-muted/30 transition-colors group items-center ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
               >
@@ -584,7 +584,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   )}
                 </div>
 
-                <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                <div className="hidden md:flex items-center text-xs md:text-sm text-muted-foreground">
                   <span className="truncate">{track.addedAt.toLocaleDateString()}</span>
                 </div>
 
