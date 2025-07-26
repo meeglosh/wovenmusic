@@ -640,133 +640,135 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const isAllSelected = files.length > 0 && selectedFiles.size === files.length;
   const isIndeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length;
 
-  if (!isConnected) {
-    return (
-      <Drawer open={isOpen} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center gap-2">
-              <DropboxIcon className="w-5 h-5" />
-              Dropbox Sync
-            </DrawerTitle>
-            <DrawerDescription>
-              Connect to Dropbox to sync your music files
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="flex flex-col items-center justify-center py-12 px-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center mb-4">
-              <Cloud className="w-8 h-8 text-blue-500" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">Connect to Dropbox</h3>
-            <p className="text-sm text-muted-foreground text-center mb-6">
-              Link your Dropbox account to browse and import your music files directly into your library.
-            </p>
-            <Button 
-              onClick={() => window.dispatchEvent(new CustomEvent('openDropboxConnect'))}
-              className="w-full max-w-sm"
-            >
-              <DropboxIcon className="w-4 h-4 mr-2" />
-              Connect Dropbox Account
-            </Button>
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="border-b">
           <div className="flex items-center justify-between">
-            <div>
-              <DrawerTitle className="flex items-center gap-2 text-primary">
-                <DropboxIcon className="w-5 h-5 text-primary" />
-                {getCurrentPathName()}
-              </DrawerTitle>
-              <DrawerDescription>
-                Browse and import music from Dropbox
-              </DrawerDescription>
+            <div className="flex items-center gap-2">
+              <DropboxIcon className="w-5 h-5" />
+              <DrawerTitle className="text-lg font-semibold">Dropbox Sync</DrawerTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="text-primary hover:text-primary"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          {/* Navigation bar */}
-          {(folderHistory.length > 0 || files.length > 0 || folders.length > 0) && (
-            <div className="flex items-center justify-between pt-4">
+            {isConnected && (
               <div className="flex items-center gap-2">
-                {folderHistory.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={navigateBack}
-                    disabled={isLoading}
-                    className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-1" />
-                    Back
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadFolders(currentPath)}
-                  disabled={isLoading}
-                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-              
-              {/* Sort Button */}
-              {(folders.length > 0 || files.length > 0) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSortOrder}
-                  disabled={isLoading}
-                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="p-2 text-primary hover:bg-muted rounded-md transition-colors"
+                  title="Toggle sort order"
                 >
                   {sortOrder === 'asc' ? (
-                    <ArrowUp className="w-4 h-4" />
+                    <ArrowUp className="h-4 w-4" />
                   ) : (
-                    <ArrowDown className="w-4 h-4" />
+                    <ArrowDown className="h-4 w-4" />
                   )}
-                </Button>
-              )}
-            </div>
-          )}
+                </button>
+                <button
+                  onClick={() => loadFolders(currentPath)}
+                  disabled={isLoading}
+                  className="p-2 text-primary hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            )}
+          </div>
         </DrawerHeader>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {isLoading ? (
+          {/* Connection Status and Controls */}
+          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg mb-4">
+            <div className="flex items-center space-x-2">
+              {isConnected ? (
+                <>
+                  <Link className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600 font-medium">Connected to Dropbox</span>
+                </>
+              ) : (
+                <>
+                  <Unlink className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Not connected to Dropbox</span>
+                </>
+              )}
+            </div>
+            {isConnected ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                className="text-destructive hover:text-destructive/80"
+              >
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="flex items-center gap-2"
+              >
+                {isConnecting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Connect to Dropbox'
+                )}
+              </Button>
+            )}
+          </div>
+
+          {!isConnected ? (
+            <div className="flex items-center justify-center py-12 text-center">
+              <div>
+                <Unlink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">Connect to Dropbox to browse your music files</p>
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="space-y-2">
-              {/* Select All Checkbox */}
+            <div className="space-y-4">
+              {/* Navigation breadcrumb */}
+              {currentPath && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+                  <Folder className="w-4 h-4" />
+                  <span>{currentPath}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={navigateBack}
+                    className="ml-auto"
+                  >
+                    <ArrowLeft className="w-4 w-4 mr-1" />
+                    Back
+                  </Button>
+                </div>
+              )}
+
+              {/* Select all checkbox */}
               {files.length > 0 && (
-                <div className="flex items-center gap-2 pb-2 mb-2 border-b">
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                    className="mr-1"
-                    data-indeterminate={isIndeterminate}
-                  />
+                <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      checked={isAllSelected || isIndeterminate}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-sm font-medium">
+                      {isAllSelected ? 'Deselect All' : 'Select All'}
+                    </span>
+                  </div>
                   <span className="text-sm text-muted-foreground">
                     {selectedFiles.size} of {files.length} selected
                   </span>
                 </div>
               )}
-               {/* Folders */}
+
+              {/* Folders */}
               {sortedFolders.map((folder) => (
                 <div
                   key={folder.path_lower}
@@ -854,7 +856,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         </div>
 
         {/* Footer with action buttons */}
-        {selectedFiles.size > 0 && (
+        {isConnected && selectedFiles.size > 0 && (
           <div className="border-t p-4">
             <Button
               onClick={syncSelectedFiles}
