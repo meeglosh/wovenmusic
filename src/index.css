@@ -409,8 +409,16 @@
     @apply border-border;
   }
 
+  html {
+    @apply bg-background;
+    width: 100%;
+    height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
+    width: 100%;
+    min-height: 100%;
   }
 
   /* Global heading styles - use REM light font for all headings */
