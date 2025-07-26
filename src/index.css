@@ -409,13 +409,62 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground font-sans;
-  }
 
-  /* Global heading styles - use REM light font for all headings */
+  /* Enhanced typography hierarchy */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-rem font-light;
+    @apply font-rem font-extralight tracking-tight;
+  }
+  
+  h1 {
+    @apply text-3xl sm:text-4xl font-thin leading-none;
+  }
+  
+  h2 {
+    @apply text-2xl sm:text-3xl font-extralight leading-tight;
+  }
+  
+  h3 {
+    @apply text-xl sm:text-2xl font-light leading-tight;
+  }
+  
+  h4 {
+    @apply text-lg sm:text-xl font-normal leading-snug;
+  }
+  
+  h5 {
+    @apply text-base sm:text-lg font-medium leading-snug;
+  }
+  
+  h6 {
+    @apply text-sm sm:text-base font-semibold leading-normal;
+  }
+  
+  /* Body text refinements */
+  body {
+    @apply bg-background text-foreground font-sans leading-relaxed;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Enhanced text utilities */
+  .text-display {
+    @apply text-4xl sm:text-5xl font-thin tracking-tighter leading-none;
+  }
+  
+  .text-title {
+    @apply text-2xl sm:text-3xl font-extralight tracking-tight leading-tight;
+  }
+  
+  .text-subtitle {
+    @apply text-base sm:text-lg font-light tracking-wide leading-relaxed opacity-80;
+  }
+  
+  .text-body {
+    @apply text-sm sm:text-base font-normal leading-relaxed;
+  }
+  
+  .text-caption {
+    @apply text-xs font-medium tracking-wide uppercase leading-tight opacity-70;
   }
 
   /* Custom scrollbar */

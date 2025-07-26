@@ -49,8 +49,8 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
     navigate("/auth");
   };
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+    <header className="border-b border-border bg-card/60 backdrop-blur-md sticky top-0 z-50">
+      <div className="flex items-center justify-between px-comfortable sm:px-generous py-tight sm:py-snug">
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Mobile Navigation */}
           {onViewChange && onPlaylistSelect && (
@@ -62,7 +62,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             />
           )}
           
-          <h1 className="text-lg sm:text-2xl font-rem font-thin text-primary">
+          <h1 className="text-title font-rem text-primary">
             Wovenmusic
           </h1>
         </div>
