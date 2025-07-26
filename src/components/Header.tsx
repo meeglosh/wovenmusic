@@ -49,8 +49,8 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
     navigate("/auth");
   };
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+    <header className="border-b border-border bg-card/60 backdrop-blur-md sticky top-0 z-50">
+      <div className="flex items-center justify-between px-comfortable sm:px-generous py-tight sm:py-snug">
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Mobile Navigation */}
           {onViewChange && onPlaylistSelect && (
@@ -62,16 +62,9 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             />
           )}
           
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/lovable-uploads/605cd05e-af1d-4851-8c69-70a083e2c069.png" 
-              alt="Wovenmusic Logo" 
-              className="w-8 h-8 sm:w-10 sm:h-10"
-            />
-            <h1 className="text-lg sm:text-2xl font-rem font-thin text-primary">
-              Wovenmusic
-            </h1>
-          </div>
+          <h1 className="text-title font-rem text-primary">
+            Wovenmusic
+          </h1>
         </div>
 
         {/* Search - Hidden on mobile, shown on larger screens */}

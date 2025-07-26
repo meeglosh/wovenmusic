@@ -21,6 +21,21 @@ export default {
 			fontFamily: {
 				'rem': ['REM', 'sans-serif'],
 			},
+			fontSize: {
+				'display': ['3.5rem', { lineHeight: '1', letterSpacing: '-0.02em' }],
+				'title': ['2rem', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
+				'subtitle': ['1.125rem', { lineHeight: '1.5', letterSpacing: '0.01em' }],
+				'body': ['0.875rem', { lineHeight: '1.6' }],
+				'caption': ['0.75rem', { lineHeight: '1.3', letterSpacing: '0.05em' }],
+			},
+			spacing: {
+				'tight': '0.25rem',
+				'snug': '0.375rem',
+				'cozy': '0.625rem',
+				'comfortable': '0.875rem',
+				'spacious': '1.125rem',
+				'generous': '1.5rem',
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
