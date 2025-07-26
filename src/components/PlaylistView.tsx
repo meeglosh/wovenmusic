@@ -658,38 +658,39 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                          Delete image
                        </Button>
                      )}
-                     {canDeletePlaylist(playlist) && (
-                       <AlertDialog>
-                         <AlertDialogTrigger asChild>
-                           <Button
-                             variant="ghost"
-                             className="justify-start h-12 text-destructive hover:text-destructive"
+                      {canDeletePlaylist(playlist) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="justify-start h-12 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-3" />
+                              Delete playlist
+                            </Button>
+                          </AlertDialogTrigger>
+                       <AlertDialogContent>
+                         <AlertDialogHeader>
+                           <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                           <AlertDialogDescription>
+                             Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                           </AlertDialogDescription>
+                         </AlertDialogHeader>
+                         <AlertDialogFooter>
+                           <AlertDialogCancel onClick={() => setShowMobileOptionsSheet(false)}>Cancel</AlertDialogCancel>
+                           <AlertDialogAction
+                             onClick={() => {
+                               handleDeletePlaylist();
+                               setShowMobileOptionsSheet(false);
+                             }}
+                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                            >
-                             <Trash2 className="w-4 h-4 mr-3" />
                              Delete playlist
-                           </Button>
-                         </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel onClick={() => setShowMobileOptionsSheet(false)}>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              handleDeletePlaylist();
-                              setShowMobileOptionsSheet(false);
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete playlist
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                           </AlertDialogAction>
+                         </AlertDialogFooter>
+                       </AlertDialogContent>
+                     </AlertDialog>
+                      )}
                   </div>
                 </SheetContent>
               </Sheet>
