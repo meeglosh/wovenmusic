@@ -66,13 +66,13 @@ export const useTheme = () => {
   }, [theme]);
 
   const applyThemeToBody = (selectedTheme: Theme) => {
-    // Remove all existing theme classes
-    const bodyClasses = document.body.className.split(' ').filter(cls => 
+    // Remove all existing theme classes from html element
+    const htmlClasses = document.documentElement.className.split(' ').filter(cls => 
       !THEMES.some(t => t.value === cls)
     );
     
-    // Add the selected theme class
-    document.body.className = [...bodyClasses, selectedTheme].join(' ').trim();
+    // Add the selected theme class to html element
+    document.documentElement.className = [...htmlClasses, selectedTheme].join(' ').trim();
   };
 
   const changeTheme = (newTheme: Theme) => {
