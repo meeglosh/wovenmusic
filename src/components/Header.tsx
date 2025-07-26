@@ -113,7 +113,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="text-primary">
                 <Settings className="w-4 h-4 mr-2" />
-                Settings
+                Ajustra
                 <ChevronDown className="w-3 h-3 ml-2" />
               </Button>
             </DropdownMenuTrigger>
