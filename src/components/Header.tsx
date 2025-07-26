@@ -62,9 +62,16 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             />
           )}
           
-          <h1 className="text-lg sm:text-2xl font-rem font-thin text-primary">
-            Wovenmusic
-          </h1>
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/lovable-uploads/605cd05e-af1d-4851-8c69-70a083e2c069.png" 
+              alt="Wovenmusic Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10"
+            />
+            <h1 className="text-lg sm:text-2xl font-rem font-thin text-primary">
+              Wovenmusic
+            </h1>
+          </div>
         </div>
 
         {/* Search - Hidden on mobile, shown on larger screens */}
