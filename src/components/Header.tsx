@@ -107,7 +107,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
           </DropdownMenu>
           <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)} className="text-primary">
             <Upload className="w-4 h-4 mr-2" />
-            Upload
+            Ascendra
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
