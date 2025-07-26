@@ -484,6 +484,10 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
 
   const handleConnect = async () => {
     setIsConnecting(true);
+    
+    // Detect mobile Safari
+    const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    
     try {
       // Set up message listener BEFORE starting auth
       const handleAuthMessage = (event: MessageEvent) => {
@@ -522,7 +526,29 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       
       window.addEventListener('message', handleAuthMessage);
       
-      // Add timeout cleanup to prevent hanging
+      // For mobile Safari, use redirect-based OAuth instead of popup
+      if (isMobileSafari) {
+        console.log('Mobile Safari detected, using redirect-based OAuth');
+        
+        // Get Dropbox config and redirect to OAuth
+        const { data } = await supabase.functions.invoke('get-dropbox-config');
+        if (data?.dropbox_app_key) {
+          const state = Math.random().toString(36).substring(2, 15);
+          localStorage.setItem('dropbox_auth_state', state);
+          localStorage.setItem('dropbox_auth_return_url', window.location.href);
+          
+          const redirectUri = `${window.location.origin}/dropbox-callback`;
+          const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${data.dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+          
+          // Redirect to Dropbox OAuth page
+          window.location.href = authUrl;
+          return;
+        } else {
+          throw new Error('Failed to get Dropbox configuration');
+        }
+      }
+      
+      // For desktop and other browsers, use popup
       const timeoutId = setTimeout(() => {
         window.removeEventListener('message', handleAuthMessage);
         setIsConnecting(false);
