@@ -172,10 +172,9 @@ export default function PrivacySettings() {
                   <div key={track.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Music className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{getCleanTitle(track)}</p>
-                        <p className="text-sm text-muted-foreground">{track.artist}</p>
-                      </div>
+                       <div>
+                         <p className="font-medium">{getCleanTitle(track)}</p>
+                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`track-${track.id}`} className="text-sm flex items-center gap-1">
