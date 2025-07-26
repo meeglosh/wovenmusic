@@ -34,8 +34,8 @@ interface UploadFile {
   trackId?: string;
 }
 
-const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
-const UNSUPPORTED_FORMATS = ['.aif', '.aiff'];
+const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.aif', '.aiff'];
+const UNSUPPORTED_FORMATS: string[] = [];
 
 export default function UploadModal({ open, onOpenChange, audioQuality }: UploadModalProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
@@ -380,9 +380,6 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-primary">Cast waveforms into the current</DialogTitle>
-            <DialogDescription>
-              Upload audio files to your library. Supports MP3, WAV, M4A, AAC, OGG, and FLAC formats.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -498,12 +495,6 @@ const uploadFile = async (uploadFile: UploadFile, index: number) => {
                 ))}
               </div>
 
-              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  <strong>Note:</strong> AIF/AIFF files are not supported due to compatibility issues. 
-                  Please convert your files to MP3 or WAV format for best results.
-                </p>
-              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
