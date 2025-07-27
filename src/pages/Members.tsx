@@ -127,14 +127,15 @@ const Members = () => {
               <span className="hidden sm:inline text-primary">Edit Profile</span>
               <span className="sm:hidden text-primary">Edit</span>
             </Button>
-            <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="text-xs sm:text-sm">
-                  <Send className="w-4 h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Invite Member</span>
-                  <span className="sm:hidden">Invite</span>
-                </Button>
-              </DialogTrigger>
+            {isAdmin && (
+              <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="text-xs sm:text-sm">
+                    <Send className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Invite Member</span>
+                    <span className="sm:hidden">Invite</span>
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="mx-4 w-[calc(100vw-2rem)] sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Invite Band Member</DialogTitle>
@@ -182,7 +183,8 @@ const Members = () => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
           </div>
         </div>
       </div>
@@ -195,11 +197,15 @@ const Members = () => {
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
             </div>
             <h3 className="text-base sm:text-lg font-medium mb-2 text-primary">No band members yet</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Invite your first band member to start collaborating</p>
-            <Button onClick={() => setShowInviteModal(true)} size="sm" className="text-sm">
-              <Send className="w-4 h-4 mr-2" />
-              Send First Invitation
-            </Button>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
+              {isAdmin ? "Invite your first band member to start collaborating" : "Contact an admin to invite new members"}
+            </p>
+            {isAdmin && (
+              <Button onClick={() => setShowInviteModal(true)} size="sm" className="text-sm">
+                <Send className="w-4 h-4 mr-2" />
+                Send First Invitation
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
