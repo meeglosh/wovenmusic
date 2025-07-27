@@ -200,7 +200,7 @@ const ProfileSetup = () => {
               {isEditing ? "Edit Profile" : "Complete Your Profile"}
             </CardTitle>
             <CardDescription className="text-sm sm:text-base">
-              {isEditing ? "Molt your metadata - become again" : "Tell us a bit about yourself to get started"}
+              {isEditing ? "Molt your metadata - become again" : "Shed a fragment to open the gate"}
             </CardDescription>
           </CardHeader>
         
