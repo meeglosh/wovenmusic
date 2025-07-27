@@ -11,6 +11,8 @@ export interface PlaylistComment {
   updatedAt: Date;
   userEmail?: string;
   userFullName?: string;
+  parentId?: string | null;
+  replies?: PlaylistComment[];
 }
 
 export const usePlaylistComments = (playlistId: string) => {
@@ -38,9 +40,14 @@ export const usePlaylistComments = (playlistId: string) => {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      return comments.map(comment => {
+      // Organize comments into threads
+      const commentMap = new Map<string, PlaylistComment>();
+      const rootComments: PlaylistComment[] = [];
+
+      // First pass: create comment objects
+      comments.forEach(comment => {
         const profile = profileMap.get(comment.user_id);
-        return {
+        const commentObj: PlaylistComment = {
           id: comment.id,
           playlistId: comment.playlist_id,
           userId: comment.user_id,
@@ -49,8 +56,32 @@ export const usePlaylistComments = (playlistId: string) => {
           updatedAt: new Date(comment.updated_at),
           userEmail: profile?.email,
           userFullName: profile?.full_name,
-        } as PlaylistComment;
+          parentId: comment.parent_id,
+          replies: [],
+        };
+        commentMap.set(comment.id, commentObj);
       });
+
+      // Second pass: organize into threads
+      commentMap.forEach(comment => {
+        if (comment.parentId) {
+          const parent = commentMap.get(comment.parentId);
+          if (parent && parent.replies) {
+            parent.replies.push(comment);
+          }
+        } else {
+          rootComments.push(comment);
+        }
+      });
+
+      // Sort replies within each thread by creation time (oldest first)
+      rootComments.forEach(comment => {
+        if (comment.replies) {
+          comment.replies.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        }
+      });
+
+      return rootComments;
     },
   });
 };
@@ -70,6 +101,7 @@ export const useAddPlaylistComment = () => {
           playlist_id: comment.playlistId,
           user_id: user.user.id,
           content: comment.content,
+          parent_id: comment.parentId,
         })
         .select()
         .single();

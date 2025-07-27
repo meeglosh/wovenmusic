@@ -162,6 +162,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           playlist_id: string
           updated_at: string
           user_id: string
@@ -170,6 +171,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           playlist_id: string
           updated_at?: string
           user_id: string
@@ -178,6 +180,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           playlist_id?: string
           updated_at?: string
           user_id?: string
@@ -195,6 +198,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "playlist_comments"
             referencedColumns: ["id"]
           },
         ]

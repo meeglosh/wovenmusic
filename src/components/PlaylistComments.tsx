@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, Send, Edit2, Trash2, X } from "lucide-react";
+import { MessageSquare, Send, Edit2, Trash2, X, Reply } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBandMembers } from "@/hooks/useBandMembers";
@@ -32,9 +32,12 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
   const [newComment, setNewComment] = useState("");
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !user) return;
@@ -45,9 +48,26 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
       content: newComment.trim(),
       userEmail: user.email || "",
       userFullName: "",
+      parentId: null,
     });
 
     setNewComment("");
+  };
+
+  const handleSubmitReply = async (parentId: string) => {
+    if (!replyContent.trim() || !user) return;
+
+    await addComment.mutateAsync({
+      playlistId,
+      userId: user.id,
+      content: replyContent.trim(),
+      userEmail: user.email || "",
+      userFullName: "",
+      parentId,
+    });
+
+    setReplyContent("");
+    setReplyingTo(null);
   };
 
   const handleEditComment = (comment: PlaylistComment) => {
@@ -140,6 +160,150 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     });
   };
 
+  const getReplyToText = (parentComment: PlaylistComment) => {
+    const userProfile = getUserProfile(parentComment.userId);
+    const displayName = userProfile?.full_name || parentComment.userFullName || userProfile?.email || parentComment.userEmail || "Unknown User";
+    return `Replying to @${displayName}`;
+  };
+
+  const renderComment = (comment: PlaylistComment, isReply: boolean = false) => {
+    const userProfile = getUserProfile(comment.userId);
+    
+    return (
+      <div key={comment.id} className={`flex gap-3 group ${isReply ? 'ml-8 mt-4' : ''}`}>
+        <Avatar className="h-8 w-8 mt-1">
+          <AvatarImage src={userProfile?.avatar_url || undefined} />
+          <AvatarFallback className="text-xs bg-primary/20 text-primary">
+            {getInitials(
+              userProfile?.full_name || comment.userFullName, 
+              userProfile?.email || comment.userEmail
+            )}
+          </AvatarFallback>
+        </Avatar>
+      
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">
+              {userProfile?.full_name || comment.userFullName || userProfile?.email || comment.userEmail || "Unknown User"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
+            </span>
+            {comment.userId === user?.id && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditComment(comment)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {editingComment === comment.id ? (
+            <div className="space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[80px]"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => handleUpdateComment(comment.id)}
+                  disabled={!editContent.trim() || updateComment.isPending}
+                >
+                  {updateComment.isPending ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingComment(null);
+                    setEditContent("");
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="text-sm bg-muted/50 rounded-lg p-3">
+                {parseContent(comment.content)}
+              </div>
+              
+              {/* Reply button for top-level comments */}
+              {!isReply && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReplyingTo(comment.id);
+                    setTimeout(() => replyTextareaRef.current?.focus(), 100);
+                  }}
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Reply className="h-3 w-3 mr-1" />
+                  Reply
+                </Button>
+              )}
+              
+              {/* Reply form */}
+              {replyingTo === comment.id && (
+                <div className="space-y-3 mt-4 pl-4 border-l-2 border-muted">
+                  <div className="text-xs text-muted-foreground">
+                    {getReplyToText(comment)}
+                  </div>
+                  <Textarea
+                    ref={replyTextareaRef}
+                    placeholder={`Reply to ${userProfile?.full_name || comment.userFullName || "this comment"}...`}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSubmitReply(comment.id)}
+                      disabled={!replyContent.trim() || addComment.isPending}
+                      className="gap-1"
+                    >
+                      <Send className="h-3 w-3" />
+                      {addComment.isPending ? "Posting..." : "Reply"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setReplyingTo(null);
+                        setReplyContent("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (!user) {
     return (
       <Card className="mt-8">
@@ -158,12 +322,17 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     );
   }
 
+  // Calculate total comment count (including replies)
+  const totalComments = comments.reduce((total, comment) => {
+    return total + 1 + (comment.replies?.length || 0);
+  }, 0);
+
   return (
     <Card className="mt-8" id="comments">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
-          Comments ({comments.length})
+          Comments ({totalComments})
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -212,88 +381,20 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
             No comments yet. Be the first to comment!
           </div>
         ) : (
-          <div className="space-y-4">
-            {comments.map((comment) => {
-              const userProfile = getUserProfile(comment.userId);
-              return (
-                <div key={comment.id} className="flex gap-3 group">
-                  <Avatar className="h-8 w-8 mt-1">
-                    <AvatarImage src={userProfile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-primary/20 text-primary">
-                      {getInitials(
-                        userProfile?.full_name || comment.userFullName, 
-                        userProfile?.email || comment.userEmail
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
+          <div className="space-y-6">
+            {comments.map((comment) => (
+              <div key={comment.id} className="space-y-4">
+                {/* Top-level comment */}
+                {renderComment(comment)}
                 
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">
-                      {userProfile?.full_name || comment.userFullName || userProfile?.email || comment.userEmail || "Unknown User"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
-                    </span>
-                    {comment.userId === user.id && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditComment(comment)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
+                {/* Replies */}
+                {comment.replies && comment.replies.length > 0 && (
+                  <div className="space-y-4">
+                    {comment.replies.map((reply) => renderComment(reply, true))}
                   </div>
-                  
-                  {editingComment === comment.id ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="min-h-[80px]"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleUpdateComment(comment.id)}
-                          disabled={!editContent.trim() || updateComment.isPending}
-                        >
-                          {updateComment.isPending ? "Saving..." : "Save"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingComment(null);
-                            setEditContent("");
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm bg-muted/50 rounded-lg p-3">
-                      {parseContent(comment.content)}
-                    </div>
-                  )}
-                </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
