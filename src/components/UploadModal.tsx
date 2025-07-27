@@ -42,6 +42,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
   const [isUploading, setIsUploading] = useState(false);
   const [showUnsupportedDialog, setShowUnsupportedDialog] = useState(false);
   const [unsupportedFiles, setUnsupportedFiles] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addTrackMutation = useAddTrack();
   const { toast } = useToast();
@@ -64,6 +65,15 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    processFiles(files);
+
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const processFiles = (files: File[]) => {
     if (files.length === 0) return;
 
     const supportedFiles: File[] = [];
@@ -92,11 +102,27 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       }));
       setUploadFiles(prev => [...prev, ...newUploadFiles]);
     }
+  };
 
-    // Clear the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
   };
 
   const removeFile = (index: number) => {
@@ -387,9 +413,18 @@ const startUpload = async () => {
 
           <div className="space-y-6">
             {/* Upload Area */}
-            <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+            <Card 
+              className={`border-2 border-dashed transition-colors ${
+                isDragOver 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-muted-foreground/25 hover:border-primary/50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <CardContent className="flex flex-col items-center justify-center p-8">
-                <Upload className="h-12 w-12 text-muted-foreground mb-4" />
+                <Upload className={`h-12 w-12 mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
                 <Button onClick={handleFileSelect} variant="outline" className="mb-2">
                   Select Audio Files
                 </Button>
