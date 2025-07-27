@@ -54,11 +54,10 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ModalDebugger } from "./ModalDebugger";
 
 interface PlaylistViewProps {
   playlistId: string;
@@ -962,8 +961,28 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       </Dialog>
       */}
 
-      {/* ISOLATED TEST: Edit Playlist Details Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+      {/* ISOLATED TEST: Edit Playlist Details Dialog - Clean Radix pattern */}
+      <Dialog 
+        open={showCategoryDialog} 
+        onOpenChange={(open) => {
+          setShowCategoryDialog(open);
+          // Clean up body styles when closing
+          if (!open) {
+            setTimeout(() => {
+              document.body.style.overflow = '';
+              document.body.style.pointerEvents = '';
+              if (document.body.hasAttribute('inert')) {
+                document.body.removeAttribute('inert');
+              }
+              console.log('Modal cleanup completed', {
+                bodyOverflow: document.body.style.overflow,
+                bodyPointerEvents: document.body.style.pointerEvents,
+                bodyInert: document.body.hasAttribute('inert')
+              });
+            }, 100);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit playlist details</DialogTitle>
@@ -992,6 +1011,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         playlist={playlist}
       />
       */}
+
+      {/* Temporary Modal Debugger */}
+      <ModalDebugger />
     </div>
   );
 };
