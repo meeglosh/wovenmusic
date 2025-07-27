@@ -22,15 +22,15 @@ const ProfileProtectedRoute = ({ children }: ProfileProtectedRouteProps) => {
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id, full_name, role, is_band_member')
+          .select('id, full_name, role, is_band_member, profile_completed')
           .eq('id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
           setHasCompleteProfile(false);
-        } else if (!profile || !profile.full_name || !profile.role) {
-          // Profile doesn't exist or is incomplete
+        } else if (!profile || !profile.full_name || !profile.role || !profile.profile_completed) {
+          // Profile doesn't exist, is incomplete, or hasn't completed onboarding
           setHasCompleteProfile(false);
         } else {
           setHasCompleteProfile(true);

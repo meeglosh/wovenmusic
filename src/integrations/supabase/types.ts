@@ -327,6 +327,7 @@ export type Database = {
           id: string
           is_admin: boolean | null
           is_band_member: boolean | null
+          profile_completed: boolean
           role: string | null
           roles: string[] | null
           updated_at: string
@@ -341,6 +342,7 @@ export type Database = {
           id: string
           is_admin?: boolean | null
           is_band_member?: boolean | null
+          profile_completed?: boolean
           role?: string | null
           roles?: string[] | null
           updated_at?: string
@@ -355,6 +357,7 @@ export type Database = {
           id?: string
           is_admin?: boolean | null
           is_band_member?: boolean | null
+          profile_completed?: boolean
           role?: string | null
           roles?: string[] | null
           updated_at?: string

@@ -109,7 +109,8 @@ const ProfileSetup = () => {
           email: profileData?.email || user.email,
           avatar_url: avatarUrl,
           is_band_member: true,
-          is_admin: canEditAdmin ? isAdminToggled : (profileData?.is_admin || false)
+          is_admin: canEditAdmin ? isAdminToggled : (profileData?.is_admin || false),
+          profile_completed: true
         });
 
       if (error) throw error;
