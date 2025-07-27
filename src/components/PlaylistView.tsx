@@ -965,21 +965,32 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       <Dialog 
         open={showCategoryDialog} 
         onOpenChange={(open) => {
+          console.log('Edit modal onOpenChange:', open);
           setShowCategoryDialog(open);
-          // Clean up body styles when closing
           if (!open) {
+            // Force DOM cleanup after Radix cleanup
             setTimeout(() => {
+              console.log('Forcing DOM cleanup...');
               document.body.style.overflow = '';
               document.body.style.pointerEvents = '';
-              if (document.body.hasAttribute('inert')) {
-                document.body.removeAttribute('inert');
-              }
-              console.log('Modal cleanup completed', {
-                bodyOverflow: document.body.style.overflow,
-                bodyPointerEvents: document.body.style.pointerEvents,
-                bodyInert: document.body.hasAttribute('inert')
+              document.body.removeAttribute('inert');
+              // Remove any lingering Radix elements
+              document.querySelectorAll('[data-radix-dialog-overlay]').forEach(el => {
+                console.log('Removing lingering overlay:', el);
+                el.remove();
               });
-            }, 100);
+              document.querySelectorAll('[data-radix-dialog-content]').forEach(el => {
+                console.log('Removing lingering content:', el);
+                el.remove();
+              });
+              console.log('DOM cleanup complete, body state:', {
+                overflow: document.body.style.overflow,
+                pointerEvents: document.body.style.pointerEvents,
+                inert: document.body.hasAttribute('inert'),
+                radixOverlays: document.querySelectorAll('[data-radix-dialog-overlay]').length,
+                radixContents: document.querySelectorAll('[data-radix-dialog-content]').length
+              });
+            }, 50);
           }
         }}
       >
