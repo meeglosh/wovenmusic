@@ -230,10 +230,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const uploadImageMutation = useUploadPlaylistImage();
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
-  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist, isAdmin } = usePermissions();
   const { user } = useAuth();
+  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist, isAdmin } = usePermissions();
   
-  // Category hooks
+  // Category hooks - always call them
   const { data: categories = [] } = usePlaylistCategories();
   const { data: playlistCategories = [] } = useGetPlaylistCategories(playlistId);
   const assignCategoryMutation = useAssignPlaylistCategory();
@@ -246,6 +246,15 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   
   // Find the current playlist from the fresh data
   const playlist = playlists.find(p => p.id === playlistId) || null;
+
+  console.log("PlaylistView rendered", { 
+    playlistId, 
+    playlist: !!playlist, 
+    user: !!user, 
+    isAdmin,
+    categoriesLength: categories.length,
+    playlistCategoriesLength: playlistCategories.length
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -479,7 +488,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   };
 
   const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    if (!newCategoryName.trim()) {
+      return;
+    }
 
     try {
       const newCategory = await createCategoryMutation.mutateAsync({
@@ -499,6 +510,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         await handleCategoryChange(newCategory.id);
       }
     } catch (error) {
+      console.error("Error creating category:", error);
       toast({
         title: "Error creating category",
         description: "Could not create category. Please try again.",
@@ -955,83 +967,87 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
-                Category
-              </Label>
-              {!showCreateCategory ? (
-                <div className="space-y-2">
-                  <Select 
-                    value={playlistCategories[0]?.id || ""} 
-                    onValueChange={handleCategoryChange}
-                    disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isAdmin && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowCreateCategory(true);
-                        setNewCategoryName("");
-                      }}
-                      className="w-full"
+            {/* Temporarily commented out category UI for debugging */}
+            {false && (
+              <div>
+                <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
+                  Category
+                </Label>
+                {!showCreateCategory ? (
+                  <div className="space-y-2">
+                    <Select 
+                      value={playlistCategories[0]?.id || ""} 
+                      onValueChange={handleCategoryChange}
+                      disabled={!assignCategoryMutation || !removeCategoryMutation || 
+                        assignCategoryMutation?.isPending || removeCategoryMutation?.isPending}
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create new category
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Input
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Enter category name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleCreateCategory();
-                      } else if (e.key === 'Escape') {
-                        setShowCreateCategory(false);
-                        setNewCategoryName("");
-                      }
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleCreateCategory}
-                      disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
-                      className="flex-1"
-                    >
-                      {createCategoryMutation.isPending ? "Creating..." : "Create"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setShowCreateCategory(false);
-                        setNewCategoryName("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No category</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isAdmin && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowCreateCategory(true);
+                          setNewCategoryName("");
+                        }}
+                        className="w-full"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create new category
+                      </Button>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Enter category name"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleCreateCategory();
+                        } else if (e.key === 'Escape') {
+                          setShowCreateCategory(false);
+                          setNewCategoryName("");
+                        }
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCreateCategory}
+                        disabled={!newCategoryName.trim() || createCategoryMutation?.isPending}
+                        className="flex-1"
+                      >
+                        {createCategoryMutation?.isPending ? "Creating..." : "Create"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowCreateCategory(false);
+                          setNewCategoryName("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowCategoryDialog(false)} className="text-primary">
