@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create invitation in database
     console.log('Creating invitation in database...');
-    const { data: invitation, error: inviteError } = await supabaseClient
+    const insertResult = await supabaseClient
       .from('invitations')
       .insert({
         email,
@@ -77,12 +77,33 @@ const handler = async (req: Request): Promise<Response> => {
       .select()
       .single();
 
-    if (inviteError) {
-      console.error('Invitation error:', inviteError);
-      throw inviteError;
+    console.log('Insert result:', JSON.stringify(insertResult, null, 2));
+    console.log('Insert data:', insertResult.data);
+    console.log('Insert error:', insertResult.error);
+
+    if (insertResult.error) {
+      console.error('Invitation insert error:', insertResult.error);
+      throw insertResult.error;
     }
     
-    console.log('Invitation created:', invitation);
+    const invitation = insertResult.data;
+    console.log('Invitation created successfully:', invitation);
+
+    // Let's verify the invitation was actually stored by querying it back
+    console.log('Verifying invitation was stored...');
+    const verifyResult = await supabaseClient
+      .from('invitations')
+      .select('*')
+      .eq('token', invitation.token)
+      .maybeSingle();
+    
+    console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
+    
+    if (!verifyResult.data) {
+      console.error('CRITICAL: Invitation was not found after insert!');
+    } else {
+      console.log('SUCCESS: Invitation verified in database');
+    }
 
     // Generate invitation URL using environment variable
     const baseUrl = Deno.env.get('BASE_URL') || 'https://wovenmusic.app';
