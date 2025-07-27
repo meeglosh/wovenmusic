@@ -958,7 +958,15 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       </Dialog>
 
       {/* Edit Playlist Details Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+      <Dialog open={showCategoryDialog} onOpenChange={(open) => {
+        setShowCategoryDialog(open);
+        if (!open) {
+          // Ensure focus is properly restored
+          setTimeout(() => {
+            document.body.focus();
+          }, 100);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit playlist details</DialogTitle>
