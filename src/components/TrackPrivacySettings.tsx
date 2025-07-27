@@ -24,6 +24,15 @@ export function TrackPrivacySettings({ track }: TrackPrivacySettingsProps) {
   }
 
   const handlePrivacyChange = async (isPublic: boolean) => {
+    if (!canEditTrackPrivacy(track)) {
+      toast({
+        title: "Permission denied",
+        description: "Only the creator or an admin can change privacy settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUpdating(true);
     try {
       await updateTrackMutation.mutateAsync({
@@ -74,7 +83,7 @@ export function TrackPrivacySettings({ track }: TrackPrivacySettingsProps) {
             id="track-privacy"
             checked={track.is_public || false}
             onCheckedChange={handlePrivacyChange}
-            disabled={isUpdating}
+            disabled={isUpdating || !canEditTrackPrivacy(track)}
           />
         </div>
       </CardContent>

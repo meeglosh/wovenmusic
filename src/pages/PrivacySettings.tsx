@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Track } from "@/types/music";
 import { getCleanTitle } from "@/types/music";
 import { useNavigate } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function PrivacySettings() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,6 +23,7 @@ export default function PrivacySettings() {
   const updatePlaylistVisibility = useUpdatePlaylistVisibility();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { canEditTrackPrivacy, canEditPlaylistPrivacy } = usePermissions();
 
   const filteredTracks = tracks.filter(track => 
     getCleanTitle(track).toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -33,6 +35,15 @@ export default function PrivacySettings() {
   );
 
   const handleTrackPrivacyChange = async (track: Track, isPublic: boolean) => {
+    if (!canEditTrackPrivacy(track)) {
+      toast({
+        title: "Permission denied",
+        description: "Only the creator or an admin can change privacy settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await updateTrackMutation.mutateAsync({
         id: track.id,
@@ -52,16 +63,25 @@ export default function PrivacySettings() {
     }
   };
 
-  const handlePlaylistPrivacyChange = async (playlistId: string, playlistName: string, isPublic: boolean) => {
+  const handlePlaylistPrivacyChange = async (playlist: any, isPublic: boolean) => {
+    if (!canEditPlaylistPrivacy(playlist)) {
+      toast({
+        title: "Permission denied",
+        description: "Only the creator or an admin can change privacy settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await updatePlaylistVisibility.mutateAsync({
-        playlistId,
+        playlistId: playlist.id,
         isPublic
       });
       
       toast({
         title: "Privacy updated",
-        description: `"${playlistName}" is now ${isPublic ? 'public' : 'private'}`,
+        description: `"${playlist.name}" is now ${isPublic ? 'public' : 'private'}`,
       });
     } catch (error) {
       toast({
@@ -194,7 +214,7 @@ export default function PrivacySettings() {
                         id={`track-${track.id}`}
                         checked={track.is_public || false}
                         onCheckedChange={(checked) => handleTrackPrivacyChange(track, checked)}
-                        disabled={updateTrackMutation.isPending}
+                        disabled={updateTrackMutation.isPending || !canEditTrackPrivacy(track)}
                       />
                     </div>
                   </div>
@@ -250,8 +270,8 @@ export default function PrivacySettings() {
                       <Switch
                         id={`playlist-${playlist.id}`}
                         checked={playlist.isPublic || false}
-                        onCheckedChange={(checked) => handlePlaylistPrivacyChange(playlist.id, playlist.name, checked)}
-                        disabled={updatePlaylistVisibility.isPending}
+                        onCheckedChange={(checked) => handlePlaylistPrivacyChange(playlist, checked)}
+                        disabled={updatePlaylistVisibility.isPending || !canEditPlaylistPrivacy(playlist)}
                       />
                     </div>
                   </div>

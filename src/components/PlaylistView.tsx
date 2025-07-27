@@ -507,8 +507,14 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   <Switch
                     id="playlist-privacy"
                     checked={playlist.isPublic || false}
-                    onCheckedChange={handlePrivacyChange}
-                    disabled={updatePlaylistVisibility.isPending}
+                    onCheckedChange={canEditPlaylistPrivacy(playlist) ? handlePrivacyChange : () => {
+                      toast({
+                        title: "Permission denied",
+                        description: "You don't have permission to change privacy settings for this playlist.",
+                        variant: "destructive",
+                      });
+                    }}
+                    disabled={updatePlaylistVisibility.isPending || !canEditPlaylistPrivacy(playlist)}
                     className="flex-shrink-0"
                   />
                 </div>
@@ -537,15 +543,17 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <span className="text-primary">Add Tracks</span>
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => setShowShareModal(true)}
-              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
-            >
-              <Share2 className="w-4 h-4 mr-2 text-primary" />
-              <span className="text-primary">Share</span>
-            </Button>
+            {canEditPlaylistPrivacy(playlist) && (
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => setShowShareModal(true)}
+                className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
+              >
+                <Share2 className="w-4 h-4 mr-2 text-primary" />
+                <span className="text-primary">Share</span>
+              </Button>
+            )}
             
             {/* Desktop Dropdown Menu */}
             <div className="hidden sm:block">
