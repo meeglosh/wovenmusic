@@ -230,7 +230,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const uploadImageMutation = useUploadPlaylistImage();
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
-  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist } = usePermissions();
+  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist, isAdmin } = usePermissions();
   const { user } = useAuth();
   
   // Category hooks
@@ -246,9 +246,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   
   // Find the current playlist from the fresh data
   const playlist = playlists.find(p => p.id === playlistId) || null;
-  
-  // Check if user is admin
-  const isAdmin = user?.user_metadata?.is_admin || false;
 
   const sensors = useSensors(
     useSensor(PointerSensor),

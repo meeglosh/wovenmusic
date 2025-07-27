@@ -15,6 +15,7 @@ import { useCreatePlaylist } from "@/hooks/usePlaylists";
 import { usePlaylistCategories, useAssignPlaylistCategory, useCreatePlaylistCategory } from "@/hooks/usePlaylistCategories";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Rocket, LogIn, Plus } from "lucide-react";
 
 interface CreatePlaylistModalProps {
@@ -35,9 +36,8 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
   const { data: categories = [] } = usePlaylistCategories();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isAdmin } = usePermissions();
   
-  // Check if user is admin
-  const isAdmin = user?.user_metadata?.is_admin || false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
