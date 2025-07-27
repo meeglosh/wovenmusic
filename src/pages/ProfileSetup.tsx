@@ -208,7 +208,7 @@ const ProfileSetup = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar Upload */}
             <div className="flex flex-col items-center space-y-4">
-              <Avatar className="w-20 h-20">
+              <Avatar className="w-20 h-20 border-2 border-border">
                 <AvatarImage src={avatarUrl} />
                 <AvatarFallback>
                   <User className="w-8 h-8" />
