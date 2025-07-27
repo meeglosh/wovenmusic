@@ -70,6 +70,7 @@ interface PlaylistViewProps {
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
+import { PlaylistComments } from "@/components/PlaylistComments";
 
 // Sortable Track Item Component
 interface SortableTrackItemProps {
@@ -749,6 +750,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </DndContext>
         </Card>
       )}
+
+      {/* Comments Section */}
+      <PlaylistComments 
+        playlistId={playlistId}
+        playlistName={playlist.name}
+      />
 
       <AddTracksModal
         open={showAddTracksModal}
