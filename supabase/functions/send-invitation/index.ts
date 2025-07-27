@@ -101,8 +101,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Attempting to send email...');
     
     const emailResponse = await resend.emails.send({
-      from: "Wovenmusic <onboarding@resend.dev>",
-      to: [inviterProfile?.email || "meeglosh@gmail.com"], // Temporary: using verified email for testing
+      from: "Wovenmusic <noreply@wovenmusic.app>", // TODO: Update once domain is verified
+      to: [email], // Will work once wovenmusic.app domain is verified on Resend
       subject: `You're invited to join Wovenmusic as a ${role}!`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
