@@ -46,6 +46,8 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase client created');
+    console.log('Supabase URL:', supabaseUrl);
+    console.log('Service role key prefix:', supabaseKey?.substring(0, 20) + '...');
     
     const requestBody = await req.text();
     console.log('Raw request body:', requestBody);
