@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: invitation, error: inviteError } = await supabase
       .from('invitations')
       .select('email, role, used_at, expires_at')
-      .eq('token', `${token}::uuid`)
+      .eq('token', token)
       .is('used_at', null)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
