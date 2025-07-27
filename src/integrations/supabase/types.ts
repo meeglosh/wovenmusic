@@ -157,6 +157,66 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      playlist_category_links: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          playlist_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          playlist_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          playlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_category_links_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "playlist_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_category_links_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_comments: {
         Row: {
           content: string
