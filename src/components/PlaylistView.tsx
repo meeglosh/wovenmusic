@@ -652,15 +652,21 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                  {canEditPlaylist(playlist) && (
-                    <DropdownMenuItem onClick={() => {
-                      setNewPlaylistName(playlist.name);
-                      setShowRenameDialog(true);
-                    }}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Rename playlist
-                    </DropdownMenuItem>
-                  )}
+                   {canEditPlaylist(playlist) && (
+                     <DropdownMenuItem onClick={() => setShowCategoryDialog(true)}>
+                       <Edit className="w-4 h-4 mr-2" />
+                       Edit playlist details
+                     </DropdownMenuItem>
+                   )}
+                   {canEditPlaylist(playlist) && (
+                     <DropdownMenuItem onClick={() => {
+                       setNewPlaylistName(playlist.name);
+                       setShowRenameDialog(true);
+                     }}>
+                       <Edit className="w-4 h-4 mr-2" />
+                       Rename playlist
+                     </DropdownMenuItem>
+                   )}
                   {canEditPlaylist(playlist) && (
                     <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                       <Image className="w-4 h-4 mr-2" />
@@ -716,20 +722,33 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   </SheetTrigger>
                  <SheetContent side="bottom" className="h-auto">
                    <div className="flex flex-col space-y-4 py-6">
-                     {canEditPlaylist(playlist) && (
-                       <Button
-                         variant="ghost"
-                         onClick={() => {
-                           setNewPlaylistName(playlist.name);
-                           setShowRenameDialog(true);
-                           setShowMobileOptionsSheet(false);
-                         }}
-                         className="justify-start h-12 text-primary hover:text-primary"
-                       >
-                         <Edit className="w-4 h-4 mr-3 text-primary" />
-                         Rename playlist
-                       </Button>
-                     )}
+                      {canEditPlaylist(playlist) && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setShowCategoryDialog(true);
+                            setShowMobileOptionsSheet(false);
+                          }}
+                          className="justify-start h-12 text-primary hover:text-primary"
+                        >
+                          <Edit className="w-4 h-4 mr-3 text-primary" />
+                          Edit playlist details
+                        </Button>
+                      )}
+                      {canEditPlaylist(playlist) && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setNewPlaylistName(playlist.name);
+                            setShowRenameDialog(true);
+                            setShowMobileOptionsSheet(false);
+                          }}
+                          className="justify-start h-12 text-primary hover:text-primary"
+                        >
+                          <Edit className="w-4 h-4 mr-3 text-primary" />
+                          Rename playlist
+                        </Button>
+                      )}
                      {canEditPlaylist(playlist) && (
                        <Button
                          variant="ghost"
@@ -887,6 +906,49 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               disabled={!newPlaylistName.trim() || newPlaylistName.trim() === playlist.name}
             >
               Rename playlist
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Playlist Details Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit playlist details</DialogTitle>
+            <DialogDescription>
+              Update playlist settings and category assignment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {categories.length > 0 && (
+              <div>
+                <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
+                  Category
+                </Label>
+                <Select 
+                  value={playlistCategories[0]?.id || ""} 
+                  onValueChange={handleCategoryChange}
+                  disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowCategoryDialog(false)} className="text-primary">
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

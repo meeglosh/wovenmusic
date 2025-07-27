@@ -170,8 +170,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
                 return (
                   <AccordionItem key={category.id} value={category.id} className="border-none">
                     <AccordionTrigger className="py-2 px-0 text-sm font-medium text-muted-foreground hover:no-underline hover:text-primary transition-colors">
-                      {category.name}
-                      <span className="ml-2 text-xs">({categoryPlaylists.length})</span>
+                      {category.name} ({categoryPlaylists.length})
                     </AccordionTrigger>
                     <AccordionContent className="pb-0">
                       <div className="space-y-1">
@@ -186,8 +185,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
               {playlistsByCategory.unsortedPlaylists.length > 0 && (
                 <AccordionItem value="unsorted" className="border-none">
                   <AccordionTrigger className="py-2 px-0 text-sm font-medium text-muted-foreground hover:no-underline hover:text-primary transition-colors">
-                    Unsorted murmur
-                    <span className="ml-2 text-xs">({playlistsByCategory.unsortedPlaylists.length})</span>
+                    Unsorted murmur ({playlistsByCategory.unsortedPlaylists.length})
                   </AccordionTrigger>
                   <AccordionContent className="pb-0">
                     <div className="space-y-1">
