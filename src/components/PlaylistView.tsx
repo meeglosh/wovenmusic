@@ -556,14 +556,15 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             )}
             
             {/* Desktop Dropdown Menu */}
-            <div className="hidden sm:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="lg">
-                    <MoreHorizontal className="w-5 h-5 text-primary" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+            {canEditPlaylistPrivacy(playlist) && (
+              <div className="hidden sm:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="lg">
+                      <MoreHorizontal className="w-5 h-5 text-primary" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                   {canEditPlaylist(playlist) && (
                     <DropdownMenuItem onClick={() => {
                       setNewPlaylistName(playlist.name);
@@ -612,18 +613,20 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
 
             {/* Mobile Sheet */}
-            <div className="sm:hidden">
-              <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
-                    <span className="text-primary underline">More</span>
-                  </Button>
-                </SheetTrigger>
+            {canEditPlaylistPrivacy(playlist) && (
+              <div className="sm:hidden">
+                <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
+                      <span className="text-primary underline">More</span>
+                    </Button>
+                  </SheetTrigger>
                  <SheetContent side="bottom" className="h-auto">
                    <div className="flex flex-col space-y-4 py-6">
                      {canEditPlaylist(playlist) && (
@@ -703,6 +706,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 </SheetContent>
               </Sheet>
             </div>
+            )}
           </div>
         </div>
       </div>
