@@ -48,7 +48,9 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Playlist not found");
     }
 
-    const shareUrl = `https://wovenmusic.app/?playlist=${playlist.share_token}`;
+    // Generate share URL using environment variable
+    const baseUrl = Deno.env.get('BASE_URL') || 'https://wovenmusic.app';
+    const shareUrl = `${baseUrl}/?playlist=${playlist.share_token}`;
 
     const emailResponse = await resend.emails.send({
       from: "Wovenmusic <onboarding@resend.dev>",

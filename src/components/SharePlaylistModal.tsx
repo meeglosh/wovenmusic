@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, Mail, Trash2, Users, Globe } from "lucide-react";
 import { Playlist } from "@/types/music";
 import { useSharePlaylist, useUpdatePlaylistVisibility, useRemovePlaylistShare } from "@/hooks/usePlaylistSharing";
+import { generatePlaylistShareUrl } from "@/lib/config";
 import { toast } from "sonner";
 
 interface SharePlaylistModalProps {
@@ -68,9 +69,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
   };
 
   const copyShareLink = () => {
-    const shareUrl = playlist.shareToken 
-      ? `https://wovenmusic.app/playlist/shared?token=${playlist.shareToken}`
-      : `https://wovenmusic.app/playlist/${playlist.id}`;
+    const shareUrl = generatePlaylistShareUrl(playlist.shareToken, playlist.id);
     navigator.clipboard.writeText(shareUrl);
     toast.success("Share link copied to clipboard!");
   };
@@ -113,10 +112,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
               <Label>Share Link</Label>
               <div className="flex space-x-2">
                 <Input 
-                  value={playlist.shareToken 
-                    ? `https://wovenmusic.app/playlist/shared?token=${playlist.shareToken}`
-                    : `https://wovenmusic.app/playlist/${playlist.id}`
-                  }
+                  value={generatePlaylistShareUrl(playlist.shareToken, playlist.id)}
                   readOnly
                   className="flex-1"
                 />

@@ -86,8 +86,9 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Create the playlist URL
-    const playlistUrl = `https://wovenmusic.app/?playlist=${playlist.share_token}#comments`;
+    // Create the playlist URL using environment variable
+    const baseUrl = Deno.env.get('BASE_URL') || 'https://wovenmusic.app';
+    const playlistUrl = `${baseUrl}/?playlist=${playlist.share_token}#comments`;
 
     // Send emails to mentioned users
     const emailPromises = mentionedUsers.map(async (mentionedUser) => {
