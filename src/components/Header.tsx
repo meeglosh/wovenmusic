@@ -11,6 +11,8 @@ import UploadModal from "./UploadModal";
 import ConversionQualitySelector from "./ConversionQualitySelector";
 import MobileNav from "./MobileNav";
 import { Playlist } from "@/types/music";
+import { useCurrentUserProfile } from "@/hooks/useBandMembers";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface HeaderProps {
   playlists?: Playlist[];
@@ -27,6 +29,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
   const { theme, setTheme, themes } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [audioQuality, setAudioQuality] = useState("mp3-320");
+  const { data: userProfile } = useCurrentUserProfile();
 
   // Load saved conversion quality from localStorage on mount
   useEffect(() => {
@@ -118,6 +121,22 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+              {userProfile && (
+                <>
+                  <div className="flex items-center gap-3 p-3 border-b border-border">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.full_name || ''} />
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-primary text-sm">{userProfile.full_name || 'User'}</span>
+                      <span className="text-xs text-muted-foreground">{userProfile.email}</span>
+                    </div>
+                  </div>
+                </>
+              )}
               <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 Members
@@ -170,7 +189,23 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Settings className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+            <DropdownMenuContent align="end" className="w-48 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+              {userProfile && (
+                <>
+                  <div className="flex items-center gap-2 p-3 border-b border-border">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.full_name || ''} />
+                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                        {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium text-primary text-xs truncate">{userProfile.full_name || 'User'}</span>
+                      <span className="text-xs text-muted-foreground truncate">{userProfile.email}</span>
+                    </div>
+                  </div>
+                </>
+              )}
               <DropdownMenuItem onClick={() => navigate("/members")} className="text-primary">
                 <Users className="w-4 h-4 mr-2" />
                 <span className="text-sm">Members</span>
