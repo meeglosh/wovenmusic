@@ -60,17 +60,23 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Playlist not found");
     }
 
-    // Find mentioned users by their display names (case insensitive)
-    const { data: mentionedUsers, error: usersError } = await supabase
-      .from("profiles")
-      .select("id, email, full_name, is_band_member")
-      .ilike("full_name", `%(${mentions.join('|')})%`)
-      .eq("is_band_member", true); // Only send to band members
+    // Find mentioned users by their exact display names or emails (case insensitive)
+    const mentionQueries = mentions.map(mention => 
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, is_band_member")
+        .eq("is_band_member", true)
+        .or(`full_name.ilike.${mention},email.ilike.${mention}`)
+    );
 
-    if (usersError) {
-      console.error("Error fetching mentioned users:", usersError);
-      throw usersError;
-    }
+    const mentionResults = await Promise.all(mentionQueries);
+    const mentionedUsers = mentionResults
+      .filter(result => !result.error && result.data)
+      .flatMap(result => result.data)
+      .filter((user, index, self) => 
+        // Remove duplicates based on user ID
+        index === self.findIndex(u => u.id === user.id)
+      );
 
     if (!mentionedUsers || mentionedUsers.length === 0) {
       console.log("No valid mentioned users found");

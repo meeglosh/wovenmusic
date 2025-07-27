@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, Send, Edit2, Trash2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBandMembers } from "@/hooks/useBandMembers";
+import { MentionAutocomplete } from "@/components/MentionAutocomplete";
 import {
   usePlaylistComments,
   useAddPlaylistComment,
@@ -31,6 +32,9 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
   const [newComment, setNewComment] = useState("");
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !user) return;
@@ -39,7 +43,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
       playlistId,
       userId: user.id,
       content: newComment.trim(),
-      userEmail: user.email,
+      userEmail: user.email || "",
       userFullName: "",
     });
 
@@ -70,7 +74,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     }
   };
 
-  const getInitials = (name?: string, email?: string) => {
+  const getInitials = (name?: string | null, email?: string | null) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     }
@@ -80,16 +84,54 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     return "U";
   };
 
+  const handleTextareaChange = (value: string) => {
+    setNewComment(value);
+    if (textareaRef.current) {
+      setCursorPosition(textareaRef.current.selectionStart);
+    }
+  };
+
+  const handleMentionSelect = (newValue: string) => {
+    setNewComment(newValue);
+    // Focus back to textarea and set cursor position after the mention
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const newCursorPos = newValue.indexOf(" ", newValue.lastIndexOf("@")) + 1;
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        setCursorPosition(newCursorPos);
+      }
+    }, 0);
+  };
+
+  // Get user profile from band members for avatar
+  const getUserProfile = (userId: string) => {
+    return bandMembers?.find(member => member.id === userId);
+  };
+
   // Parse @mentions in content and highlight them
   const parseContent = (content: string) => {
-    const mentionRegex = /@(\w+)/g;
+    // Updated regex to match mentions with spaces and special characters
+    const mentionRegex = /@([^@\s]+(?:\s+[^@\s]+)*)/g;
     const parts = content.split(mentionRegex);
     
     return parts.map((part, index) => {
       if (index % 2 === 1) {
-        // This is a mention
+        // This is a mention - check if it matches a real band member
+        const isValidMention = bandMembers?.some(member => 
+          (member.full_name && member.full_name.toLowerCase() === part.toLowerCase()) ||
+          (member.email && member.email.toLowerCase() === part.toLowerCase())
+        );
+        
         return (
-          <span key={index} className="text-primary font-medium bg-primary/10 px-1 rounded">
+          <span 
+            key={index} 
+            className={`font-medium px-1 rounded ${
+              isValidMention 
+                ? "text-primary bg-primary/10" 
+                : "text-muted-foreground bg-muted/50"
+            }`}
+          >
             @{part}
           </span>
         );
@@ -126,13 +168,30 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add new comment */}
-        <div className="space-y-4">
-          <Textarea
-            placeholder={`Add a comment about ${playlistName}... (Use @username to mention band members)`}
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="min-h-[100px]"
-          />
+        <div className="space-y-4 relative">
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              placeholder={`Add a comment about ${playlistName}... (Type @ to mention band members)`}
+              value={newComment}
+              onChange={(e) => handleTextareaChange(e.target.value)}
+              onSelect={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                setCursorPosition(target.selectionStart);
+              }}
+              onClick={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                setCursorPosition(target.selectionStart);
+              }}
+              className="min-h-[100px]"
+            />
+            <MentionAutocomplete
+              inputValue={newComment}
+              onMentionSelect={handleMentionSelect}
+              cursorPosition={cursorPosition}
+              textareaRef={textareaRef}
+            />
+          </div>
           <Button 
             onClick={handleSubmitComment}
             disabled={!newComment.trim() || addComment.isPending}
@@ -154,18 +213,24 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
           </div>
         ) : (
           <div className="space-y-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3 group">
-                <Avatar className="h-8 w-8 mt-1">
-                  <AvatarFallback className="text-xs">
-                    {getInitials(comment.userFullName, comment.userEmail)}
-                  </AvatarFallback>
-                </Avatar>
+            {comments.map((comment) => {
+              const userProfile = getUserProfile(comment.userId);
+              return (
+                <div key={comment.id} className="flex gap-3 group">
+                  <Avatar className="h-8 w-8 mt-1">
+                    <AvatarImage src={userProfile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs bg-primary/20 text-primary">
+                      {getInitials(
+                        userProfile?.full_name || comment.userFullName, 
+                        userProfile?.email || comment.userEmail
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
                 
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">
-                      {comment.userFullName || comment.userEmail || "Unknown User"}
+                      {userProfile?.full_name || comment.userFullName || userProfile?.email || comment.userEmail || "Unknown User"}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
@@ -226,8 +291,9 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>

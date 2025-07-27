@@ -76,8 +76,8 @@ export const useAddPlaylistComment = () => {
 
       if (error) throw error;
 
-      // Check for @mentions and send notifications
-      const mentions = comment.content.match(/@(\w+)/g);
+      // Check for @mentions and send notifications - updated regex to handle names with spaces
+      const mentions = comment.content.match(/@([^@\s]+(?:\s+[^@\s]+)*)/g);
       if (mentions && mentions.length > 0) {
         try {
           await supabase.functions.invoke('send-mention-notification', {
