@@ -87,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create the playlist URL
-    const playlistUrl = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app") || ""}/?playlist=${playlist.share_token}#comments`;
+    const playlistUrl = `https://wovenmusic.app/?playlist=${playlist.share_token}#comments`;
 
     // Send emails to mentioned users
     const emailPromises = mentionedUsers.map(async (mentionedUser) => {

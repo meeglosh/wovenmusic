@@ -85,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Invitation created:', invitation);
 
     // Generate invitation URL
-    const inviteUrl = `${req.headers.get('origin') || 'https://wovenmusic.com'}/auth?token=${invitation.token}`;
+    const inviteUrl = `https://wovenmusic.app/auth?token=${invitation.token}`;
     
     // Send email using Resend
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
