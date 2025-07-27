@@ -48,7 +48,7 @@ interface DropboxSyncAccordionProps {
   onPendingTracksChange?: (pendingTracks: import("@/types/music").PendingTrack[]) => void;
 }
 
-export const DropboxSyncAccordion = ({ isExpanded = true, onExpandedChange, onPendingTracksChange }: DropboxSyncAccordionProps) => {
+export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onPendingTracksChange }: DropboxSyncAccordionProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");

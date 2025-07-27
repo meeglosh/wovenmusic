@@ -117,10 +117,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   }, [randomLibraryTitle.title, onTitleChange]);
 
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
-  const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(() => {
-    const saved = localStorage.getItem('isDropboxSyncExpanded');
-    return saved ? JSON.parse(saved) : true;
-  });
+  const [isDropboxSyncExpanded, setIsDropboxSyncExpanded] = useState(false);
   const [isDropboxDrawerOpen, setIsDropboxDrawerOpen] = useState(false);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>(() => {
@@ -298,9 +295,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           <div 
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
             onClick={() => {
-              const newExpanded = !isDropboxSyncExpanded;
-              setIsDropboxSyncExpanded(newExpanded);
-              localStorage.setItem('isDropboxSyncExpanded', JSON.stringify(newExpanded));
+              setIsDropboxSyncExpanded(!isDropboxSyncExpanded);
             }}
           >
             <div className="flex items-center space-x-2">
@@ -327,10 +322,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             <div className="border-t border-border p-4">
               <DropboxSyncAccordion 
                 isExpanded={isDropboxSyncExpanded}
-                onExpandedChange={(expanded) => {
-                  setIsDropboxSyncExpanded(expanded);
-                  localStorage.setItem('isDropboxSyncExpanded', JSON.stringify(expanded));
-                }}
+                onExpandedChange={setIsDropboxSyncExpanded}
                 onPendingTracksChange={onPendingTracksChange}
               />
             </div>
