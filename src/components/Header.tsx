@@ -120,19 +120,19 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <ChevronDown className="w-3 h-3 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+            <DropdownMenuContent align="end" className="w-60 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
               {userProfile && (
                 <>
                   <div className="flex items-center gap-3 p-3 border-b border-border">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.full_name || ''} />
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-primary text-sm">{userProfile.full_name || 'User'}</span>
-                      <span className="text-xs text-muted-foreground">{userProfile.email}</span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium text-primary text-sm truncate">{userProfile.full_name || 'User'}</span>
+                      <span className="text-xs text-muted-foreground truncate">{userProfile.email}</span>
                     </div>
                   </div>
                 </>
@@ -189,11 +189,11 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Settings className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
+            <DropdownMenuContent align="end" className="w-52 bg-card border-2 border-border shadow-lg" style={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))'}}>
               {userProfile && (
                 <>
                   <div className="flex items-center gap-2 p-3 border-b border-border">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.full_name || ''} />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                         {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
