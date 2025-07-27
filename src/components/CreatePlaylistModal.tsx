@@ -12,10 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
-import { usePlaylistCategories, useAssignPlaylistCategory } from "@/hooks/usePlaylistCategories";
+import { usePlaylistCategories, useAssignPlaylistCategory, useCreatePlaylistCategory } from "@/hooks/usePlaylistCategories";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Rocket, LogIn } from "lucide-react";
+import { Rocket, LogIn, Plus } from "lucide-react";
 
 interface CreatePlaylistModalProps {
   open: boolean;
@@ -26,11 +26,18 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
   const [playlistName, setPlaylistName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  
   const createPlaylistMutation = useCreatePlaylist();
   const assignCategoryMutation = useAssignPlaylistCategory();
+  const createCategoryMutation = useCreatePlaylistCategory();
   const { data: categories = [] } = usePlaylistCategories();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Check if user is admin
+  const isAdmin = user?.user_metadata?.is_admin || false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +97,36 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    try {
+      const newCategory = await createCategoryMutation.mutateAsync({
+        name: newCategoryName.trim()
+      });
+
+      setShowCreateCategory(false);
+      setNewCategoryName("");
+      setSelectedCategoryId(newCategory.id);
+
+      toast({
+        title: "Category created",
+        description: `"${newCategoryName.trim()}" category has been created.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error creating category",
+        description: "Could not create category. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleClose = () => {
     setPlaylistName("");
     setSelectedCategoryId("");
+    setNewCategoryName("");
+    setShowCreateCategory(false);
     onOpenChange(false);
   };
 
@@ -158,24 +192,77 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
               </p>
             </div>
 
-            {categories.length > 0 && (
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category (optional)</Label>
-                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category (optional)</Label>
+              {!showCreateCategory ? (
+                <div className="space-y-2">
+                  <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No category</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCreateCategory(true);
+                        setNewCategoryName("");
+                      }}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create new category
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Enter category name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateCategory();
+                      } else if (e.key === 'Escape') {
+                        setShowCreateCategory(false);
+                        setNewCategoryName("");
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCreateCategory}
+                      disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+                      className="flex-1"
+                    >
+                      {createCategoryMutation.isPending ? "Creating..." : "Create"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowCreateCategory(false);
+                        setNewCategoryName("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <DialogFooter>

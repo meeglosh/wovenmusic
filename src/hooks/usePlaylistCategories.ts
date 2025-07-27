@@ -88,6 +88,29 @@ export const useAssignPlaylistCategory = () => {
   });
 };
 
+export const useCreatePlaylistCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const { data, error } = await supabase
+        .from("playlist_categories")
+        .insert({
+          name,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlist-categories"] });
+    }
+  });
+};
+
 export const useRemovePlaylistCategory = () => {
   const queryClient = useQueryClient();
   
