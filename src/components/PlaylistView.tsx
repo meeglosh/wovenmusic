@@ -967,8 +967,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Temporarily commented out category UI for debugging */}
-            {false && (
+            {/* Category assignment UI */}
+            {(categories.length > 0 || isAdmin) && (
               <div>
                 <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
                   Category

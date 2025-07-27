@@ -203,8 +203,8 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
               </p>
             </div>
 
-            {/* Temporarily commented out category UI for debugging */}
-            {false && categories.length > 0 && (
+            {/* Category assignment UI */}
+            {(categories.length > 0 || isAdmin) && (
               <div className="grid gap-2">
                 <Label htmlFor="category">Category (optional)</Label>
                 {!showCreateCategory ? (
