@@ -466,6 +466,10 @@ export type Database = {
         }
         Returns: string
       }
+      transfer_playlist_ownership_to_admin: {
+        Args: { deleted_user_id: string }
+        Returns: string
+      }
       update_user_privileges: {
         Args: {
           p_target_user_id: string
