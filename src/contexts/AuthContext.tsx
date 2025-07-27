@@ -153,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: invitation.email,
       password,
       options: {
-        emailRedirectTo: CONFIG.BASE_URL,
+        emailRedirectTo: `${CONFIG.BASE_URL}/auth`,
         data: {
           full_name: fullName,
           invitation_role: invitation.role,
