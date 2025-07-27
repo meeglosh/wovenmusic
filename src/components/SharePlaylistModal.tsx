@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, Mail, Trash2, Users, Globe } from "lucide-react";
 import { Playlist } from "@/types/music";
 import { useSharePlaylist, useUpdatePlaylistVisibility, useRemovePlaylistShare } from "@/hooks/usePlaylistSharing";
+import { usePermissions } from "@/hooks/usePermissions";
 import { generatePlaylistShareUrl } from "@/lib/config";
 import { toast } from "sonner";
 
@@ -24,6 +25,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
   const sharePlaylistMutation = useSharePlaylist();
   const updateVisibilityMutation = useUpdatePlaylistVisibility();
   const removeShareMutation = useRemovePlaylistShare();
+  const { canEditPlaylistPrivacy } = usePermissions();
 
   const handleShareByEmail = async () => {
     if (!email.trim()) {
@@ -88,23 +90,25 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Public/Private Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center space-x-2">
-                <Globe className="w-4 h-4" />
-                <span>Make Public</span>
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Anyone with the link can view this playlist
-              </p>
+          {/* Public/Private Toggle - Only show to playlist creator or admin */}
+          {canEditPlaylistPrivacy(playlist) && (
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4" />
+                  <span>Make Public</span>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Anyone with the link can view this playlist
+                </p>
+              </div>
+              <Switch 
+                checked={isPublic}
+                onCheckedChange={handleTogglePublic}
+                disabled={updateVisibilityMutation.isPending}
+              />
             </div>
-            <Switch 
-              checked={isPublic}
-              onCheckedChange={handleTogglePublic}
-              disabled={updateVisibilityMutation.isPending}
-            />
-          </div>
+          )}
 
           {/* Share Link */}
           {isPublic && (
