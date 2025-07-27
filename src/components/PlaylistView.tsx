@@ -71,6 +71,8 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
+import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCategory, useRemovePlaylistCategory } from "@/hooks/usePlaylistCategories";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Sortable Track Item Component
 interface SortableTrackItemProps {
@@ -215,6 +217,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [showMobileOptionsSheet, setShowMobileOptionsSheet] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
@@ -225,6 +228,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
   const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist } = usePermissions();
+  
+  // Category hooks
+  const { data: categories = [] } = usePlaylistCategories();
+  const { data: playlistCategories = [] } = useGetPlaylistCategories(playlistId);
+  const assignCategoryMutation = useAssignPlaylistCategory();
+  const removeCategoryMutation = useRemovePlaylistCategory();
 
   // Fetch fresh data directly in this component
   const { data: playlists = [] } = usePlaylists();
@@ -416,6 +425,54 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handleCategoryChange = async (categoryId: string) => {
+    if (!categoryId) {
+      // Remove all categories if "No category" is selected
+      for (const category of playlistCategories) {
+        try {
+          await removeCategoryMutation.mutateAsync({
+            playlistId: playlist.id,
+            categoryId: category.id
+          });
+        } catch (error) {
+          console.error("Error removing category:", error);
+        }
+      }
+      toast({
+        title: "Category removed",
+        description: "Playlist category has been cleared.",
+      });
+    } else {
+      try {
+        // Remove existing categories first (since we only allow one category)
+        for (const category of playlistCategories) {
+          await removeCategoryMutation.mutateAsync({
+            playlistId: playlist.id,
+            categoryId: category.id
+          });
+        }
+        
+        // Add the new category
+        await assignCategoryMutation.mutateAsync({
+          playlistId: playlist.id,
+          categoryId
+        });
+        
+        const selectedCategory = categories.find(c => c.id === categoryId);
+        toast({
+          title: "Category updated",
+          description: `Playlist categorized as "${selectedCategory?.name}".`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error updating category",
+          description: "Could not update playlist category. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="p-6">
       <Button
@@ -487,6 +544,36 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               </>
             )}
           </div>
+
+          {/* Category Selection */}
+          {canEditPlaylist(playlist) && categories.length > 0 && (
+            <div className="mb-6">
+              <Card className="p-4">
+                <div className="space-y-3">
+                  <Label htmlFor="playlist-category" className="text-sm font-medium">
+                    Category
+                  </Label>
+                  <Select 
+                    value={playlistCategories[0]?.id || ""} 
+                    onValueChange={handleCategoryChange}
+                    disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No category</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {/* Privacy Controls */}
           {canEditPlaylistPrivacy(playlist) && (

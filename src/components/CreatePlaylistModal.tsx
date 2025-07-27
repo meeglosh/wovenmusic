@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
+import { usePlaylistCategories, useAssignPlaylistCategory } from "@/hooks/usePlaylistCategories";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Rocket, LogIn } from "lucide-react";
@@ -22,8 +24,11 @@ interface CreatePlaylistModalProps {
 
 const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) => {
   const [playlistName, setPlaylistName] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const createPlaylistMutation = useCreatePlaylist();
+  const assignCategoryMutation = useAssignPlaylistCategory();
+  const { data: categories = [] } = usePlaylistCategories();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -51,7 +56,20 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
     setIsLoading(true);
     
     try {
-      await createPlaylistMutation.mutateAsync(playlistName.trim());
+      const newPlaylist = await createPlaylistMutation.mutateAsync(playlistName.trim());
+      
+      // Assign category if one was selected
+      if (selectedCategoryId && newPlaylist) {
+        try {
+          await assignCategoryMutation.mutateAsync({
+            playlistId: newPlaylist.id,
+            categoryId: selectedCategoryId
+          });
+        } catch (categoryError) {
+          console.error("Error assigning category:", categoryError);
+          // Don't fail the whole operation if category assignment fails
+        }
+      }
       
       toast({
         title: "Playlist created!",
@@ -59,6 +77,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
       });
       
       setPlaylistName("");
+      setSelectedCategoryId("");
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -73,6 +92,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
 
   const handleClose = () => {
     setPlaylistName("");
+    setSelectedCategoryId("");
     onOpenChange(false);
   };
 
@@ -137,6 +157,25 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
                 {playlistName.length}/100 characters
               </p>
             </div>
+
+            {categories.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category (optional)</Label>
+                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
