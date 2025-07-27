@@ -256,9 +256,10 @@ const Members = () => {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                            <AlertDialogTitle>Are you sure you want to remove this user?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove <strong>{member.full_name || member.email}</strong> from the band? This action cannot be undone.
+                              This action will permanently remove <strong>{member.full_name || member.email}</strong> from the band.
+                              Any playlists they created will not be deleted — instead, ownership will be automatically transferred to an admin.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
