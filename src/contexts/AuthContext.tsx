@@ -112,9 +112,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .eq('token', token)
       .is('used_at', null)
       .gt('expires_at', new Date().toISOString())
-      .single();
+      .maybeSingle();
 
-    if (inviteError || !invitation) {
+    if (inviteError) {
+      console.error('Invitation query error:', inviteError);
+      return { error: { message: 'Error validating invitation' } };
+    }
+
+    if (!invitation) {
       return { error: { message: 'Invalid or expired invitation' } };
     }
 
