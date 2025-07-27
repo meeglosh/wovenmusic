@@ -35,6 +35,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [replyCursorPosition, setReplyCursorPosition] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -122,6 +123,26 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
         setCursorPosition(newCursorPos);
       }
     }, 0);
+  };
+
+  const handleReplyMentionSelect = (newValue: string) => {
+    setReplyContent(newValue);
+    // Focus back to textarea and set cursor position after the mention
+    setTimeout(() => {
+      if (replyTextareaRef.current) {
+        const newCursorPos = newValue.indexOf(" ", newValue.lastIndexOf("@")) + 1;
+        replyTextareaRef.current.focus();
+        replyTextareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        setReplyCursorPosition(newCursorPos);
+      }
+    }, 0);
+  };
+
+  const handleReplyTextareaChange = (value: string) => {
+    setReplyContent(value);
+    if (replyTextareaRef.current) {
+      setReplyCursorPosition(replyTextareaRef.current.selectionStart);
+    }
   };
 
   // Get user profile from band members for avatar
@@ -267,13 +288,29 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
                   <div className="text-xs text-muted-foreground">
                     {getReplyToText(comment)}
                   </div>
-                  <Textarea
-                    ref={replyTextareaRef}
-                    placeholder={`Reply to ${userProfile?.full_name || comment.userFullName || "this comment"}...`}
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    className="min-h-[80px]"
-                  />
+                   <div className="relative">
+                     <Textarea
+                       ref={replyTextareaRef}
+                       placeholder={`Reply to ${userProfile?.full_name || comment.userFullName || "this comment"}... (Type @ to mention band members)`}
+                       value={replyContent}
+                       onChange={(e) => handleReplyTextareaChange(e.target.value)}
+                       onSelect={(e) => {
+                         const target = e.target as HTMLTextAreaElement;
+                         setReplyCursorPosition(target.selectionStart);
+                       }}
+                       onClick={(e) => {
+                         const target = e.target as HTMLTextAreaElement;
+                         setReplyCursorPosition(target.selectionStart);
+                       }}
+                       className="min-h-[80px]"
+                     />
+                     <MentionAutocomplete
+                       inputValue={replyContent}
+                       onMentionSelect={handleReplyMentionSelect}
+                       cursorPosition={replyCursorPosition}
+                       textareaRef={replyTextareaRef}
+                     />
+                   </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"

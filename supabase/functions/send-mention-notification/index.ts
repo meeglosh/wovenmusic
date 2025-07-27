@@ -52,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get playlist details
     const { data: playlist, error: playlistError } = await supabase
       .from("playlists")
-      .select("name, share_token")
+      .select("name, share_token, id")
       .eq("id", playlistId)
       .single();
 
@@ -88,7 +88,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create the playlist URL using environment variable
     const baseUrl = Deno.env.get('BASE_URL') || 'https://wovenmusic.app';
-    const playlistUrl = `${baseUrl}/?playlist=${playlist.share_token}#comments`;
+    // Use share_token if available, otherwise fall back to playlist ID with comment anchor
+    const playlistUrl = playlist.share_token 
+      ? `${baseUrl}/?playlist=${playlist.share_token}#comments`
+      : `${baseUrl}/?playlist=${playlist.id}&comment=${commentId}#comments`;
 
     // Send emails to mentioned users
     const emailPromises = mentionedUsers.map(async (mentionedUser) => {
