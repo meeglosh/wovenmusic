@@ -909,6 +909,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         playlistName={playlist.name}
       />
 
+      {/* Temporarily commenting out other modals for testing */}
+      {/*
       <AddTracksModal
         open={showAddTracksModal}
         onOpenChange={setShowAddTracksModal}
@@ -917,8 +919,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         allTracks={tracks}
         existingTrackIds={playlist.trackIds}
       />
+      */}
 
-      {/* Rename Playlist Dialog */}
+      {/* Temporarily commenting out rename dialog */}
+      {/*
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent>
           <DialogHeader>
@@ -956,34 +960,38 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      */}
 
-      {/* Edit Playlist Details Dialog - Minimal test version */}
-      {showCategoryDialog && (
-        <Dialog open={true} onOpenChange={() => setShowCategoryDialog(false)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit playlist details</DialogTitle>
-              <DialogDescription>
-                Update playlist settings and category assignment.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <p className="text-muted-foreground">Test modal content</p>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowCategoryDialog(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* ISOLATED TEST: Edit Playlist Details Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit playlist details</DialogTitle>
+            <DialogDescription>
+              Testing modal interaction - this should close cleanly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              This is a test modal. The app should remain responsive after closing this.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Temporarily commenting out share modal */}
+      {/*
       <SharePlaylistModal
         open={showShareModal}
         onOpenChange={setShowShareModal}
         playlist={playlist}
       />
+      */}
     </div>
   );
 };
