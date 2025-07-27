@@ -108,7 +108,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Log the token for debugging
     console.log('Accepting invitation with token:', token);
     
-    // First get the invitation details
+    // First, let's check if the record exists at all (without filters)
+    const { data: rawInvitation, error: rawError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('token', token)
+      .maybeSingle();
+
+    console.log('Raw invitation query result:', { rawInvitation, rawError });
+
+    if (rawInvitation) {
+      console.log('Raw invitation details:', {
+        token: rawInvitation.token,
+        used_at: rawInvitation.used_at,
+        expires_at: rawInvitation.expires_at,
+        currentTime: new Date().toISOString(),
+        isExpired: new Date(rawInvitation.expires_at) <= new Date(),
+        isUsed: rawInvitation.used_at !== null
+      });
+    }
+
+    // Now get the invitation details with all filters
     const { data: invitation, error: inviteError } = await supabase
       .from('invitations')
       .select('email, role, used_at, expires_at')
@@ -117,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    console.log('Invitation query result:', { invitation, inviteError });
+    console.log('Filtered invitation query result:', { invitation, inviteError });
 
     if (inviteError) {
       console.error('Invitation query error:', inviteError);
