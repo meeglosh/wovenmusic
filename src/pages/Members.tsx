@@ -80,15 +80,15 @@ const Members = () => {
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
       case 'producer':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        return 'bg-purple-100/75 text-purple-800 dark:bg-purple-900/75 dark:text-purple-300 rounded-md';
       case 'musician':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        return 'bg-blue-100/75 text-blue-800 dark:bg-blue-900/75 dark:text-blue-300 rounded-md';
       case 'vocalist':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        return 'bg-green-100/75 text-green-800 dark:bg-green-900/75 dark:text-green-300 rounded-md';
       case 'songwriter':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        return 'bg-yellow-100/75 text-yellow-800 dark:bg-yellow-900/75 dark:text-yellow-300 rounded-md';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        return 'bg-gray-100/75 text-gray-800 dark:bg-gray-900/75 dark:text-gray-300 rounded-md';
     }
   };
 
