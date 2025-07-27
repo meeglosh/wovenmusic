@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { CONFIG } from '@/lib/config';
 
 interface AuthContextType {
   user: User | null;
@@ -52,13 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: CONFIG.BASE_URL,
         data: fullName ? { full_name: fullName } : undefined
       }
     });
@@ -74,12 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithProvider = async (provider: 'google' | 'github' | 'twitter') => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: redirectUrl
+        redirectTo: CONFIG.BASE_URL
       }
     });
     return { error };
@@ -90,12 +87,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const sendMagicLink = async (email: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/auth/verify`;
-    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: `${CONFIG.BASE_URL}/auth/verify`,
         data: fullName ? { full_name: fullName } : undefined
       }
     });
@@ -128,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: invitation.email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: CONFIG.BASE_URL,
         data: {
           full_name: fullName,
           invitation_role: invitation.role,
