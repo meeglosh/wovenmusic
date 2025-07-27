@@ -957,33 +957,27 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Playlist Details Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={(open) => {
-        setShowCategoryDialog(open);
-        if (!open) {
-          // Ensure focus is properly restored
-          setTimeout(() => {
-            document.body.focus();
-          }, 100);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit playlist details</DialogTitle>
-            <DialogDescription>
-              Update playlist settings and category assignment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Category UI temporarily removed for step-by-step testing */}
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowCategoryDialog(false)} className="text-primary">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Playlist Details Dialog - Minimal test version */}
+      {showCategoryDialog && (
+        <Dialog open={true} onOpenChange={() => setShowCategoryDialog(false)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit playlist details</DialogTitle>
+              <DialogDescription>
+                Update playlist settings and category assignment.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-muted-foreground">Test modal content</p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowCategoryDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <SharePlaylistModal
         open={showShareModal}
