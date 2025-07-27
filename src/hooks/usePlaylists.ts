@@ -23,6 +23,19 @@ export const usePlaylists = () => {
       
       if (error) throw error;
       
+      // Get all unique creator IDs
+      const creatorIds = [...new Set(data.map(p => p.created_by).filter(Boolean))];
+      
+      // Fetch creator profiles
+      let creatorProfiles: any[] = [];
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", creatorIds);
+        creatorProfiles = profiles || [];
+      }
+      
       return data.map(playlist => ({
         id: playlist.id,
         name: playlist.name,
@@ -34,7 +47,8 @@ export const usePlaylists = () => {
         sharedWith: playlist.playlist_shares?.map(share => share.email) || [],
         isPublic: playlist.is_public,
         shareToken: playlist.share_token,
-        created_by: playlist.created_by
+        created_by: playlist.created_by,
+        createdByName: creatorProfiles.find(p => p.id === playlist.created_by)?.full_name || 'Unknown User'
       })) as Playlist[];
     }
   });

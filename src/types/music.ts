@@ -63,6 +63,7 @@ export interface Playlist {
   isPublic?: boolean;
   shareToken?: string;
   created_by?: string;
+  createdByName?: string;
 }
 
 export interface BandMember {

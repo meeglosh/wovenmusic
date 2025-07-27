@@ -456,12 +456,11 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Badge variant="secondary">Playlist</Badge>
             <Badge variant={playlist.isPublic ? "default" : "secondary"} className="text-xs">
               {playlist.isPublic ? (
-                <><Globe className="h-3 w-3 mr-1" />Public</>
+                <><Globe className="h-3 w-3 mr-1" />Public Playlist</>
               ) : (
-                <><Lock className="h-3 w-3 mr-1" />Private</>
+                <><Lock className="h-3 w-3 mr-1" />Private Playlist</>
               )}
             </Badge>
             {playlist.sharedWith.length > 0 && (
@@ -479,7 +478,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             <span className="hidden md:inline">•</span>
             <span>{calculatePlaylistDuration(playlistTracks)}</span>
             <span className="hidden md:inline">•</span>
-            <span>Created {playlist.createdAt.toLocaleDateString()}</span>
+            <span>Created by {playlist.createdByName} – {playlist.createdAt.toLocaleDateString()}</span>
             {playlist.sharedWith.length > 0 && (
               <>
                 <span className="hidden md:inline">•</span>
