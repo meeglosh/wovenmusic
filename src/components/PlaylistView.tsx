@@ -224,7 +224,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const uploadImageMutation = useUploadPlaylistImage();
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
-  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy } = usePermissions();
+  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist } = usePermissions();
 
   // Fetch fresh data directly in this component
   const { data: playlists = [] } = usePlaylists();
@@ -543,7 +543,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <span className="text-primary">Add Tracks</span>
               </Button>
             )}
-            {canEditPlaylistPrivacy(playlist) && (
+            {canSharePlaylist(playlist) && (
               <Button 
                 variant="outline" 
                 size="lg"

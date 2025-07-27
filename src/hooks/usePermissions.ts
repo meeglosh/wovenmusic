@@ -49,6 +49,18 @@ export const usePermissions = () => {
     return playlist.created_by === currentUserId;
   };
 
+  const canSharePlaylist = (playlist: Playlist): boolean => {
+    // Private playlists can only be shared by their creators (and admins)
+    if (!playlist.isPublic) {
+      if (isAdmin) return true;
+      return playlist.created_by === currentUserId;
+    }
+    
+    // Public playlists can be shared by any authenticated user (assuming they are band members)
+    // since only band members can access playlists according to RLS policies
+    return currentUserProfile?.is_band_member || isAdmin || false;
+  };
+
   return {
     isAdmin,
     currentUserId,
@@ -59,5 +71,6 @@ export const usePermissions = () => {
     canDeletePlaylist,
     canManagePlaylistTracks,
     canEditPlaylistPrivacy,
+    canSharePlaylist,
   };
 };
