@@ -26,26 +26,26 @@ export const usePermissions = () => {
   };
 
   const canEditPlaylist = (playlist: Playlist): boolean => {
+    // Admins can edit any playlist, users can only edit playlists they created
     if (isAdmin) return true;
-    // Users can only edit playlists they created
     return playlist.created_by === currentUserId;
   };
 
   const canDeletePlaylist = (playlist: Playlist): boolean => {
+    // Admins can delete any playlist, users can only delete playlists they created
     if (isAdmin) return true;
-    // Users can only delete playlists they created
     return playlist.created_by === currentUserId;
   };
 
   const canManagePlaylistTracks = (playlist: Playlist): boolean => {
+    // Admins can manage tracks in any playlist, users can only manage tracks in playlists they created
     if (isAdmin) return true;
-    // Users can only manage tracks in playlists they created
     return playlist.created_by === currentUserId;
   };
 
   const canEditPlaylistPrivacy = (playlist: Playlist): boolean => {
+    // Admins can modify privacy for any playlist, users can only modify privacy for playlists they created
     if (isAdmin) return true;
-    // Users can only modify privacy for playlists they created
     return playlist.created_by === currentUserId;
   };
 
