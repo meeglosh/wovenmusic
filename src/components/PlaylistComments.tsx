@@ -191,7 +191,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     const userProfile = getUserProfile(comment.userId);
     
     return (
-      <div key={comment.id} className={`flex gap-3 group ${isReply ? 'ml-8 mt-4' : ''}`}>
+      <div key={comment.id} className={`flex gap-3 group ${isReply ? 'ml-8 mt-4 pl-4 bg-primary/10 rounded-lg border-l-2 border-primary/25' : ''}`}>
         <Avatar className="h-8 w-8 mt-1">
           <AvatarImage src={userProfile?.avatar_url || undefined} />
           <AvatarFallback className="text-xs bg-primary/20 text-primary">
@@ -418,7 +418,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
             No comments yet. Be the first to comment!
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {comments.map((comment) => (
               <div key={comment.id} className="space-y-4">
                 {/* Top-level comment */}
