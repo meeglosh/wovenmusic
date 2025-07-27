@@ -105,14 +105,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const acceptInvitation = async (token: string, password: string, fullName: string) => {
+    // Log the token for debugging
+    console.log('Accepting invitation with token:', token);
+    
     // First get the invitation details
     const { data: invitation, error: inviteError } = await supabase
       .from('invitations')
-      .select('email, role')
+      .select('email, role, used_at, expires_at')
       .eq('token', token)
       .is('used_at', null)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
+
+    console.log('Invitation query result:', { invitation, inviteError });
 
     if (inviteError) {
       console.error('Invitation query error:', inviteError);
