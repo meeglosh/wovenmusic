@@ -54,10 +54,11 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ModalDebugger } from "./ModalDebugger";
 
 interface PlaylistViewProps {
   playlistId: string;
@@ -69,9 +70,8 @@ interface PlaylistViewProps {
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAuth } from "@/contexts/AuthContext";
 import { PlaylistComments } from "@/components/PlaylistComments";
-import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCategory, useRemovePlaylistCategory, useCreatePlaylistCategory } from "@/hooks/usePlaylistCategories";
+import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCategory, useRemovePlaylistCategory } from "@/hooks/usePlaylistCategories";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Sortable Track Item Component
@@ -218,8 +218,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [showCreateCategory, setShowCreateCategory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
@@ -229,15 +227,13 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const uploadImageMutation = useUploadPlaylistImage();
   const deleteImageMutation = useDeletePlaylistImage();
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist, isAdmin } = usePermissions();
+  const { canEditPlaylist, canDeletePlaylist, canManagePlaylistTracks, canEditPlaylistPrivacy, canSharePlaylist } = usePermissions();
   
-  // Category hooks - always call them
+  // Category hooks
   const { data: categories = [] } = usePlaylistCategories();
   const { data: playlistCategories = [] } = useGetPlaylistCategories(playlistId);
   const assignCategoryMutation = useAssignPlaylistCategory();
   const removeCategoryMutation = useRemovePlaylistCategory();
-  const createCategoryMutation = useCreatePlaylistCategory();
 
   // Fetch fresh data directly in this component
   const { data: playlists = [] } = usePlaylists();
@@ -245,15 +241,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   
   // Find the current playlist from the fresh data
   const playlist = playlists.find(p => p.id === playlistId) || null;
-
-  console.log("PlaylistView rendered", { 
-    playlistId, 
-    playlist: !!playlist, 
-    user: !!user, 
-    isAdmin,
-    categoriesLength: categories.length,
-    playlistCategoriesLength: playlistCategories.length
-  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -483,38 +470,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           variant: "destructive",
         });
       }
-    }
-  };
-
-  const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) {
-      return;
-    }
-
-    try {
-      const newCategory = await createCategoryMutation.mutateAsync({
-        name: newCategoryName.trim()
-      });
-
-      setShowCreateCategory(false);
-      setNewCategoryName("");
-
-      toast({
-        title: "Category created",
-        description: `"${newCategoryName.trim()}" category has been created.`,
-      });
-
-      // Automatically assign the new category to this playlist
-      if (newCategory) {
-        await handleCategoryChange(newCategory.id);
-      }
-    } catch (error) {
-      console.error("Error creating category:", error);
-      toast({
-        title: "Error creating category",
-        description: "Could not create category. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -908,8 +863,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         playlistName={playlist.name}
       />
 
-      {/* Temporarily commenting out other modals for testing */}
-      {/*
       <AddTracksModal
         open={showAddTracksModal}
         onOpenChange={setShowAddTracksModal}
@@ -918,10 +871,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         allTracks={tracks}
         existingTrackIds={playlist.trackIds}
       />
-      */}
 
-      {/* Temporarily commenting out rename dialog */}
-      {/*
+      {/* Rename Playlist Dialog */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent>
           <DialogHeader>
@@ -959,72 +910,55 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      */}
 
-      {/* ISOLATED TEST: Edit Playlist Details Dialog - Clean Radix pattern */}
-      <Dialog 
-        open={showCategoryDialog} 
-        onOpenChange={(open) => {
-          console.log('Edit modal onOpenChange:', open);
-          setShowCategoryDialog(open);
-          if (!open) {
-            // Force DOM cleanup after Radix cleanup
-            setTimeout(() => {
-              console.log('Forcing DOM cleanup...');
-              document.body.style.overflow = '';
-              document.body.style.pointerEvents = '';
-              document.body.removeAttribute('inert');
-              // Remove any lingering Radix elements
-              document.querySelectorAll('[data-radix-dialog-overlay]').forEach(el => {
-                console.log('Removing lingering overlay:', el);
-                el.remove();
-              });
-              document.querySelectorAll('[data-radix-dialog-content]').forEach(el => {
-                console.log('Removing lingering content:', el);
-                el.remove();
-              });
-              console.log('DOM cleanup complete, body state:', {
-                overflow: document.body.style.overflow,
-                pointerEvents: document.body.style.pointerEvents,
-                inert: document.body.hasAttribute('inert'),
-                radixOverlays: document.querySelectorAll('[data-radix-dialog-overlay]').length,
-                radixContents: document.querySelectorAll('[data-radix-dialog-content]').length
-              });
-            }, 50);
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
+      {/* Edit Playlist Details Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit playlist details</DialogTitle>
             <DialogDescription>
-              Testing modal interaction - this should close cleanly.
+              Update playlist settings and category assignment.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-muted-foreground">
-              This is a test modal. The app should remain responsive after closing this.
-            </p>
+          <div className="space-y-4">
+            {categories.length > 0 && (
+              <div>
+                <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
+                  Category
+                </Label>
+                <Select 
+                  value={playlistCategories[0]?.id || ""} 
+                  onValueChange={handleCategoryChange}
+                  disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
+            <Button variant="ghost" onClick={() => setShowCategoryDialog(false)} className="text-primary">
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Temporarily commenting out share modal */}
-      {/*
       <SharePlaylistModal
         open={showShareModal}
         onOpenChange={setShowShareModal}
         playlist={playlist}
       />
-      */}
-
-      {/* Temporary Modal Debugger */}
-      <ModalDebugger />
     </div>
   );
 };

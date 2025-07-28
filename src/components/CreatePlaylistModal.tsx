@@ -12,11 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
-import { usePlaylistCategories, useAssignPlaylistCategory, useCreatePlaylistCategory } from "@/hooks/usePlaylistCategories";
+import { usePlaylistCategories, useAssignPlaylistCategory } from "@/hooks/usePlaylistCategories";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions";
-import { Rocket, LogIn, Plus } from "lucide-react";
+import { Rocket, LogIn } from "lucide-react";
 
 interface CreatePlaylistModalProps {
   open: boolean;
@@ -27,27 +26,11 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
   const [playlistName, setPlaylistName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [showCreateCategory, setShowCreateCategory] = useState(false);
-  
   const createPlaylistMutation = useCreatePlaylist();
+  const assignCategoryMutation = useAssignPlaylistCategory();
+  const { data: categories = [] } = usePlaylistCategories();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdmin } = usePermissions();
-  
-  // Category hooks - always call them
-  const { data: categories = [] } = usePlaylistCategories();
-  const assignCategoryMutation = useAssignPlaylistCategory();
-  const createCategoryMutation = useCreatePlaylistCategory();
-
-  console.log("CreatePlaylistModal rendered", { 
-    open, 
-    user: !!user, 
-    isAdmin, 
-    categoriesLength: categories.length,
-    playlistName 
-  });
-  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,37 +90,9 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
     }
   };
 
-  const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return;
-
-    try {
-      const newCategory = await createCategoryMutation.mutateAsync({
-        name: newCategoryName.trim()
-      });
-
-      setShowCreateCategory(false);
-      setNewCategoryName("");
-      setSelectedCategoryId(newCategory.id);
-
-      toast({
-        title: "Category created",
-        description: `"${newCategoryName.trim()}" category has been created.`,
-      });
-    } catch (error) {
-      console.error("Error creating category:", error);
-      toast({
-        title: "Error creating category",
-        description: "Could not create category. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleClose = () => {
     setPlaylistName("");
     setSelectedCategoryId("");
-    setNewCategoryName("");
-    setShowCreateCategory(false);
     onOpenChange(false);
   };
 
@@ -203,7 +158,24 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
               </p>
             </div>
 
-            {/* Category UI temporarily removed for step-by-step testing */}
+            {categories.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category (optional)</Label>
+                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
