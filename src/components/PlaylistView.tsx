@@ -473,8 +473,11 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   };
 
   const handleCategoryChange = async (categoryId: string) => {
-    if (!categoryId) {
+    console.log('handleCategoryChange called with:', { categoryId, type: typeof categoryId });
+    
+    if (!categoryId || categoryId === 'none') {
       // Remove all categories if "No category" is selected
+      console.log('Removing categories for playlist:', playlist.id, 'Current categories:', playlistCategories);
       for (const category of playlistCategories) {
         try {
           await removeCategoryMutation.mutateAsync({
@@ -632,23 +635,26 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   <Label htmlFor="playlist-category" className="text-sm font-medium">
                     Category
                   </Label>
-                  <Select 
-                    value={playlistCategories[0]?.id || ""} 
-                    onValueChange={handleCategoryChange}
-                    disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <Select 
+                     value={playlistCategories[0]?.id || "none"} 
+                     onValueChange={(value) => {
+                       console.log('Category changed in main view:', { value, currentCategories: playlistCategories });
+                       handleCategoryChange(value);
+                     }}
+                     disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                   >
+                     <SelectTrigger>
+                       <SelectValue placeholder="Select a category" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="none">No category</SelectItem>
+                       {categories.filter(category => category.id && category.id.trim() && typeof category.id === 'string').map((category) => (
+                         <SelectItem key={category.id} value={category.id}>
+                           {category.name}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
                 </div>
               </Card>
             </div>
@@ -910,7 +916,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         } else {
           // Pre-fill with current values when opening
           setEditPlaylistName(playlist.name);
-          const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "";
+          const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "none";
+          console.log('Setting selectedEditCategoryId on dialog open:', { currentCategoryId, playlistCategories });
           setSelectedEditCategoryId(currentCategoryId);
         }
       }}>
@@ -1003,28 +1010,29 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <div className="space-y-2">
                   {categories.length > 0 && (
                     <>
-                      <Select 
-                        value={selectedEditCategoryId} 
-                        onValueChange={(value) => {
-                          setSelectedEditCategoryId(value);
-                          if (value !== selectedEditCategoryId) {
-                            handleCategoryChange(value);
-                          }
-                        }}
-                        disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">No category</SelectItem>
-                          {categories.filter(category => category.id && category.id.trim()).map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                       <Select 
+                         value={selectedEditCategoryId || "none"} 
+                         onValueChange={(value) => {
+                           console.log('Category changed in edit dialog:', { value, previousValue: selectedEditCategoryId });
+                           setSelectedEditCategoryId(value);
+                           if (value !== selectedEditCategoryId) {
+                             handleCategoryChange(value);
+                           }
+                         }}
+                         disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                       >
+                         <SelectTrigger>
+                           <SelectValue placeholder="Select a category" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="none">No category</SelectItem>
+                           {categories.filter(category => category.id && category.id.trim() && typeof category.id === 'string').map((category) => (
+                             <SelectItem key={category.id} value={category.id}>
+                               {category.name}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
                       {(assignCategoryMutation.isPending || removeCategoryMutation.isPending) && (
                         <p className="text-xs text-muted-foreground">Updating category...</p>
                       )}
