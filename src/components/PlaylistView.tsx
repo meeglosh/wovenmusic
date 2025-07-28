@@ -891,8 +891,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       <Dialog open={showEditDialog} onOpenChange={(open) => {
         setShowEditDialog(open);
         if (!open) {
-          setEditPlaylistName("");
-          setSelectedEditCategoryId("");
           setShowNewCategoryInput(false);
           setNewCategoryName("");
           // Force cleanup of any lingering DOM state
@@ -1020,7 +1018,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">No category</SelectItem>
-                          {categories.map((category) => (
+                          {categories.filter(category => category.id && category.id.trim()).map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
                             </SelectItem>
