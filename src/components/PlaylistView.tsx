@@ -873,7 +873,25 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       />
 
       {/* Rename Playlist Dialog */}
-      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+      <Dialog open={showRenameDialog} onOpenChange={(open) => {
+        setShowRenameDialog(open);
+        if (!open) {
+          // Force cleanup of any lingering DOM state
+          setTimeout(() => {
+            document.body.style.overflow = '';
+            document.body.style.pointerEvents = '';
+            document.body.removeAttribute('inert');
+            
+            // Remove any lingering Radix overlays
+            const overlays = document.querySelectorAll('[data-radix-portal]');
+            overlays.forEach(overlay => {
+              if (overlay.children.length === 0) {
+                overlay.remove();
+              }
+            });
+          }, 50);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename playlist</DialogTitle>
@@ -912,7 +930,25 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       </Dialog>
 
       {/* Edit Playlist Details Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+      <Dialog open={showCategoryDialog} onOpenChange={(open) => {
+        setShowCategoryDialog(open);
+        if (!open) {
+          // Force cleanup of any lingering DOM state
+          setTimeout(() => {
+            document.body.style.overflow = '';
+            document.body.style.pointerEvents = '';
+            document.body.removeAttribute('inert');
+            
+            // Remove any lingering Radix overlays
+            const overlays = document.querySelectorAll('[data-radix-portal]');
+            overlays.forEach(overlay => {
+              if (overlay.children.length === 0) {
+                overlay.remove();
+              }
+            });
+          }, 50);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit playlist details</DialogTitle>
