@@ -244,7 +244,7 @@ const TrackView = () => {
                 </Button>
                 <div className="text-left">
                   <h2 className="text-xl font-semibold text-primary">{track.title}</h2>
-                  <p className="text-primary">{track.artist}</p>
+                  <!--<p className="text-primary">{track.artist}</p>-->
                 </div>
               </div>
             </div>
@@ -491,7 +491,7 @@ const TrackView = () => {
                     <div className="space-y-4">
                       <div>
                         <h3 className="font-bold text-lg text-primary">{track.title}</h3>
-                        <p className="text-muted-foreground">{track.artist}</p>
+                        <!--<p className="text-muted-foreground">{track.artist}</p>-->
                       </div>
                       <div className="pt-4 border-t">
                         <div className="flex justify-between text-sm">
