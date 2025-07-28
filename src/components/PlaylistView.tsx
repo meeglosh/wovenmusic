@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, Share2, Users, MoreHorizontal, Plus, GripVertical, Trash2, Edit, X, Upload, Image, Lock, Globe } from "lucide-react";
+import { ArrowLeft, Play, Share2, Users, Plus, GripVertical, Trash2, Edit, X, Upload, Image, Lock, Globe, Pencil } from "lucide-react";
 import { Track, Playlist, getCleanTitle, calculatePlaylistDuration } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
@@ -33,13 +33,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -214,10 +207,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [showAddTracksModal, setShowAddTracksModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [showMobileOptionsSheet, setShowMobileOptionsSheet] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
-  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
@@ -322,17 +314,14 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         name: newPlaylistName.trim()
       });
       
-      setShowRenameDialog(false);
-      setNewPlaylistName("");
-      
       toast({
-        title: "Playlist renamed",
+        title: "Playlist updated",
         description: `Playlist renamed to "${newPlaylistName.trim()}".`,
       });
     } catch (error) {
       toast({
-        title: "Error renaming playlist",
-        description: "Could not rename playlist. Please try again.",
+        title: "Error updating playlist",
+        description: "Could not update playlist. Please try again.",
         variant: "destructive",
       });
     }
@@ -642,176 +631,55 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               </Button>
             )}
             
-            {/* Desktop Dropdown Menu */}
-            {canEditPlaylistPrivacy(playlist) && (
-              <div className="hidden sm:block">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="lg">
-                      <MoreHorizontal className="w-5 h-5 text-primary" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                   {canEditPlaylist(playlist) && (
-                     <DropdownMenuItem onClick={() => setShowCategoryDialog(true)}>
-                       <Edit className="w-4 h-4 mr-2" />
-                       Edit playlist details
-                     </DropdownMenuItem>
-                   )}
-                   {canEditPlaylist(playlist) && (
-                     <DropdownMenuItem onClick={() => {
-                       setNewPlaylistName(playlist.name);
-                       setShowRenameDialog(true);
-                     }}>
-                       <Edit className="w-4 h-4 mr-2" />
-                       Rename playlist
-                     </DropdownMenuItem>
-                   )}
-                  {canEditPlaylist(playlist) && (
-                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                      <Image className="w-4 h-4 mr-2" />
-                      Change image
-                    </DropdownMenuItem>
-                  )}
-                  {canEditPlaylist(playlist) && playlist.imageUrl && (
-                    <DropdownMenuItem onClick={handleDeleteImage}>
-                      <X className="w-4 h-4 mr-2" />
-                      Delete image
-                    </DropdownMenuItem>
-                  )}
-                  {canDeletePlaylist(playlist) && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete playlist
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeletePlaylist}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete playlist
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+            {/* Edit Icon */}
+            {canEditPlaylist(playlist) && (
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => {
+                  setNewPlaylistName(playlist.name);
+                  setShowEditDialog(true);
+                }}
+                className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
+                title="Edit playlist"
+              >
+                <Pencil className="w-4 h-4 mr-2 text-primary" />
+                <span className="text-primary">Edit</span>
+              </Button>
             )}
-
-            {/* Mobile Sheet */}
-            {canEditPlaylistPrivacy(playlist) && (
-              <div className="sm:hidden">
-                <Sheet open={showMobileOptionsSheet} onOpenChange={setShowMobileOptionsSheet}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="lg" className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 justify-center">
-                      <span className="text-primary underline">More</span>
-                    </Button>
-                  </SheetTrigger>
-                 <SheetContent side="bottom" className="h-auto">
-                   <div className="flex flex-col space-y-4 py-6">
-                      {canEditPlaylist(playlist) && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            setShowCategoryDialog(true);
-                            setShowMobileOptionsSheet(false);
-                          }}
-                          className="justify-start h-12 text-primary hover:text-primary"
-                        >
-                          <Edit className="w-4 h-4 mr-3 text-primary" />
-                          Edit playlist details
-                        </Button>
-                      )}
-                      {canEditPlaylist(playlist) && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            setNewPlaylistName(playlist.name);
-                            setShowRenameDialog(true);
-                            setShowMobileOptionsSheet(false);
-                          }}
-                          className="justify-start h-12 text-primary hover:text-primary"
-                        >
-                          <Edit className="w-4 h-4 mr-3 text-primary" />
-                          Rename playlist
-                        </Button>
-                      )}
-                     {canEditPlaylist(playlist) && (
-                       <Button
-                         variant="ghost"
-                         onClick={() => {
-                           fileInputRef.current?.click();
-                           setShowMobileOptionsSheet(false);
-                         }}
-                         className="justify-start h-12 text-primary hover:text-primary"
-                       >
-                         <Image className="w-4 h-4 mr-3 text-primary" />
-                         Change image
-                       </Button>
-                     )}
-                     {canEditPlaylist(playlist) && playlist.imageUrl && (
-                       <Button
-                         variant="ghost"
-                         onClick={() => {
-                           handleDeleteImage();
-                           setShowMobileOptionsSheet(false);
-                         }}
-                         className="justify-start h-12 text-primary hover:text-primary"
-                       >
-                         <X className="w-4 h-4 mr-3 text-primary" />
-                         Delete image
-                       </Button>
-                     )}
-                      {canDeletePlaylist(playlist) && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="justify-start h-12 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4 mr-3" />
-                              Delete playlist
-                            </Button>
-                          </AlertDialogTrigger>
-                       <AlertDialogContent>
-                         <AlertDialogHeader>
-                           <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
-                           <AlertDialogDescription>
-                             Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
-                           </AlertDialogDescription>
-                         </AlertDialogHeader>
-                         <AlertDialogFooter>
-                           <AlertDialogCancel onClick={() => setShowMobileOptionsSheet(false)}>Cancel</AlertDialogCancel>
-                           <AlertDialogAction
-                             onClick={() => {
-                               handleDeletePlaylist();
-                               setShowMobileOptionsSheet(false);
-                             }}
-                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                           >
-                             Delete playlist
-                           </AlertDialogAction>
-                         </AlertDialogFooter>
-                       </AlertDialogContent>
-                     </AlertDialog>
-                      )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+            
+            {/* Delete Icon */}
+            {canDeletePlaylist(playlist) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    title="Delete playlist"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    <span>Delete</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete playlist?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{playlist.name}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeletePlaylist}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete playlist
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
@@ -930,8 +798,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       </Dialog>
 
       {/* Edit Playlist Details Dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={(open) => {
-        setShowCategoryDialog(open);
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
         if (!open) {
           // Force cleanup of any lingering DOM state
           setTimeout(() => {
@@ -983,7 +851,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowCategoryDialog(false)} className="text-primary">
+            <Button variant="ghost" onClick={() => setShowEditDialog(false)} className="text-primary">
               Close
             </Button>
           </DialogFooter>
