@@ -445,6 +445,7 @@ const TrackView = () => {
             <div className="space-y-6">
               {/* Privacy Settings */}
               <Card>
+              	<div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
                     {track.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
