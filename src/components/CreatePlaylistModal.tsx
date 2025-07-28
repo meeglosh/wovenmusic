@@ -59,7 +59,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
       const newPlaylist = await createPlaylistMutation.mutateAsync(playlistName.trim());
       
       // Assign category if one was selected
-      if (selectedCategoryId && newPlaylist) {
+      if (selectedCategoryId && selectedCategoryId !== "none" && newPlaylist) {
         try {
           await assignCategoryMutation.mutateAsync({
             playlistId: newPlaylist.id,
@@ -166,7 +166,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
+                    <SelectItem value="none">No category</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
