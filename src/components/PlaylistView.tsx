@@ -881,7 +881,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         } else {
           // Pre-fill with current values when opening
           setEditPlaylistName(playlist.name);
-          setSelectedEditCategoryId(playlistCategories[0]?.id || "");
+          const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "";
+          setSelectedEditCategoryId(currentCategoryId);
         }
       }}>
         <DialogContent className="sm:max-w-md">
@@ -916,8 +917,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             {/* Image Management Section */}
             <div className="space-y-3">
               <Label>Playlist image</Label>
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+              <div className="flex items-start gap-4">
+                <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
                   {playlist.imageUrl ? (
                     <img 
                       src={playlist.imageUrl} 
@@ -926,17 +927,18 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
-                      <div className="text-lg text-primary/60">♪</div>
+                      <div className="text-xl text-primary/60">♪</div>
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex-1 space-y-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => editImageInputRef.current?.click()}
                     disabled={uploadImageMutation.isPending}
+                    className="w-full justify-start"
                   >
                     <Image className="w-4 h-4 mr-2" />
                     {playlist.imageUrl ? "Change image" : "Upload image"}
@@ -948,7 +950,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                       size="sm"
                       onClick={handleDeleteImage}
                       disabled={deleteImageMutation.isPending}
-                      className="text-destructive hover:text-destructive"
+                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       Remove image
@@ -966,31 +968,40 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </div>
 
             {/* Category Section */}
-            {categories.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="edit-playlist-category">Category</Label>
-                <Select 
-                  value={selectedEditCategoryId} 
-                  onValueChange={(value) => {
-                    setSelectedEditCategoryId(value);
-                    handleCategoryChange(value);
-                  }}
-                  disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="edit-playlist-category">Category</Label>
+              {categories.length > 0 ? (
+                <div className="space-y-2">
+                  <Select 
+                    value={selectedEditCategoryId} 
+                    onValueChange={(value) => {
+                      setSelectedEditCategoryId(value);
+                      if (value !== selectedEditCategoryId) {
+                        handleCategoryChange(value);
+                      }
+                    }}
+                    disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No category</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(assignCategoryMutation.isPending || removeCategoryMutation.isPending) && (
+                    <p className="text-xs text-muted-foreground">Updating category...</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No categories available. Contact an admin to create categories.</p>
+              )}
+            </div>
           </div>
           
           <DialogFooter>
