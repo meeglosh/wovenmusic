@@ -444,7 +444,7 @@ const TrackView = () => {
             {/* Sidebar with Track Info */}
             <div className="space-y-6">
               {/* Privacy Settings */}
-              <Card>
+              <Card className="overflow-hidden">
               	<div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
@@ -506,7 +506,8 @@ const TrackView = () => {
               </div>
               
               {/* Statistics */}
-              <Card>
+              <Card className="overflow-hidden">
+              	<div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 text-primary">Statistics</h3>
                   <div className="space-y-3">
