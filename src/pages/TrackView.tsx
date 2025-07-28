@@ -325,7 +325,7 @@ const TrackView = () => {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                       <MessageSquare className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <h3 className="font-semibold mb-2 text-primary">Start the conversation</h3>
+                    <h3 className="font-semibold mb-2 text-primary">Stir the silence</h3>
                     <p className="text-muted-foreground mb-4">
                       {user 
                         ? "Be the first to comment on this track. Shift+click on the waveform to add a comment at any moment!" 
@@ -507,7 +507,7 @@ const TrackView = () => {
               
               {/* Statistics */}
               <Card className="overflow-hidden">
-              	<div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
+                  <div className="h-2 bg-gradient-to-r from-primary to-secondary"></div>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 text-primary">Statistics</h3>
                   <div className="space-y-3">
