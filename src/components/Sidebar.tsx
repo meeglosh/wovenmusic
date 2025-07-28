@@ -84,32 +84,32 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
         )}
         onClick={() => onPlaylistSelect(playlist)}
       >
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
-            {playlist.imageUrl ? (
-              <img 
-                src={playlist.imageUrl} 
-                alt={`${playlist.name} cover`}
-                className="w-full h-full object-cover rounded"
-              />
-            ) : (
-              <List className="w-4 h-4 text-primary" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2">
-              <p className="text-base font-semibold text-primary break-words whitespace-normal leading-tight">{playlist.name}</p>
-              <div title={playlist.isPublic ? "Public playlist" : "Private playlist"}>
-                {playlist.isPublic ? (
-                  <Globe className="h-3 w-3 text-green-600" />
-                ) : (
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                )}
-              </div>
+        <div className="flex items-center w-full">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
+              {playlist.imageUrl ? (
+                <img 
+                  src={playlist.imageUrl} 
+                  alt={`${playlist.name} cover`}
+                  className="w-full h-full object-cover rounded"
+                />
+              ) : (
+                <List className="w-4 h-4 text-primary" />
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''} • {duration}
-            </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-primary break-words whitespace-normal leading-tight">{playlist.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''} • {duration}
+              </p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 ml-2" title={playlist.isPublic ? "Public playlist" : "Private playlist"}>
+            {playlist.isPublic ? (
+              <Globe className="h-3 w-3 text-green-600" />
+            ) : (
+              <Lock className="h-3 w-3 text-muted-foreground" />
+            )}
           </div>
         </div>
       </Button>
