@@ -210,7 +210,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editPlaylistName, setEditPlaylistName] = useState("");
+  const [selectedEditCategoryId, setSelectedEditCategoryId] = useState<string>("");
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
   const reorderMutation = useReorderPlaylistTracks();
   const removeTrackMutation = useRemoveTrackFromPlaylist();
   const updatePlaylistMutation = useUpdatePlaylist();
@@ -409,6 +414,60 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       toast({
         title: "Error deleting image",
         description: "Could not delete image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPlaylistSubmit = async () => {
+    if (!editPlaylistName.trim()) return;
+    
+    try {
+      await updatePlaylistMutation.mutateAsync({
+        id: playlist.id,
+        name: editPlaylistName.trim()
+      });
+      
+      toast({
+        title: "Playlist updated",
+        description: `Playlist renamed to "${editPlaylistName.trim()}".`,
+      });
+      
+      setShowEditDialog(false);
+    } catch (error) {
+      toast({
+        title: "Error updating playlist",
+        description: "Could not update playlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await uploadImageMutation.mutateAsync({ file, playlistId: playlist.id });
+      
+      toast({
+        title: "Image uploaded",
+        description: "Playlist image has been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error uploading image",
+        description: "Could not upload image. Please try again.",
         variant: "destructive",
       });
     }
@@ -801,6 +860,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       <Dialog open={showEditDialog} onOpenChange={(open) => {
         setShowEditDialog(open);
         if (!open) {
+          setEditPlaylistName("");
+          setSelectedEditCategoryId("");
+          setShowNewCategoryInput(false);
+          setNewCategoryName("");
           // Force cleanup of any lingering DOM state
           setTimeout(() => {
             document.body.style.overflow = '';
@@ -815,24 +878,103 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               }
             });
           }, 50);
+        } else {
+          // Pre-fill with current values when opening
+          setEditPlaylistName(playlist.name);
+          setSelectedEditCategoryId(playlistCategories[0]?.id || "");
         }
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit playlist details</DialogTitle>
             <DialogDescription>
-              Update playlist settings and category assignment.
+              Update your playlist name, image, and category.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          
+          <div className="space-y-6">
+            {/* Rename Section */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-playlist-name">Playlist name</Label>
+              <Input
+                id="edit-playlist-name"
+                value={editPlaylistName}
+                onChange={(e) => setEditPlaylistName(e.target.value)}
+                placeholder="Enter playlist name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && editPlaylistName.trim()) {
+                    handleEditPlaylistSubmit();
+                  }
+                }}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                {editPlaylistName.length}/100 characters
+              </p>
+            </div>
+
+            {/* Image Management Section */}
+            <div className="space-y-3">
+              <Label>Playlist image</Label>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                  {playlist.imageUrl ? (
+                    <img 
+                      src={playlist.imageUrl} 
+                      alt={playlist.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                      <div className="text-lg text-primary/60">♪</div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => editImageInputRef.current?.click()}
+                    disabled={uploadImageMutation.isPending}
+                  >
+                    <Image className="w-4 h-4 mr-2" />
+                    {playlist.imageUrl ? "Change image" : "Upload image"}
+                  </Button>
+                  {playlist.imageUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeleteImage}
+                      disabled={deleteImageMutation.isPending}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={editImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleEditImageUpload}
+                className="hidden"
+              />
+            </div>
+
+            {/* Category Section */}
             {categories.length > 0 && (
-              <div>
-                <Label htmlFor="edit-playlist-category" className="text-sm font-medium">
-                  Category
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="edit-playlist-category">Category</Label>
                 <Select 
-                  value={playlistCategories[0]?.id || ""} 
-                  onValueChange={handleCategoryChange}
+                  value={selectedEditCategoryId} 
+                  onValueChange={(value) => {
+                    setSelectedEditCategoryId(value);
+                    handleCategoryChange(value);
+                  }}
                   disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
                 >
                   <SelectTrigger>
@@ -850,9 +992,20 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               </div>
             )}
           </div>
+          
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowEditDialog(false)} className="text-primary">
-              Close
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowEditDialog(false)} 
+              className="text-primary"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEditPlaylistSubmit}
+              disabled={!editPlaylistName.trim() || editPlaylistName.trim() === playlist.name || updatePlaylistMutation.isPending}
+            >
+              {updatePlaylistMutation.isPending ? "Saving..." : "Save changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
