@@ -9,9 +9,14 @@ import { ArrowLeft, Play, Share2, Users, Plus, GripVertical, Trash2, Edit, X, Up
 import { Track, Playlist, getCleanTitle, calculatePlaylistDuration } from "@/types/music";
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
-import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage, useDeletePlaylistImage } from "@/hooks/usePlaylists";
+import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage, useDeletePlaylistImage, usePlaylists } from "@/hooks/usePlaylists";
 import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCategory, useRemovePlaylistCategory, useCreatePlaylistCategory } from "@/hooks/usePlaylistCategories";
+import { useTracks } from "@/hooks/useTracks";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PlaylistComments } from "@/components/PlaylistComments";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,13 +64,6 @@ interface PlaylistViewProps {
   onBack: () => void;
 }
 
-// Import the hooks we need
-import { usePlaylists } from "@/hooks/usePlaylists";
-import { useTracks } from "@/hooks/useTracks";
-import { usePermissions } from "@/hooks/usePermissions";
-import { PlaylistComments } from "@/components/PlaylistComments";
-import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCategory, useRemovePlaylistCategory } from "@/hooks/usePlaylistCategories";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Sortable Track Item Component
 interface SortableTrackItemProps {
@@ -231,6 +229,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const { data: playlistCategories = [] } = useGetPlaylistCategories(playlistId);
   const assignCategoryMutation = useAssignPlaylistCategory();
   const removeCategoryMutation = useRemovePlaylistCategory();
+  const createCategoryMutation = useCreatePlaylistCategory();
 
   // Fetch fresh data directly in this component
   const { data: playlists = [] } = usePlaylists();
@@ -518,6 +517,38 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      const newCategory = await createCategoryMutation.mutateAsync({
+        name: newCategoryName.trim()
+      });
+      
+      // Auto-assign the new category to this playlist
+      await assignCategoryMutation.mutateAsync({
+        playlistId: playlist.id,
+        categoryId: newCategory.id
+      });
+      
+      // Update UI state
+      setSelectedEditCategoryId(newCategory.id);
+      setShowNewCategoryInput(false);
+      setNewCategoryName("");
+      
+      toast({
+        title: "Category created",
+        description: `"${newCategory.name}" category created and assigned.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error creating category",
+        description: "Could not create category. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -970,32 +1001,97 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             {/* Category Section */}
             <div className="space-y-2">
               <Label htmlFor="edit-playlist-category">Category</Label>
-              {categories.length > 0 ? (
+              {categories.length > 0 || canEditPlaylist(playlist) ? (
                 <div className="space-y-2">
-                  <Select 
-                    value={selectedEditCategoryId} 
-                    onValueChange={(value) => {
-                      setSelectedEditCategoryId(value);
-                      if (value !== selectedEditCategoryId) {
-                        handleCategoryChange(value);
-                      }
-                    }}
-                    disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {(assignCategoryMutation.isPending || removeCategoryMutation.isPending) && (
-                    <p className="text-xs text-muted-foreground">Updating category...</p>
+                  {categories.length > 0 && (
+                    <>
+                      <Select 
+                        value={selectedEditCategoryId} 
+                        onValueChange={(value) => {
+                          setSelectedEditCategoryId(value);
+                          if (value !== selectedEditCategoryId) {
+                            handleCategoryChange(value);
+                          }
+                        }}
+                        disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No category</SelectItem>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {(assignCategoryMutation.isPending || removeCategoryMutation.isPending) && (
+                        <p className="text-xs text-muted-foreground">Updating category...</p>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Admin Category Creation */}
+                  {canEditPlaylist(playlist) && (
+                    <div className="space-y-2">
+                      {categories.length === 0 && (
+                        <p className="text-sm text-muted-foreground mb-2">No categories available.</p>
+                      )}
+                      {!showNewCategoryInput ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowNewCategoryInput(true)}
+                          className="w-full justify-start"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create new category
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Enter category name"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newCategoryName.trim()) {
+                                handleCreateCategory();
+                              } else if (e.key === 'Escape') {
+                                setShowNewCategoryInput(false);
+                                setNewCategoryName("");
+                              }
+                            }}
+                            maxLength={50}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleCreateCategory}
+                              disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+                              className="flex-1"
+                            >
+                              {createCategoryMutation.isPending ? "Creating..." : "Create"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setShowNewCategoryInput(false);
+                                setNewCategoryName("");
+                              }}
+                              className="flex-1"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ) : (

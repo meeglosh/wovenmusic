@@ -107,3 +107,25 @@ export const useRemovePlaylistCategory = () => {
     }
   });
 };
+
+export const useCreatePlaylistCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const { data, error } = await supabase
+        .from("playlist_categories")
+        .insert({
+          name: name.trim()
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlist-categories"] });
+    }
+  });
+};
