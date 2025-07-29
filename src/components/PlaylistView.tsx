@@ -17,6 +17,7 @@ import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCateg
 import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
+import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -715,6 +716,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <span className="text-primary">Add Tracks</span>
               </Button>
             )}
+            <OfflineDownloadButton 
+              playlist={playlist}
+              tracks={playlistTracks}
+              size="lg"
+              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
+            />
             {canSharePlaylist(playlist) && (
               <Button 
                 variant="outline" 

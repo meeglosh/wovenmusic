@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
 import { Track, PendingTrack, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
+import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import { DropboxSyncDrawer } from "./DropboxSyncDrawer";
 import BulkAddToPlaylistModal from "./BulkAddToPlaylistModal";
@@ -605,7 +606,15 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   )}
                 </div>
 
-                <div className="w-12 flex items-center">
+                <div className="w-12 flex items-center gap-1">
+                  <OfflineDownloadButton 
+                    track={track}
+                    variant="ghost"
+                    size="icon"
+                    className={`w-8 h-8 transition-opacity ${
+                      isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                  />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

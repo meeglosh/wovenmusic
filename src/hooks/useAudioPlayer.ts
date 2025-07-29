@@ -4,6 +4,7 @@ import { useUpdateTrack } from "@/hooks/useTracks";
 
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
+import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -85,7 +86,22 @@ export const useAudioPlayer = () => {
         console.log('Track file URL:', currentTrack.fileUrl);
         console.log('Track dropbox path:', currentTrack.dropbox_path);
         
-        let audioUrl = currentTrack.fileUrl;
+        // First check if track is available offline
+        let audioUrl = await offlineStorageService.getOfflineTrackUrl(currentTrack.id);
+        
+        if (audioUrl) {
+          console.log('Using offline cached track');
+        } else {
+          // Fall back to streaming if not cached or if online
+          console.log('Track not cached or offline mode not available, using streaming');
+          audioUrl = currentTrack.fileUrl;
+          
+          // Show helpful message if offline and track not downloaded
+          if (!isOnline()) {
+            console.warn('User is offline and track is not downloaded');
+            throw new Error('TRACK_NOT_AVAILABLE_OFFLINE');
+          }
+        }
         
         // If no valid fileUrl, but we have dropbox_path, get fresh URL from Dropbox
         if ((!audioUrl || audioUrl === "#" || audioUrl === "") && currentTrack.dropbox_path) {

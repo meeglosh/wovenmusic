@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2 } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2, HardDrive } from "lucide-react";
+import { OfflineStorageManager } from "@/components/OfflineStorageManager";
+import { OfflineStatusIndicator } from "@/components/OfflineStatusIndicator";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
@@ -29,6 +31,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
   const { signOut } = useAuth();
   const { theme, setTheme, themes } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showOfflineManager, setShowOfflineManager] = useState(false);
   const [audioQuality, setAudioQuality] = useState("mp3-320");
   const { data: userProfile } = useCurrentUserProfile();
 
@@ -147,6 +150,10 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowOfflineManager(true)} className="text-primary">
+                <HardDrive className="w-4 h-4 mr-2" />
+                Offline Storage
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <ConversionQualitySelector 
                 value={audioQuality} 
@@ -216,6 +223,10 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <Shield className="w-4 h-4 mr-2" />
                 <span className="text-sm">Privacy</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowOfflineManager(true)} className="text-primary">
+                <HardDrive className="w-4 h-4 mr-2" />
+                <span className="text-sm">Offline Storage</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <ConversionQualitySelector 
                 value={audioQuality} 
@@ -233,6 +244,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
       </div>
       
       <UploadModal open={showUploadModal} onOpenChange={setShowUploadModal} audioQuality={audioQuality} />
+      <OfflineStorageManager open={showOfflineManager} onOpenChange={setShowOfflineManager} />
     </header>
   );
 };
