@@ -207,6 +207,7 @@ const Index = () => {
           onPlaylistSelect={() => {}}
           searchTerm=""
           onSearchChange={() => {}}
+          tracks={[]}
         />
         <EmptyLibraryState 
           onDropboxConnected={() => {
@@ -231,6 +232,7 @@ const Index = () => {
         onPlaylistSelect={handleViewPlaylist}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        tracks={tracks}
       />
       
       <div className="flex flex-1 min-h-0">

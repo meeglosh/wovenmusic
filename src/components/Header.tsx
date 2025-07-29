@@ -21,9 +21,10 @@ interface HeaderProps {
   onPlaylistSelect?: (playlist: Playlist) => void;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
+  tracks?: any[];
 }
 
-const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect, searchTerm = "", onSearchChange }: HeaderProps) => {
+const Header = ({ playlists = [], currentView = "library", onViewChange, onPlaylistSelect, searchTerm = "", onSearchChange, tracks = [] }: HeaderProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, setTheme, themes } = useTheme();
@@ -62,6 +63,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
               currentView={currentView}
               onViewChange={onViewChange}
               onPlaylistSelect={onPlaylistSelect}
+              tracks={tracks}
             />
           )}
           
