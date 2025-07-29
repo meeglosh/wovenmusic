@@ -17,7 +17,7 @@ import { usePlaylistCategories, useGetPlaylistCategories, useAssignPlaylistCateg
 import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
-import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
+import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -661,9 +661,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             </div>
           )}
 
-          {/* Privacy Controls */}
-          {canEditPlaylistPrivacy(playlist) && (
-            <div className="mb-6">
+          {/* Privacy and Download Controls */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Privacy Controls */}
+            {canEditPlaylistPrivacy(playlist) && (
               <Card className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="space-y-1 flex-1 min-w-0">
@@ -692,8 +693,14 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   />
                 </div>
               </Card>
-            </div>
-          )}
+            )}
+
+            {/* Offline Download Controls */}
+            <OfflineDownloadToggle 
+              playlist={playlist}
+              tracks={playlistTracks}
+            />
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3">
             <Button 
@@ -716,12 +723,6 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                 <span className="text-primary">Add Tracks</span>
               </Button>
             )}
-            <OfflineDownloadButton 
-              playlist={playlist}
-              tracks={playlistTracks}
-              size="lg"
-              className="w-full max-w-[343px] sm:flex-none sm:w-auto sm:max-w-none min-h-[44px] sm:min-h-0"
-            />
             {canSharePlaylist(playlist) && (
               <Button 
                 variant="outline" 
