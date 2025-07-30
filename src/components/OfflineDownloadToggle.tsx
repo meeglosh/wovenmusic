@@ -36,8 +36,6 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
   
   const handleToggleChange = async (checked: boolean) => {
-    console.log('Toggle clicked:', { checked, downloaded, playlistId: playlist.id, tracksCount: playlistTracks.length });
-    
     if (checked && !downloaded) {
       // Download playlist
       if (!online) {
@@ -58,11 +56,9 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
         return;
       }
       
-      console.log('Starting playlist download');
       downloadPlaylist({ playlist, tracks: playlistTracks });
     } else if (!checked && downloaded) {
       // Remove playlist
-      console.log('Starting playlist removal');
       removePlaylist(playlist.id);
     }
   };

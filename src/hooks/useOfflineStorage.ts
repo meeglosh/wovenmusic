@@ -124,14 +124,7 @@ export const useOfflineStorage = () => {
   };
 
   const isPlaylistDownloaded = (playlist: Playlist): boolean => {
-    const result = playlist.trackIds.every(trackId => isTrackDownloaded(trackId));
-    console.log('isPlaylistDownloaded check:', { 
-      playlistId: playlist.id, 
-      trackIds: playlist.trackIds, 
-      downloadedTracks: downloadedTracks.map(t => t.trackId),
-      result 
-    });
-    return result;
+    return playlist.trackIds.every(trackId => isTrackDownloaded(trackId));
   };
 
   const getOfflineTrackUrl = async (trackId: string): Promise<string | null> => {
