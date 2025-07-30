@@ -96,8 +96,18 @@ class OfflineStorageService {
     const playlist = metadata.playlists.find(p => p.playlistId === playlistId);
     
     if (playlist) {
-      // Remove all tracks in the playlist
-      await Promise.all(playlist.trackIds.map(trackId => this.removeTrack(trackId)));
+      // Get tracks that are ONLY in this playlist (not shared with other playlists)
+      const otherPlaylists = metadata.playlists.filter(p => p.playlistId !== playlistId);
+      const tracksInOtherPlaylists = new Set(
+        otherPlaylists.flatMap(p => p.trackIds)
+      );
+      
+      const tracksToRemove = playlist.trackIds.filter(trackId => 
+        !tracksInOtherPlaylists.has(trackId)
+      );
+      
+      // Remove tracks that are only in this playlist
+      await Promise.all(tracksToRemove.map(trackId => this.removeTrack(trackId)));
       
       // Remove playlist metadata
       metadata.playlists = metadata.playlists.filter(p => p.playlistId !== playlistId);
