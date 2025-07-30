@@ -38,9 +38,17 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   
   // Make downloaded value reactive to downloadedTracks changes
   const downloaded = useMemo(() => {
-    if (!playlist || !Array.isArray(playlist.trackIds) || playlist.trackIds.length === 0) return false;
-    if (!downloadedTracks || !Array.isArray(downloadedTracks)) return false;
-    return playlist.trackIds.every(trackId => isTrackDownloaded(trackId));
+    if (
+      !playlist ||
+      !Array.isArray(playlist.trackIds) ||
+      playlist.trackIds.length === 0 ||
+      !downloadedTracks ||
+      !Array.isArray(downloadedTracks) ||
+      typeof isTrackDownloaded !== "function"
+    ) {
+      return false;
+    }
+    return playlist.trackIds.every((trackId) => isTrackDownloaded(trackId));
   }, [playlist, downloadedTracks, isTrackDownloaded]);
   
   const handleToggleChange = async (checked: boolean) => {
