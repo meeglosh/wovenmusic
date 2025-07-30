@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -23,8 +23,7 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     downloadPlaylist,
     removePlaylist,
     isDownloading,
-    isRemoving,
-    downloadedTracks
+    isRemoving
   } = useOfflineStorage();
   const { toast } = useToast();
 
@@ -33,14 +32,8 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   }
 
   const online = isOnline();
+  const downloaded = isPlaylistDownloaded(playlist);
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
-  
-  // Make downloaded value reactive to downloadedTracks changes
-  const downloaded = useMemo(() => {
-    const result = isPlaylistDownloaded(playlist);
-    console.log('Downloaded computed:', { playlistId: playlist.id, result, downloadedTracksCount: downloadedTracks.length });
-    return result;
-  }, [playlist, downloadedTracks, isPlaylistDownloaded]);
   
   const handleToggleChange = async (checked: boolean) => {
     console.log('Toggle clicked:', { checked, downloaded, playlistId: playlist.id, tracksCount: playlistTracks.length });
