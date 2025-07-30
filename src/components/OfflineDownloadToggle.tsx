@@ -112,14 +112,13 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
             )}
           </p>
         </div>
-{/* <Switch
-  id="playlist-download"
-  checked={!!downloaded}
-  onCheckedChange={handleToggleChange}
-  disabled={isDisabled}
-  className="flex-shrink-0"
-/> */}
-
+        <Switch
+		  id="playlist-download"
+		  checked={!!downloaded} // Ensures it's always a booolean
+		  onCheckedChange={handleToggleChange}
+		  disabled={isDisabled}
+		  className="flex-shrink-0"
+		/>
 
       </div>
     </Card>
