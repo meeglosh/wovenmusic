@@ -24,8 +24,7 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     removePlaylist,
     isDownloading,
     isRemoving,
-    downloadedTracks,
-    isTrackDownloaded
+    downloadedTracks
   } = useOfflineStorage();
   const { toast } = useToast();
 
@@ -37,24 +36,11 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
   
   // Make downloaded value reactive to downloadedTracks changes
-  const downloaded: boolean = useMemo(() => {
-    if (
-      !playlist ||
-      !Array.isArray(playlist.trackIds) ||
-      playlist.trackIds.length === 0 ||
-      !downloadedTracks ||
-      !Array.isArray(downloadedTracks) ||
-      typeof isTrackDownloaded !== "function"
-    ) {
-      return false;
-    }
-    try {
-      return playlist.trackIds.every((trackId) => isTrackDownloaded(trackId));
-    } catch (e) {
-      console.error("Error in isTrackDownloaded:", e);
-      return false;
-    }
-  }, [playlist, downloadedTracks, isTrackDownloaded]);
+  const downloaded = useMemo(() => {
+    const result = isPlaylistDownloaded(playlist);
+    console.log('Downloaded computed:', { playlistId: playlist.id, result, downloadedTracksCount: downloadedTracks.length });
+    return result;
+  }, [playlist, downloadedTracks, isPlaylistDownloaded]);
   
   const handleToggleChange = async (checked: boolean) => {
     console.log('Toggle clicked:', { checked, downloaded, playlistId: playlist.id, tracksCount: playlistTracks.length });
@@ -113,13 +99,12 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
           </p>
         </div>
         <Switch
-		  id="playlist-download"
-		  checked={!!downloaded} // Ensures it's always a booolean
-		  onCheckedChange={handleToggleChange}
-		  disabled={isDisabled}
-		  className="flex-shrink-0"
-		/>
-
+          id="playlist-download"
+          checked={downloaded}
+          onCheckedChange={handleToggleChange}
+          disabled={isDisabled}
+          className="flex-shrink-0"
+        />
       </div>
     </Card>
   );
