@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/OfflineDownloadToggle.tsx
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ interface OfflineDownloadToggleProps {
 
 export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   playlist,
-  tracks
+  tracks,
 }) => {
   const {
     isInitialized,
@@ -22,18 +23,15 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     downloadPlaylist,
     removePlaylist,
     isDownloading,
-    isRemoving
+    isRemoving,
   } = useOfflineStorage();
 
-  // 1) UNCONDITIONAL hook calls
-  const [checked, setChecked] = useState(false);
-  const downloaded = isPlaylistDownloaded(playlist);
+  // 1) local toggle state, seeded from the RQ-driven flag
+  const [checked, setChecked] = useState(() =>
+    isPlaylistDownloaded(playlist)
+  );
 
-  useEffect(() => {
-    setChecked(downloaded);
-  }, [downloaded]);
-
-  // 2) Now it’s safe to bail out early
+  // Bail out until service is ready
   if (!isInitialized || !("caches" in window)) {
     return null;
   }
@@ -44,26 +42,30 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   );
 
   const handleToggleChange = async (newChecked: boolean) => {
-    // optimistically flip UI
+    // immediately update UI
     setChecked(newChecked);
 
-    if (newChecked && !downloaded) {
-      // download
+    if (newChecked) {
+      // DOWNLOAD
       if (!online || playlistTracks.length === 0) {
-        setChecked(downloaded); // revert
+        // revert if we can't
+        setChecked(false);
         return;
       }
       try {
+        // mutateAsync triggers onSuccess toast every time
         await downloadPlaylist({ playlist, tracks: playlistTracks });
+        // local state already “on”
       } catch {
-        setChecked(downloaded); // revert on error
+        setChecked(false);
       }
-    } else if (!newChecked && downloaded) {
-      // remove
+    } else {
+      // REMOVE
       try {
         await removePlaylist(playlist.id);
+        // local state already “off”
       } catch {
-        setChecked(downloaded); // revert on error
+        setChecked(true);
       }
     }
   };
