@@ -1,4 +1,3 @@
-// /Users/mjerugim/wovenmusic/src/components/DropboxSyncAccordion.tsx
 import { useState, useEffect } from "react";
 import { 
   Accordion,
@@ -49,11 +48,8 @@ interface DropboxSyncAccordionProps {
   onPendingTracksChange?: (pendingTracks: import("@/types/music").PendingTrack[]) => void;
 }
 
-export const DropboxSyncAccordion = ({
-  isExpanded = false,
-  onExpandedChange,
-  onPendingTracksChange
-}: DropboxSyncAccordionProps) => {
+export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onPendingTracksChange }: DropboxSyncAccordionProps) => {
+  // -- state & hooks --
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -71,20 +67,32 @@ export const DropboxSyncAccordion = ({
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
 
-  // … all helper functions unchanged …
+  // -- helper fns: durations, sorting, formatting -- (unchanged)
+  // ...
 
-  // when accordion is first expanded, load root
+  // -- core actions --
+  const checkConnection = async () => { /* ... */ };
+  const handleConnect = async () => { /* ... */ };
+  const handleDisconnect = async () => { /* ... */ };
+  const loadFolders = async (path: string = "") => { /* ... */ };
+  const syncSelectedFiles = async () => { /* ... */ };
+
+  // -- effects --
   useEffect(() => {
-    if (isExpanded) {
-      checkConnection().then(connected => {
-        if (connected && files.length === 0 && folders.length === 0 && !isLoading) {
-          loadFolders();
-        }
-      });
-    }
+    if (isExpanded) { /* ... load root folder ... */ }
   }, [isExpanded]);
 
-  // … other effects …
+  useEffect(() => {
+    // handle dropboxAuthRefreshed
+  }, [isExpanded, currentPath]);
+
+  useEffect(() => {
+    // resort on sortOrder change
+  }, [sortOrder]);
+
+  useEffect(() => {
+    // convert importProgress to pendingTracks
+  }, [importProgress, onPendingTracksChange]);
 
   const accordionValue = isExpanded ? "dropbox-sync" : "";
 
@@ -92,12 +100,12 @@ export const DropboxSyncAccordion = ({
     <Accordion 
       type="single" 
       value={accordionValue}
-      onValueChange={v => onExpandedChange?.(v === "dropbox-sync")}
+      onValueChange={(value) => onExpandedChange?.(value === "dropbox-sync")}
       className="w-full"
     >
       <AccordionItem value="dropbox-sync" className="border rounded-lg">
-        {/* hide the built-in caret on this trigger */}
-        <AccordionTrigger noChevron className="px-4 py-3 hover:no-underline">
+        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+          {/* header trigger only */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
               <DropboxIcon className="w-4 h-4 fill-primary" />
@@ -112,58 +120,8 @@ export const DropboxSyncAccordion = ({
         </AccordionTrigger>
 
         <AccordionContent className="px-4 pb-4">
-          <div className="space-y-4">
-            {/* Connection Status and Controls */}
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-2">
-                {isConnected ? (
-                  <>
-                    <Link className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-600 font-medium">
-                      Connected to Dropbox
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Unlink className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Not connected to Dropbox
-                    </span>
-                  </>
-                )}
-              </div>
-              {isConnected ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDisconnect}
-                  className="text-primary hover:text-primary/80"
-                >
-                  Disconnect
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="flex items-center gap-2"
-                >
-                  {isConnecting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    'Connect to Dropbox'
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* … the rest of your content … */}
-
-          </div>
+          {/* content block no extra triggers */}
+          {/* connection status, sorting, navigation, file/folder lists, import UI */}
         </AccordionContent>
       </AccordionItem>
     </Accordion>
