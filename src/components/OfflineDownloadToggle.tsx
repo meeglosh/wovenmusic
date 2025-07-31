@@ -41,7 +41,7 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
       if (!online) {
         toast({
           title: "No internet connection",
-          description: "Connect to the internet to download this playlist",
+          description: "Bridge to the cloud; the sound will follow",
           variant: "destructive",
         });
         return;
@@ -50,7 +50,7 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
       if (playlistTracks.length === 0) {
         toast({
           title: "No tracks to download",
-          description: "This playlist doesn't contain any tracks",
+          description: "Silence nests here, untouched",
           variant: "destructive",
         });
         return;
@@ -87,6 +87,7 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
             )}
           </p>
         </div>
+        console.log('downloaded flag is', downloaded);
         <Switch
           id="playlist-download"
           checked={downloaded}
