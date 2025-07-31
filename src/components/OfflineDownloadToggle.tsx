@@ -19,8 +19,8 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   const {
     isInitialized,
     isPlaylistDownloaded,
-    downloadPlaylist,
-    removePlaylist,
+    downloadPlaylist,    // should be mutateAsync
+    removePlaylist,      // should be mutateAsync
     isDownloading,
     isRemoving
   } = useOfflineStorage();
@@ -36,13 +36,21 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     playlist.trackIds.includes(t.id)
   );
 
-  const handleToggleChange = (checked: boolean) => {
+  const handleToggleChange = async (checked: boolean) => {
     if (checked && !downloaded) {
-      // kick off the download mutation (toasts & state update happen in the hook)
-      downloadPlaylist({ playlist, tracks: playlistTracks });
+      // Download playlist
+      if (!online) {
+        // your hook already toasts on error, so just bail
+        return;
+      }
+      if (playlistTracks.length === 0) {
+        return;
+      }
+      // await the download so that onSuccess invalidation fires
+      await downloadPlaylist({ playlist, tracks: playlistTracks });
     } else if (!checked && downloaded) {
-      // kick off the removal mutation
-      removePlaylist(playlist.id);
+      // await the removal so that onSuccess invalidation fires
+      await removePlaylist(playlist.id);
     }
   };
 
