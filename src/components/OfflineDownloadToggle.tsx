@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -19,11 +19,14 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   const {
     isInitialized,
     isPlaylistDownloaded,
-    downloadPlaylist,    // should be mutateAsync
-    removePlaylist,      // should be mutateAsync
+    downloadPlaylist,
+    removePlaylist,
     isDownloading,
     isRemoving
   } = useOfflineStorage();
+
+  // local checked state mirrors the hook’s downloaded flag
+  const [checked, setChecked] = useState(false);
 
   // don’t render until our service is ready
   if (!isInitialized || !("caches" in window)) {
@@ -36,28 +39,43 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     playlist.trackIds.includes(t.id)
   );
 
-  const handleToggleChange = async (checked: boolean) => {
-    if (checked && !downloaded) {
+  // whenever the underlying downloaded state changes, sync local switch
+  useEffect(() => {
+    setChecked(downloaded);
+  }, [downloaded]);
+
+  const handleToggleChange = async (newChecked: boolean) => {
+    console.log("🔄 handleToggleChange – newChecked:", newChecked, "downloaded:", downloaded);
+
+    if (newChecked && !downloaded) {
       // Download playlist
-      if (!online) {
-        // your hook already toasts on error, so just bail
+      if (!online || playlistTracks.length === 0) {
         return;
       }
-      if (playlistTracks.length === 0) {
-        return;
+      // Fire off mutateAsync and optimistically flip UI
+      setChecked(true);
+      try {
+        await downloadPlaylist({ playlist, tracks: playlistTracks });
+      } catch {
+        // if it fails, revert UI
+        setChecked(false);
       }
-      // await the download so that onSuccess invalidation fires
-      await downloadPlaylist({ playlist, tracks: playlistTracks });
-    } else if (!checked && downloaded) {
-      // await the removal so that onSuccess invalidation fires
-      await removePlaylist(playlist.id);
+    } else if (!newChecked && downloaded) {
+      // Remove playlist
+      setChecked(false);
+      try {
+        await removePlaylist(playlist.id);
+      } catch {
+        // if it fails, revert UI
+        setChecked(true);
+      }
     }
   };
 
   const isDisabled =
     isDownloading ||
     isRemoving ||
-    (!online && !downloaded) ||
+    (!online && !checked) ||
     playlistTracks.length === 0;
 
   return (
@@ -68,23 +86,23 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
             Download for offline playback
           </Label>
           <p className="text-xs text-muted-foreground break-words">
-            {!online && !downloaded ? (
+            {!online && !checked ? (
               <span className="flex items-center gap-1">
                 <WifiOff className="h-3 w-3" />
                 Connect to internet to download
               </span>
             ) : playlistTracks.length === 0 ? (
               "No tracks in playlist"
-            ) : downloaded ? (
-              "Preserve the signal for disconnected dreaming"
+            ) : checked ? (
+              "Playlist available offline"
             ) : (
-              "Preserve the signal for disconnected dreaming"
+              "Download this playlist for offline listening"
             )}
           </p>
         </div>
         <Switch
           id="playlist-download"
-          checked={downloaded}
+          checked={checked}
           onCheckedChange={handleToggleChange}
           disabled={isDisabled}
           className="flex-shrink-0"
