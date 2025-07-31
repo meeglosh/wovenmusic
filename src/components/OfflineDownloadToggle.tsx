@@ -27,59 +27,53 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
   } = useOfflineStorage();
   const { toast } = useToast();
 
+  // Don’t render if storage not ready or browser doesn’t support caches
   if (!isInitialized || !('caches' in window)) {
     return null;
   }
 
   const online = isOnline();
   const downloaded = isPlaylistDownloaded(playlist);
-  
-  console.log('downloaded flag is', downloaded);
-    
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
-  
-const handleToggleChange = async (checked: boolean) => {
-  console.log("🔄 handleToggleChange – checked:", checked, "downloaded:", downloaded);
 
-  if (checked && !downloaded) {
-    // Download playlist
-    if (!online) {
-      toast({
-        title: "No internet connection",
-        description: "Bridge to the cloud; the sound will follow",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleToggleChange = async (checked: boolean) => {
+    console.log("🔄 handleToggleChange – checked:", checked);
 
-    if (playlistTracks.length === 0) {
-      toast({
-        title: "No tracks to download",
-        description: "Silence nests here, untouched",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (checked) {
+      // Download playlist
+      if (!online) {
+        toast({
+          title: "No internet connection",
+          description: "Bridge to the cloud; the sound will follow",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // await the download and then show success toast
-    const success = await downloadPlaylist({ playlist, tracks: playlistTracks });
-    if (success) {
-      toast({
-        title: "Resonance secured - drift with it untethered",
-      });
-    }
-  } else if (!checked && downloaded) {
-    // Remove playlist
-    const removed = await removePlaylist(playlist.id);
-    if (removed) {
-      toast({
-        title: "The memory unhooked itself - nothing remains tethered",
-      });
-    }
-  }
-};
+      if (playlistTracks.length === 0) {
+        toast({
+          title: "No tracks to download",
+          description: "Silence nests here, untouched",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const isDisabled = isDownloading || isRemoving || (!online && !downloaded) || playlistTracks.length === 0;
+      await downloadPlaylist({ playlist, tracks: playlistTracks });
+      toast({ title: "Resonance secured – drift with it untethered" });
+
+    } else {
+      // Remove playlist
+      await removePlaylist(playlist.id);
+      toast({ title: "The memory unhooked itself – nothing remains tethered" });
+    }
+  };
+
+  const isDisabled =
+    isDownloading ||
+    isRemoving ||
+    (!online && !downloaded) ||
+    playlistTracks.length === 0;
 
   return (
     <Card className="p-4">
