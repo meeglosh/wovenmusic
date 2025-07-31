@@ -25,49 +25,45 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     isRemoving
   } = useOfflineStorage();
 
-  // local checked state mirrors the hook’s downloaded flag
+  // 1) UNCONDITIONAL hook calls
   const [checked, setChecked] = useState(false);
+  const downloaded = isPlaylistDownloaded(playlist);
 
-  // don’t render until our service is ready
+  useEffect(() => {
+    setChecked(downloaded);
+  }, [downloaded]);
+
+  // 2) Now it’s safe to bail out early
   if (!isInitialized || !("caches" in window)) {
     return null;
   }
 
   const online = isOnline();
-  const downloaded = isPlaylistDownloaded(playlist);
   const playlistTracks = tracks.filter((t) =>
     playlist.trackIds.includes(t.id)
   );
 
-  // whenever the underlying downloaded state changes, sync local switch
-  useEffect(() => {
-    setChecked(downloaded);
-  }, [downloaded]);
-
   const handleToggleChange = async (newChecked: boolean) => {
-    console.log("🔄 handleToggleChange – newChecked:", newChecked, "downloaded:", downloaded);
+    // optimistically flip UI
+    setChecked(newChecked);
 
     if (newChecked && !downloaded) {
-      // Download playlist
+      // download
       if (!online || playlistTracks.length === 0) {
+        setChecked(downloaded); // revert
         return;
       }
-      // Fire off mutateAsync and optimistically flip UI
-      setChecked(true);
       try {
         await downloadPlaylist({ playlist, tracks: playlistTracks });
       } catch {
-        // if it fails, revert UI
-        setChecked(false);
+        setChecked(downloaded); // revert on error
       }
     } else if (!newChecked && downloaded) {
-      // Remove playlist
-      setChecked(false);
+      // remove
       try {
         await removePlaylist(playlist.id);
       } catch {
-        // if it fails, revert UI
-        setChecked(true);
+        setChecked(downloaded); // revert on error
       }
     }
   };
