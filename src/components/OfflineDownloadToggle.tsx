@@ -6,7 +6,6 @@ import { WifiOff } from "lucide-react";
 import { Track, Playlist } from "@/types/music";
 import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 import { isOnline } from "@/services/offlineStorageService";
-import { useToast } from "@/hooks/use-toast";
 
 interface OfflineDownloadToggleProps {
   playlist: Playlist;
@@ -25,47 +24,25 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     isDownloading,
     isRemoving
   } = useOfflineStorage();
-  const { toast } = useToast();
 
-  // Don’t render if storage not ready or browser doesn’t support caches
-  if (!isInitialized || !('caches' in window)) {
+  // don’t render until our service is ready
+  if (!isInitialized || !("caches" in window)) {
     return null;
   }
 
   const online = isOnline();
   const downloaded = isPlaylistDownloaded(playlist);
-  const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
+  const playlistTracks = tracks.filter((t) =>
+    playlist.trackIds.includes(t.id)
+  );
 
-  const handleToggleChange = async (checked: boolean) => {
-    console.log("🔄 handleToggleChange – checked:", checked);
-
-    if (checked) {
-      // Download playlist
-      if (!online) {
-        toast({
-          title: "No internet connection",
-          description: "Bridge to the cloud; the sound will follow",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (playlistTracks.length === 0) {
-        toast({
-          title: "No tracks to download",
-          description: "Silence nests here, untouched",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      await downloadPlaylist({ playlist, tracks: playlistTracks });
-      toast({ title: "Resonance secured – drift with it untethered" });
-
-    } else {
-      // Remove playlist
-      await removePlaylist(playlist.id);
-      toast({ title: "The memory unhooked itself – nothing remains tethered" });
+  const handleToggleChange = (checked: boolean) => {
+    if (checked && !downloaded) {
+      // kick off the download mutation (toasts & state update happen in the hook)
+      downloadPlaylist({ playlist, tracks: playlistTracks });
+    } else if (!checked && downloaded) {
+      // kick off the removal mutation
+      removePlaylist(playlist.id);
     }
   };
 
