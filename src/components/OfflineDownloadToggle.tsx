@@ -38,33 +38,46 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
     
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
   
-  const handleToggleChange = async (checked: boolean) => {
-    if (checked && !downloaded) {
-      // Download playlist
-      if (!online) {
-        toast({
-          title: "No internet connection",
-          description: "Bridge to the cloud; the sound will follow",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (playlistTracks.length === 0) {
-        toast({
-          title: "No tracks to download",
-          description: "Silence nests here, untouched",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      downloadPlaylist({ playlist, tracks: playlistTracks });
-    } else if (!checked && downloaded) {
-      // Remove playlist
-      removePlaylist(playlist.id);
+const handleToggleChange = async (checked: boolean) => {
+  console.log("🔄 handleToggleChange – checked:", checked, "downloaded:", downloaded);
+
+  if (checked && !downloaded) {
+    // Download playlist
+    if (!online) {
+      toast({
+        title: "No internet connection",
+        description: "Bridge to the cloud; the sound will follow",
+        variant: "destructive",
+      });
+      return;
     }
-  };
+
+    if (playlistTracks.length === 0) {
+      toast({
+        title: "No tracks to download",
+        description: "Silence nests here, untouched",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // await the download and then show success toast
+    const success = await downloadPlaylist({ playlist, tracks: playlistTracks });
+    if (success) {
+      toast({
+        title: "Resonance secured - drift with it untethered",
+      });
+    }
+  } else if (!checked && downloaded) {
+    // Remove playlist
+    const removed = await removePlaylist(playlist.id);
+    if (removed) {
+      toast({
+        title: "The memory unhooked itself - nothing remains tethered",
+      });
+    }
+  }
+};
 
   const isDisabled = isDownloading || isRemoving || (!online && !downloaded) || playlistTracks.length === 0;
 
