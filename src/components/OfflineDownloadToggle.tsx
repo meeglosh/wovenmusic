@@ -33,6 +33,9 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
 
   const online = isOnline();
   const downloaded = isPlaylistDownloaded(playlist);
+  
+  console.log('downloaded flag is', downloaded);
+    
   const playlistTracks = tracks.filter(t => playlist.trackIds.includes(t.id));
   
   const handleToggleChange = async (checked: boolean) => {
@@ -87,7 +90,6 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
             )}
           </p>
         </div>
-        console.log('downloaded flag is', downloaded);
         <Switch
           id="playlist-download"
           checked={downloaded}
