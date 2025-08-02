@@ -271,7 +271,7 @@ const Index = () => {
           {currentView === "library" ? (
             <div className="p-6 pb-2">
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "playlists")}>
-                <TabsList className="bg-muted/50 p-1 mb-6">
+                <TabsList className="bg-muted/50 p-1 mb-6 gap-3">
                   <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     Library
                   </TabsTrigger>

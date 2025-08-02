@@ -489,9 +489,23 @@ export const useAudioPlayer = () => {
     
     if (tracks.length === 0) return;
     
+    // Ensure startIndex is within bounds
+    const safeStartIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
+    const trackToPlay = tracks[safeStartIndex];
+    
+    // Check for offline mode and track availability before proceeding
+    if (!navigator.onLine && !isTrackDownloaded(trackToPlay.id)) {
+      console.log('First track not available offline, showing toast');
+      toast({
+        title: "No pulse here - connect to the grid to awaken this sound.",
+        description: "This playlist needs to be downloaded for offline playback.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setPlaylist(tracks);
-    setCurrentTrackIndex(startIndex);
-    const trackToPlay = tracks[startIndex];
+    setCurrentTrackIndex(safeStartIndex);
     console.log('Setting current track:', trackToPlay);
     
     // Force a new object reference to ensure React sees the change
