@@ -480,42 +480,42 @@ export const useAudioPlayer = () => {
     }
   };
 
-  const playPlaylist = (tracks: Track[], startIndex: number = 0) => {
-    console.log('=== PLAY PLAYLIST ===');
-    console.log('Tracks count:', tracks.length);
-    console.log('Start index:', startIndex);
-    console.log('First track details:', tracks[0]);
-    console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
-    
-    if (tracks.length === 0) return;
-    
-    // Ensure startIndex is within bounds
-    const safeStartIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
-    const trackToPlay = tracks[safeStartIndex];
-    
-    // Check for offline mode and track availability before proceeding
-    if (!navigator.onLine && !isTrackDownloaded(trackToPlay.id)) {
-      console.log('First track not available offline, showing toast');
-      toast({
-        title: "No pulse here - connect to the grid to awaken this sound.",
-        description: "This playlist needs to be downloaded for offline playback.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setPlaylist(tracks);
-    setCurrentTrackIndex(safeStartIndex);
-    console.log('Setting current track:', trackToPlay);
-    
-    // Force a new object reference to ensure React sees the change
-    setCurrentTrack({ ...trackToPlay });
-    
-    // Auto-start playback when a new track is selected
-    setIsPlaying(true);
-    
-    console.log('Track set with auto-play enabled, waiting for useEffect to load...');
-  };
+	const playPlaylist = (tracks: Track[], startIndex: number = 0) => {
+	  console.log('=== PLAY PLAYLIST ===');
+	  console.log('Tracks count:', tracks.length);
+	  console.log('Start index:', startIndex);
+	  console.log('First track details:', tracks[0]);
+	  console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
+	
+	  if (tracks.length === 0) return;
+	
+	  // 1) load the playlist array
+	  setPlaylist(tracks);
+	
+	  if (isShuffleMode) {
+	    // 2a) user wants shuffle: generate a new random order
+	    const indices = tracks.map((_, i) => i);
+	    const shuffled = shuffleArray(indices);
+	    setShuffledOrder(shuffled);
+	
+	    // 3a) play the first element of that shuffle
+	    const firstShuffled = shuffled[0];
+	    setCurrentTrackIndex(firstShuffled);
+	    setCurrentTrack({ ...tracks[firstShuffled] });
+	  } else {
+	    // 2b) user wants normal order: clear any old shuffle
+	    setShuffledOrder([]);
+	
+	    // 3b) play the requested startIndex
+	    setCurrentTrackIndex(startIndex);
+	    setCurrentTrack({ ...tracks[startIndex] });
+	  }
+	
+	  // 4) kick off playback
+	  setIsPlaying(true);
+	  console.log('Track set with auto-play enabled, waiting for useEffect to load...');
+	};
+
 
   const togglePlayPause = async () => {
     const audio = audioRef.current;
