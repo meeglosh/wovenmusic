@@ -19,6 +19,14 @@ const ProfileProtectedRoute = ({ children }: ProfileProtectedRouteProps) => {
         return;
       }
 
+      // If offline, assume profile is complete to avoid breaking offline experience
+      if (!navigator.onLine) {
+        console.log('Offline mode detected - skipping profile completion check');
+        setHasCompleteProfile(true);
+        setProfileLoading(false);
+        return;
+      }
+
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
@@ -28,7 +36,13 @@ const ProfileProtectedRoute = ({ children }: ProfileProtectedRouteProps) => {
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
-          setHasCompleteProfile(false);
+          // If we can't reach Supabase, assume profile is complete when offline
+          if (!navigator.onLine) {
+            console.log('Network error while offline - assuming complete profile');
+            setHasCompleteProfile(true);
+          } else {
+            setHasCompleteProfile(false);
+          }
         } else if (!profile || !profile.full_name || !profile.role || !profile.profile_completed) {
           // Profile doesn't exist, is incomplete, or hasn't completed onboarding
           setHasCompleteProfile(false);
@@ -37,7 +51,13 @@ const ProfileProtectedRoute = ({ children }: ProfileProtectedRouteProps) => {
         }
       } catch (error) {
         console.error('Error checking profile:', error);
-        setHasCompleteProfile(false);
+        // If we can't reach Supabase, assume profile is complete when offline
+        if (!navigator.onLine) {
+          console.log('Network error while offline - assuming complete profile');
+          setHasCompleteProfile(true);
+        } else {
+          setHasCompleteProfile(false);
+        }
       }
 
       setProfileLoading(false);
