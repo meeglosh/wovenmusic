@@ -2,8 +2,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Playlist, Track, calculatePlaylistDuration } from "@/types/music";
+import {
+  Playlist,
+  Track,
+  calculatePlaylistDuration,
+} from "@/types/music";
 import {
   usePlaylistCategories,
   usePlaylistCategoryLinks,
@@ -12,8 +17,8 @@ import {
 interface PlaylistsGridProps {
   playlists: Playlist[];
   tracks: Track[];
-  /** now hands back the playlist’s ID, so parent can look up its tracks in order */
-  onPlayPlaylist: (playlistId: string) => void;
+  /** back to the full Playlist so parent can map its .trackIds in order */
+  onPlayPlaylist: (playlist: Playlist) => void;
   onPlaylistSelect: (playlist: Playlist) => void;
 }
 
@@ -28,22 +33,21 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
   onPlayPlaylist,
   onPlaylistSelect,
 }) => {
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [expandedGroups, setExpandedGroups] =
+    useState<Record<string, boolean>>({});
   const { data: categories = [] } = usePlaylistCategories();
   const { data: categoryLinks = [] } = usePlaylistCategoryLinks();
 
-  // group playlists by category + “Unsorted”
+  // Group into categories + “Unsorted”
   const playlistGroups: PlaylistGroup[] = [
     ...categories
-      .map((c) => ({
-        name: c.name,
-        playlists: playlists.filter((p) =>
+      .map((cat) => ({
+        name: cat.name,
+        playlists: playlists.filter((pl) =>
           categoryLinks.some(
-            (l) =>
-              l.playlist_id === p.id &&
-              l.playlist_categories?.name === c.name
+            (link) =>
+              link.playlist_id === pl.id &&
+              link.playlist_categories?.name === cat.name
           )
         ),
       }))
@@ -51,49 +55,64 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
     {
       name: "Unsorted",
       playlists: playlists.filter(
-        (p) => !categoryLinks.some((l) => l.playlist_id === p.id)
+        (pl) =>
+          !categoryLinks.some((link) => link.playlist_id === pl.id)
       ),
     },
   ].filter((g) => g.playlists.length);
 
-  const handlePlaylistClick = (pl: Playlist) => onPlaylistSelect(pl);
+  const handlePlaylistClick = (pl: Playlist) =>
+    onPlaylistSelect(pl);
 
   const handlePlayAllClick = (
     e: React.MouseEvent,
     pl: Playlist
   ) => {
     e.stopPropagation();
-    onPlayPlaylist(pl.id);
+    onPlayPlaylist(pl);
   };
 
   const toggleGroup = (name: string) =>
-    setExpandedGroups((prev) => ({ ...prev, [name]: !prev[name] }));
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [name]: !prev[name],
+    }));
 
-  const shouldShowAll = (g: PlaylistGroup) => g.playlists.length > 6;
+  const shouldShowAll = (g: PlaylistGroup) =>
+    g.playlists.length > 6;
   const visible = (g: PlaylistGroup) =>
-    expandedGroups[g.name] ? g.playlists : g.playlists.slice(0, 6);
+    expandedGroups[g.name]
+      ? g.playlists
+      : g.playlists.slice(0, 6);
 
-  if (!playlists.length)
+  if (!playlists.length) {
     return (
       <div className="p-6 text-center text-muted-foreground">
         <div className="py-12 text-lg">No playlists yet</div>
-        <div className="text-sm">Create your first playlist to get started</div>
+        <div className="text-sm">
+          Create your first playlist to get started
+        </div>
       </div>
     );
+  }
 
   return (
     <div className="p-6 space-y-8">
       {playlistGroups.map((group) => (
         <div key={group.name} className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">{group.name}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              {group.name}
+            </h2>
             {shouldShowAll(group) && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => toggleGroup(group.name)}
               >
-                {expandedGroups[group.name] ? "Show less" : "Show all"}
+                {expandedGroups[group.name]
+                  ? "Show less"
+                  : "Show all"}
               </Button>
             )}
           </div>
@@ -120,7 +139,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                     </div>
                   )}
 
-                  {/* play overlay */}
+                  {/* Play overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition">
                     <Button
                       size="icon"
@@ -139,12 +158,22 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                   </h3>
                   <div className="text-xs text-muted-foreground">
                     {pl.trackIds?.length || 0} tracks
-                    {pl.trackIds?.length > 0 && (
-                      <> • {calculatePlaylistDuration(tracks.filter(t => pl.trackIds!.includes(t.id)))}</>
+                    {pl.trackIds?.length! > 0 && (
+                      <>
+                        {" "}
+                        •{" "}
+                        {calculatePlaylistDuration(
+                          tracks.filter((t) =>
+                            pl.trackIds!.includes(t.id)
+                          )
+                        )}
+                      </>
                     )}
                   </div>
                   {pl.isPublic && (
-                    <div className="text-xs text-muted-foreground/60">Public</div>
+                    <div className="text-xs text-muted-foreground/60">
+                      Public
+                    </div>
                   )}
                 </div>
               </div>
