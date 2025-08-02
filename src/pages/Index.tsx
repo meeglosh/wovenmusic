@@ -295,14 +295,22 @@ const Index = () => {
                   />
                 </TabsContent>
                 
-                <TabsContent value="playlists" className="mt-0 -m-6">
-                  <PlaylistsGrid 
-                    playlists={filteredPlaylists}
-                    tracks={tracks}
-                    onPlayPlaylist={handlePlayPlaylist}
-                    onPlaylistSelect={handleViewPlaylist}
-                  />
-                </TabsContent>
+                 <TabsContent value="playlists" className="mt-0 -m-6">
+                   <PlaylistsGrid 
+                     playlists={filteredPlaylists}
+                     tracks={tracks}
+                     onPlayPlaylist={(playlistId) => {
+                       const playlist = playlists.find(p => p.id === playlistId);
+                       if (playlist) {
+                         const ordered = playlist.trackIds
+                           .map((id) => tracks.find((t) => t.id === id))
+                           .filter((t): t is Track => !!t);
+                         playPlaylist(ordered, 0);
+                       }
+                     }}
+                     onPlaylistSelect={handleViewPlaylist}
+                   />
+                 </TabsContent>
               </Tabs>
             </div>
           ) : (

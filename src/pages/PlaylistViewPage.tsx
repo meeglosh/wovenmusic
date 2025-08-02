@@ -8,14 +8,14 @@ import type { Track } from "@/types/music";
 export const PlaylistViewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { startPlaylistInOrder } = useAudioPlayer();
+  const { playPlaylist } = useAudioPlayer();
 
   return (
     <PlaylistView
       playlistId={id!}
       onPlayTrack={(_track: Track, playlistTracks?: Track[]) => {
         if (!playlistTracks) return;
-        startPlaylistInOrder(playlistTracks);
+        playPlaylist(playlistTracks, 0);
       }}
       onBack={() => navigate(-1)}
     />

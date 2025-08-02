@@ -11,14 +11,14 @@ export const PlaylistsPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: playlists = [] } = usePlaylists();
   const { data: tracks = [] } = useTracks();
-  const { startPlaylistInOrder } = useAudioPlayer();
+  const { playPlaylist } = useAudioPlayer();
 
   const handlePlay = (playlist) => {
     // build an ordered Track[] from playlist.trackIds
     const ordered = playlist.trackIds
       .map((id) => tracks.find((t) => t.id === id))
       .filter((t): t is Track => !!t);
-    startPlaylistInOrder(ordered);
+    playPlaylist(ordered, 0);
   };
 
   return (
