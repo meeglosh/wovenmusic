@@ -9,8 +9,8 @@ import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlay
 interface PlaylistsGridProps {
   playlists: Playlist[];
   tracks: Track[];
-  /** Now takes ordered Track[] + optional startIndex */
-  onPlayPlaylist: (tracks: Track[], startIndex?: number) => void;
+  /** Now takes full Playlist so parent can map its .trackIds in order */
+  onPlayPlaylist: (playlist: Playlist) => void;
   onPlaylistSelect: (playlist: Playlist) => void;
 }
 
@@ -57,13 +57,11 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
     onPlaylistSelect(playlist);
   };
 
-  // Build ordered track list and play
+  // Now receives the entire Playlist
   const handlePlayAllClick = (e: React.MouseEvent, playlist: Playlist) => {
+    e.preventDefault();
     e.stopPropagation();
-    const orderedTracks = playlist.trackIds
-      .map((id) => tracks.find((t) => t.id === id))
-      .filter((t): t is Track => !!t);
-    onPlayPlaylist(orderedTracks, 0);
+    onPlayPlaylist(playlist);
   };
 
   const toggleGroupExpansion = (groupName: string) => {
@@ -74,6 +72,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
   };
 
   const shouldShowShowAll = (group: PlaylistGroup) => group.playlists.length > 6;
+
   const getVisiblePlaylists = (group: PlaylistGroup) => {
     const isExpanded = expandedGroups[group.name];
     return isExpanded ? group.playlists : group.playlists.slice(0, 6);
@@ -133,11 +132,24 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                   )}
 
                   {/* Play button overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
+                  <div className="
+                    absolute inset-0
+                    bg-black/0 group-hover:bg-black/20
+                    transition-all duration-200
+                    flex items-center justify-center
+                    pointer-events-none
+                  ">
                     <Button
                       size="icon"
                       variant="default"
-                      className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 shadow-lg"
+                      className="
+                        w-12 h-12 rounded-full
+                        bg-primary hover:bg-primary/90
+                        opacity-0 group-hover:opacity-100
+                        transform scale-90 group-hover:scale-100
+                        transition-all duration-200 shadow-lg
+                        pointer-events-auto
+                      "
                       onClick={(e) => handlePlayAllClick(e, playlist)}
                     >
                       <Play className="w-5 h-5 fill-current" />
@@ -153,7 +165,8 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                     {playlist.trackIds?.length || 0} tracks
                     {playlist.trackIds && playlist.trackIds.length > 0 && (
                       <span>
-                        {' '}•{' '}
+                        {" "}
+                        •{" "}
                         {calculatePlaylistDuration(
                           tracks.filter((t) => playlist.trackIds.includes(t.id))
                         )}
