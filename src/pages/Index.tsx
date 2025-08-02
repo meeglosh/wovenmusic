@@ -5,9 +5,11 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
 import PlaylistView from "@/components/PlaylistView";
+import PlaylistsGrid from "@/components/PlaylistsGrid";
 import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
 import EmptyLibraryState from "@/components/EmptyLibraryState";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Track, Playlist, PendingTrack } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
@@ -34,6 +36,7 @@ const Index = () => {
   // State management
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [activeTab, setActiveTab] = useState<"library" | "playlists">("library");
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
@@ -133,6 +136,18 @@ const Index = () => {
   const handleViewPlaylist = (playlist: Playlist) => {
     setSelectedPlaylist(playlist);
     setCurrentView("playlist");
+  };
+
+  const handlePlayPlaylist = (playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist && playlist.trackIds.length > 0) {
+      const playlistTracks = tracks.filter(track => 
+        playlist.trackIds.includes(track.id)
+      );
+      if (playlistTracks.length > 0) {
+        playPlaylist(playlistTracks, 0);
+      }
+    }
   };
 
   // Handle Dropbox token expiration
@@ -254,18 +269,42 @@ const Index = () => {
         
         <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
-            <MusicLibrary 
-              tracks={filteredTracks} 
-              onPlayTrack={handlePlayTrack}
-              currentTrack={currentTrack}
-              isPlaying={isPlaying}
-              searchTerm={searchTerm}
-              onTitleChange={setCurrentLibraryTitle}
-              showDropboxAccordion={showDropboxAccordion}
-              pendingTracks={pendingTracks}
-              onRetryPendingTrack={() => {/* TODO: Implement retry logic */}}
-              onPendingTracksChange={setPendingTracks}
-            />
+            <div className="p-6 pb-2">
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "playlists")}>
+                <TabsList className="bg-muted/50 p-1 mb-6">
+                  <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Library
+                  </TabsTrigger>
+                  <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Playlists
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="library" className="mt-0 -m-6">
+                  <MusicLibrary 
+                    tracks={filteredTracks} 
+                    onPlayTrack={handlePlayTrack}
+                    currentTrack={currentTrack}
+                    isPlaying={isPlaying}
+                    searchTerm={searchTerm}
+                    onTitleChange={setCurrentLibraryTitle}
+                    showDropboxAccordion={showDropboxAccordion}
+                    pendingTracks={pendingTracks}
+                    onRetryPendingTrack={() => {/* TODO: Implement retry logic */}}
+                    onPendingTracksChange={setPendingTracks}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="playlists" className="mt-0 -m-6">
+                  <PlaylistsGrid 
+                    playlists={filteredPlaylists}
+                    tracks={tracks}
+                    onPlayPlaylist={handlePlayPlaylist}
+                    onPlaylistSelect={handleViewPlaylist}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
           ) : (
             <PlaylistView 
               playlistId={selectedPlaylist?.id || ""}
