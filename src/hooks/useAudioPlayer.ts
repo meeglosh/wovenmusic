@@ -1,10 +1,9 @@
+// src/hooks/useAudioPlayer.ts
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 import { useUpdateTrack } from "@/hooks/useTracks";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineStorage } from "@/hooks/useOfflineStorage";
-
-// Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
 import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
 
@@ -18,12 +17,12 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
-// Helper function to format time
+// Helper to format time
 const formatTime = (time: number): string => {
   if (!time || isNaN(time)) return "0:00";
-  const minutes = Math.floor(time / 60);
-  const seconds = Math.floor(time % 60);
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const m = Math.floor(time / 60);
+  const s = Math.floor(time % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
 export const useAudioPlayer = () => {
@@ -35,12 +34,10 @@ export const useAudioPlayer = () => {
   const [recentlyReauthed, setRecentlyReauthed] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Track‐duration mutation + toast + offline check
   const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
   const { isTrackDownloaded } = useOfflineStorage();
 
-  // Playlist state
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isShuffleMode, setIsShuffleMode] = useState(false);
@@ -59,72 +56,64 @@ export const useAudioPlayer = () => {
     }
   }, []);
 
-  // load / play logic (unchanged)
+  // Track loading / metadata logic
   useEffect(() => {
-    /* ... your existing loadTrack() logic ... */
+    if (!currentTrack || !audioRef.current) return;
+    // ... existing loadTrack() implementation from your code, unchanged ...
   }, [currentTrack, recentlyReauthed]);
 
-  /* ... other useEffect hooks for auth refresh, timeupdate, volume, shuffle generation ... */
+  // Other effects: auth refresh, timeupdate, volume, shuffle generation...
 
-  /* Helpers to get next/prev indexes (unchanged) */
   const getCurrentIndex = () => {
-    if (isShuffleMode && shuffledOrder.length) {
+    if (isShuffleMode && shuffledOrder.length)
       return shuffledOrder.findIndex((i) => i === currentTrackIndex);
-    }
     return currentTrackIndex;
   };
   const getNextTrackIndex = () => {
-    /* ... */
+    if (!playlist.length) return -1;
+    if (isRepeatMode && playlist.length === 1) return currentTrackIndex;
     return isShuffleMode
       ? shuffledOrder[(getCurrentIndex() + 1) % shuffledOrder.length]
       : (currentTrackIndex + 1) % playlist.length;
   };
   const getPreviousTrackIndex = () => {
-    /* ... */
+    if (!playlist.length) return -1;
     return isShuffleMode
       ? shuffledOrder[(getCurrentIndex() + shuffledOrder.length - 1) % shuffledOrder.length]
       : (currentTrackIndex + playlist.length - 1) % playlist.length;
   };
 
-  // play a single track (unchanged)
+  // play a single track
   const playTrack = (track: Track, newPlaylist?: Track[]) => {
-    /* ... */
+    // ... unchanged logic ...
   };
 
-  // your existing playPlaylist, now respecting isShuffleMode:
-  const playPlaylist = (tracks: Track[], startIndex: number = 0) => {
+  // play a playlist respecting shuffle mode
+  const playPlaylist = (tracks: Track[], startIndex = 0) => {
     if (!tracks.length) return;
-
     setPlaylist(tracks);
-
     if (isShuffleMode) {
       const indices = tracks.map((_, i) => i);
       const shuffled = shuffleArray(indices);
       setShuffledOrder(shuffled);
-
-      const firstShuffled = shuffled[0];
-      setCurrentTrackIndex(firstShuffled);
-      setCurrentTrack({ ...tracks[firstShuffled] });
+      const firstId = shuffled[0];
+      setCurrentTrackIndex(firstId);
+      setCurrentTrack({ ...tracks[firstId] });
     } else {
-      // clear any old shuffle order
       setShuffledOrder([]);
-
-      // play in “natural” order
-      const safeIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
-      setCurrentTrackIndex(safeIndex);
-      setCurrentTrack({ ...tracks[safeIndex] });
+      const idx = Math.max(0, Math.min(startIndex, tracks.length - 1));
+      setCurrentTrackIndex(idx);
+      setCurrentTrack({ ...tracks[idx] });
     }
-
     setIsPlaying(true);
   };
 
-  // **NEW** helper: always turn OFF shuffle, then play in order from track 0
+  // helper to always play in order from the start
   const startPlaylistInOrder = (tracks: Track[]) => {
     setIsShuffleMode(false);
     playPlaylist(tracks, 0);
   };
 
-  // rest of your controls (togglePlayPause, playNext, playPrevious, toggleShuffle, toggleRepeat, seekTo, setVolumeLevel)
   const togglePlayPause = async () => { /* ... */ };
   const playNext = () => { /* ... */ };
   const playPrevious = () => { /* ... */ };
@@ -146,7 +135,6 @@ export const useAudioPlayer = () => {
     isRepeatMode,
     playTrack,
     playPlaylist,
-    // **new**:
     startPlaylistInOrder,
     togglePlayPause,
     playNext,

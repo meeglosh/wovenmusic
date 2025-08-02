@@ -9,8 +9,8 @@ import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlay
 interface PlaylistsGridProps {
   playlists: Playlist[];
   tracks: Track[];
-  /** Now takes full Playlist so parent can map its .trackIds in order */
-  onPlayPlaylist: (playlist: Playlist) => void;
+  /** Now takes ordered Track[] + optional startIndex */
+  onPlayPlaylist: (tracks: Track[], startIndex?: number) => void;
   onPlaylistSelect: (playlist: Playlist) => void;
 }
 
@@ -57,10 +57,13 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
     onPlaylistSelect(playlist);
   };
 
-  // Now receives the entire Playlist
+  // Build ordered track list and play
   const handlePlayAllClick = (e: React.MouseEvent, playlist: Playlist) => {
     e.stopPropagation();
-    onPlayPlaylist(playlist);
+    const orderedTracks = playlist.trackIds
+      .map((id) => tracks.find((t) => t.id === id))
+      .filter((t): t is Track => !!t);
+    onPlayPlaylist(orderedTracks, 0);
   };
 
   const toggleGroupExpansion = (groupName: string) => {
@@ -71,7 +74,6 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
   };
 
   const shouldShowShowAll = (group: PlaylistGroup) => group.playlists.length > 6;
-
   const getVisiblePlaylists = (group: PlaylistGroup) => {
     const isExpanded = expandedGroups[group.name];
     return isExpanded ? group.playlists : group.playlists.slice(0, 6);
@@ -151,8 +153,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                     {playlist.trackIds?.length || 0} tracks
                     {playlist.trackIds && playlist.trackIds.length > 0 && (
                       <span>
-                        {" "}
-                        •{" "}
+                        {' '}•{' '}
                         {calculatePlaylistDuration(
                           tracks.filter((t) => playlist.trackIds.includes(t.id))
                         )}
