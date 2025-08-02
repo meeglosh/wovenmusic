@@ -8,7 +8,7 @@ import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlay
 interface PlaylistsGridProps {
   playlists: Playlist[];
   tracks: Track[];
-  /** Now takes full Playlist so parent can map its .trackIds in order */
+  /** takes the full Playlist object */
   onPlayPlaylist: (playlist: Playlist) => void;
   onPlaylistSelect: (playlist: Playlist) => void;
 }
@@ -56,11 +56,15 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
 
   const handlePlayAllClick = (e: React.MouseEvent, playlist: Playlist) => {
     e.stopPropagation();
+    console.log("🎯 Play button clicked for playlist:", playlist.id);
     onPlayPlaylist(playlist);
   };
 
   const toggleGroupExpansion = (groupName: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
   };
 
   const shouldShowShowAll = (group: PlaylistGroup) => group.playlists.length > 6;
