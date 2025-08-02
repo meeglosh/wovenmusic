@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { WifiOff } from "lucide-react";
+import { WifiOff, Loader2 } from "lucide-react";
 import { Track, Playlist } from "@/types/music";
 import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 import { isOnline } from "@/services/offlineStorageService";
@@ -97,14 +97,24 @@ export const OfflineDownloadToggle: React.FC<OfflineDownloadToggleProps> = ({
               "Download this playlist for offline listening"
             )}
           </p>
+          {isDownloading && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Download in progress...
+            </p>
+          )}
         </div>
-        <Switch
-          id="playlist-download"
-          checked={checked}
-          onCheckedChange={handleToggleChange}
-          disabled={isDisabled}
-          className="flex-shrink-0"
-        />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isDownloading && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          <Switch
+            id="playlist-download"
+            checked={checked}
+            onCheckedChange={handleToggleChange}
+            disabled={isDisabled}
+          />
+        </div>
       </div>
     </Card>
   );
