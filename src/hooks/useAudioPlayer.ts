@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Track } from "@/types/music";
 import { useUpdateTrack } from "@/hooks/useTracks";
+import { useToast } from "@/hooks/use-toast";
+import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
@@ -36,6 +38,8 @@ export const useAudioPlayer = () => {
   
   // Add mutation for updating track duration
   const updateTrackMutation = useUpdateTrack();
+  const { toast } = useToast();
+  const { isTrackDownloaded } = useOfflineStorage();
 
   // Playlist functionality
   const [playlist, setPlaylist] = useState<Track[]>([]);
@@ -449,6 +453,16 @@ export const useAudioPlayer = () => {
     // Check if we have either a fileUrl or dropbox_path
     if ((!track.fileUrl || track.fileUrl === "#" || track.fileUrl === "") && !track.dropbox_path) {
       console.error('Track has no valid fileUrl or dropbox_path');
+      return;
+    }
+
+    // Check if offline and track not downloaded
+    if (!navigator.onLine && !isTrackDownloaded(track.id)) {
+      console.log('User is offline and track not downloaded - preventing playback');
+      toast({
+        title: "No pulse here - connect to the grid to awaken this sound.",
+        variant: "destructive",
+      });
       return;
     }
 
