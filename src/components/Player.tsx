@@ -119,7 +119,7 @@ const Player = ({
               disabled={!onShuffle}
               className="hidden sm:flex"
             >
-              <Shuffle className="w-4 h-4 text-primary" />
+              <Shuffle className={`w-4 h-4 ${isShuffleMode ? "text-primary-foreground" : "text-primary"}`} />
             </Button>
             <Button 
               variant="ghost" 
@@ -157,7 +157,7 @@ const Player = ({
               disabled={!onRepeat}
               className="hidden sm:flex"
             >
-              <Repeat className="w-4 h-4 text-primary" />
+              <Repeat className={`w-4 h-4 ${isRepeatMode ? "text-primary-foreground" : "text-primary"}`} />
             </Button>
             {onFullScreen && (
               <Button variant="ghost" size="sm" onClick={onFullScreen} className="hidden sm:flex">
