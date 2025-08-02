@@ -61,6 +61,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
   const handlePlayAllClick = (e: React.MouseEvent, playlist: Playlist) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log("▶️ Play button clicked for playlist:", playlist.id);
     onPlayPlaylist(playlist);
   };
 
@@ -132,13 +133,14 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                   )}
 
                   {/* Play button overlay */}
-                  <div className="
-                    absolute inset-0
-                    bg-black/0 group-hover:bg-black/20
-                    transition-all duration-200
-                    flex items-center justify-center
-                    pointer-events-none
-                  ">
+                  <div
+                    className="
+                      absolute inset-0
+                      bg-black/0 group-hover:bg-black/20
+                      transition-all duration-200
+                      flex items-center justify-center
+                    "
+                  >
                     <Button
                       size="icon"
                       variant="default"
