@@ -9,7 +9,6 @@ import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlay
 interface PlaylistsGridProps {
   playlists: Playlist[];
   tracks: Track[];
-  /** Now takes full Playlist so parent can map its .trackIds in order */
   onPlayPlaylist: (playlist: Playlist) => void;
   onPlaylistSelect: (playlist: Playlist) => void;
 }
@@ -34,52 +33,46 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
   // Group playlists by category
   const playlistGroups: PlaylistGroup[] = [
     ...categories
-      .map((category) => ({
+      .map(category => ({
         name: category.name,
-        playlists: playlists.filter((pl) =>
+        playlists: playlists.filter(pl =>
           categoryLinks.some(
-            (link) =>
+            link =>
               link.playlist_id === pl.id &&
               link.playlist_categories?.name === category.name
           )
         ),
       }))
-      .filter((g) => g.playlists.length > 0),
+      .filter(g => g.playlists.length > 0),
     {
       name: "Unsorted",
       playlists: playlists.filter(
-        (pl) => !categoryLinks.some((link) => link.playlist_id === pl.id)
+        pl => !categoryLinks.some(link => link.playlist_id === pl.id)
       ),
     },
-  ].filter((g) => g.playlists.length > 0);
+  ].filter(g => g.playlists.length > 0);
 
   const handlePlaylistClick = (playlist: Playlist) => {
     onPlaylistSelect(playlist);
   };
 
-  // Now receives the entire Playlist
   const handlePlayAllClick = (e: React.MouseEvent, playlist: Playlist) => {
-    e.preventDefault();
     e.stopPropagation();
-    console.log("▶️ Play button clicked for playlist:", playlist.id);
     onPlayPlaylist(playlist);
   };
 
   const toggleGroupExpansion = (groupName: string) => {
-    setExpandedGroups((prev) => ({
+    setExpandedGroups(prev => ({
       ...prev,
       [groupName]: !prev[groupName],
     }));
   };
 
   const shouldShowShowAll = (group: PlaylistGroup) => group.playlists.length > 6;
+  const getVisiblePlaylists = (group: PlaylistGroup) =>
+    expandedGroups[group.name] ? group.playlists : group.playlists.slice(0, 6);
 
-  const getVisiblePlaylists = (group: PlaylistGroup) => {
-    const isExpanded = expandedGroups[group.name];
-    return isExpanded ? group.playlists : group.playlists.slice(0, 6);
-  };
-
-  if (playlists.length === 0) {
+  if (!playlists.length) {
     return (
       <div className="p-6">
         <div className="text-center py-12">
@@ -94,7 +87,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
 
   return (
     <div className="p-6 space-y-8">
-      {playlistGroups.map((group) => (
+      {playlistGroups.map(group => (
         <div key={group.name} className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">{group.name}</h2>
@@ -111,11 +104,15 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {getVisiblePlaylists(group).map((playlist) => (
+            {getVisiblePlaylists(group).map(playlist => (
               <div
                 key={playlist.id}
                 className="group cursor-pointer space-y-2"
-                onClick={() => handlePlaylistClick(playlist)}
+                onClick={e => {
+                  // If the click originated inside our play-button, do NOT navigate
+                  if ((e.target as HTMLElement).closest("button")) return;
+                  handlePlaylistClick(playlist);
+                }}
               >
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                   {playlist.imageUrl ? (
@@ -133,26 +130,12 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                   )}
 
                   {/* Play button overlay */}
-                  <div
-                    className="
-                      absolute inset-0
-                      bg-black/0 group-hover:bg-black/20
-                      transition-all duration-200
-                      flex items-center justify-center
-                    "
-                  >
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
                     <Button
                       size="icon"
                       variant="default"
-                      className="
-                        w-12 h-12 rounded-full
-                        bg-primary hover:bg-primary/90
-                        opacity-0 group-hover:opacity-100
-                        transform scale-90 group-hover:scale-100
-                        transition-all duration-200 shadow-lg
-                        pointer-events-auto
-                      "
-                      onClick={(e) => handlePlayAllClick(e, playlist)}
+                      className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 shadow-lg pointer-events-auto"
+                      onClick={e => handlePlayAllClick(e, playlist)}
                     >
                       <Play className="w-5 h-5 fill-current" />
                     </Button>
@@ -170,7 +153,7 @@ const PlaylistsGrid: React.FC<PlaylistsGridProps> = ({
                         {" "}
                         •{" "}
                         {calculatePlaylistDuration(
-                          tracks.filter((t) => playlist.trackIds.includes(t.id))
+                          tracks.filter(t => playlist.trackIds.includes(t.id))
                         )}
                       </span>
                     )}
