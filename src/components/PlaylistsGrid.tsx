@@ -123,16 +123,16 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                   )}
                   
                   {/* Play button overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
-                    <Button
-                      size="icon"
-                      variant="default"
-                      className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 shadow-lg"
-                      onClick={(e) => handlePlayAllClick(e, playlist.id)}
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                    </Button>
-                  </div>
+					<div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none">
+					  <Button
+					    size="icon"
+					    variant="default"
+					    className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 shadow-lg pointer-events-auto"
+					    onClick={(e) => handlePlayAllClick(e, playlist.id)}
+					  >
+					    <Play className="w-5 h-5 fill-current" />
+					  </Button>
+					</div>
                 </div>
 
                 <div className="space-y-1">
