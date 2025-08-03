@@ -132,7 +132,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
 					  >
 					    <Play className="w-5 h-5 fill-current" />
 					  </Button>
-					</div>
+					</div>	
                 </div>
 
                 <div className="space-y-1">
