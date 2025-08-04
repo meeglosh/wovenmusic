@@ -3,8 +3,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Menu, Music, ListMusic, Search, List, Lock, Globe } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Menu, Music, ListMusic, List, Lock, Globe } from "lucide-react";
 import { Playlist, calculatePlaylistDuration } from "@/types/music";
 import { cn } from "@/lib/utils";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
@@ -21,7 +20,6 @@ interface MobileNavProps {
 
 const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, libraryTitle = "Driftspace", selectedPlaylist, tracks }: MobileNavProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   
   // Fetch categories and category links
   const { data: categories = [] } = usePlaylistCategories();
@@ -39,16 +37,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
     localStorage.setItem('expanded-categories-mobile', JSON.stringify(value));
   };
   
-  // Filter playlists based on search query
-  const filteredPlaylists = useMemo(() => {
-    if (!searchQuery.trim()) return playlists;
-    
-    return playlists.filter(playlist => 
-      playlist.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [playlists, searchQuery]);
-  
-  // Group filtered playlists by category
+  // Group playlists by category
   const playlistsByCategory = useMemo(() => {
     const categoryMap = new Map<string, Playlist[]>();
     const unsortedPlaylists: Playlist[] = [];
@@ -59,7 +48,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
     });
     
     // Group playlists
-    filteredPlaylists.forEach(playlist => {
+    playlists.forEach(playlist => {
       const playlistLinks = categoryLinks.filter(link => link.playlist_id === playlist.id);
       
       if (playlistLinks.length === 0) {
@@ -76,7 +65,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
     });
     
     return { categoryMap, unsortedPlaylists };
-  }, [filteredPlaylists, categoryLinks, categories]);
+  }, [playlists, categoryLinks, categories]);
 
   const handleViewChange = (view: "library" | "playlist") => {
     onViewChange(view);
@@ -146,18 +135,6 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
         </SheetTrigger>
         <SheetContent side="left" className="w-80 sm:w-96">
           <div className="flex flex-col h-full">
-            {/* Search */}
-            <div className="p-4 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input 
-                  placeholder="Search tracks, playlists..." 
-                  className="pl-10 bg-muted/30 border-muted"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
 
             {/* Navigation */}
             <div className="flex-1 overflow-auto">
@@ -183,9 +160,9 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
                     </h3>
                   </div>
                   
-                  {filteredPlaylists.length === 0 ? (
+                  {playlists.length === 0 ? (
                     <p className="text-sm text-muted-foreground px-3 py-2">
-                      {searchQuery ? "No playlists found" : "No playlists yet"}
+                      No playlists yet
                     </p>
                   ) : (
                     <Accordion 

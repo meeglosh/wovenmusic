@@ -10,6 +10,8 @@ import Player from "@/components/Player";
 import FullScreenPlayer from "@/components/FullScreenPlayer";
 import EmptyLibraryState from "@/components/EmptyLibraryState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 import { Track, Playlist, PendingTrack } from "@/types/music";
 import { useTracks } from "@/hooks/useTracks";
@@ -270,6 +272,19 @@ const Index = () => {
         <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
             <div className="p-6 pb-2">
+              {/* Mobile Search - Only show on mobile */}
+              <div className="md:hidden mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input 
+                    placeholder="Search tracks, playlists..." 
+                    className="pl-10 bg-muted/30 border-muted"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "playlists")}>
                 <TabsList className="bg-muted/50 p-1 mb-6 gap-3">
                   <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
