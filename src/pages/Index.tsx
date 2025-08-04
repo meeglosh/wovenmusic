@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
 import PlaylistView from "@/components/PlaylistView";
 import PlaylistsGrid from "@/components/PlaylistsGrid";
@@ -250,6 +251,22 @@ const Index = () => {
       />
       
       <div className="flex flex-1 min-h-0">
+        {/* Sidebar - Hidden on mobile, overlay on tablet */}
+        <div className="hidden md:flex md:w-64 lg:w-80">
+          <Sidebar 
+            playlists={filteredPlaylists}
+            currentView={currentView}
+            onViewChange={(view) => {
+              setCurrentView(view);
+              if (view === "library") setSelectedPlaylist(null);
+            }}
+            onPlaylistSelect={handleViewPlaylist}
+            libraryTitle={currentLibraryTitle}
+            selectedPlaylist={selectedPlaylist}
+            tracks={tracks}
+          />
+        </div>
+        
         <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
             <div className="p-6 pb-2">

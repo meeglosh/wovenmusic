@@ -117,6 +117,7 @@ const Player = ({
               size="sm"
               onClick={onShuffle}
               disabled={!onShuffle}
+              className="hidden sm:flex"
             >
               <Shuffle className={`w-4 h-4 ${isShuffleMode ? "text-black" : "text-primary"}`} />
             </Button>
@@ -154,6 +155,7 @@ const Player = ({
               size="sm"
               onClick={onRepeat}
               disabled={!onRepeat}
+              className="hidden sm:flex"
             >
               <Repeat className={`w-4 h-4 ${isRepeatMode ? "text-black" : "text-primary"}`} />
             </Button>
