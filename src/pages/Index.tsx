@@ -272,10 +272,10 @@ const Index = () => {
             <div className="p-6 pb-2">
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "playlists")}>
                 <TabsList className="bg-muted/50 p-1 mb-6 gap-3">
-                  <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
                     Library
                   </TabsTrigger>
-                  <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
                     Playlists
                   </TabsTrigger>
                 </TabsList>
