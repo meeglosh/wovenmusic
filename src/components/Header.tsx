@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
 import UploadModal from "./UploadModal";
 import ConversionQualitySelector from "./ConversionQualitySelector";
-import MobileNav from "./MobileNav";
+
 import { Playlist } from "@/types/music";
 import { useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,17 +59,6 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Mobile Navigation */}
-          {onViewChange && onPlaylistSelect && (
-            <MobileNav 
-              playlists={playlists}
-              currentView={currentView}
-              onViewChange={onViewChange}
-              onPlaylistSelect={onPlaylistSelect}
-              tracks={tracks}
-            />
-          )}
-          
           <h1 className="text-lg sm:text-2xl font-rem font-thin text-primary">
             Wovenmusic
           </h1>
