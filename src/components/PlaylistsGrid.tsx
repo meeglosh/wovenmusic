@@ -51,6 +51,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
   };
 
   const handlePlayAllClick = (e: React.MouseEvent, playlistId: string) => {
+    e.preventDefault();
     e.stopPropagation();
     onPlayPlaylist(playlistId);
   };
@@ -112,7 +113,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                     <img
                       src={playlist.imageUrl}
                       alt={playlist.name}
-                      className="w-full h-full object-cover transition-all duration-200 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
@@ -122,17 +123,17 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                     </div>
                   )}
                   
-                  {/* Play button overlay */}
-					<div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
-					  <Button
-					    size="icon"
-					    variant="default"
-					    className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 shadow-lg"
-					    onClick={(e) => handlePlayAllClick(e, playlist.id)}
-					  >
-					    <Play className="w-5 h-5 fill-current" />
-					  </Button>
-					</div>	
+                  {/* Play button overlay - positioned in bottom right corner to avoid scroll interference */}
+                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button
+                      size="icon"
+                      variant="default"
+                      className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform duration-200"
+                      onClick={(e) => handlePlayAllClick(e, playlist.id)}
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
