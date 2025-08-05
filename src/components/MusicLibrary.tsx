@@ -32,6 +32,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface MusicLibraryProps {
   tracks: Track[];
@@ -129,6 +138,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     const saved = localStorage.getItem('musicLibrarySortDirection');
     return saved ? (saved as SortDirection) : 'desc';
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   const deleteTrackMutation = useDeleteTrack();
   const bulkDeleteMutation = useBulkDeleteTracks();
@@ -166,12 +177,18 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedTracks.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTracks = sortedTracks.slice(startIndex, endIndex);
+
   const selectedTracks = sortedTracks.filter(track => selectedTrackIds.has(track.id));
   const deletableSelectedTracks = selectedTracks.filter(track => canDeleteTrack(track));
 
   const isSelectionMode = selectedTrackIds.size > 0;
-  const allTracksSelected = tracks.length > 0 && selectedTrackIds.size === tracks.length;
-  const someTracksSelected = selectedTrackIds.size > 0 && selectedTrackIds.size < tracks.length;
+  const allCurrentPageSelected = paginatedTracks.length > 0 && paginatedTracks.every(track => selectedTrackIds.has(track.id));
+  const someCurrentPageSelected = paginatedTracks.some(track => selectedTrackIds.has(track.id)) && !allCurrentPageSelected;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -194,7 +211,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedTrackIds(new Set(tracks.map(track => track.id)));
+      setSelectedTrackIds(new Set(paginatedTracks.map(track => track.id)));
     } else {
       setSelectedTrackIds(new Set());
     }
@@ -286,6 +303,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         <div className="flex items-center space-x-4">
           <div className="text-sm text-muted-foreground">
             {tracks.length} track{tracks.length !== 1 ? 's' : ''}
+            {totalPages > 1 && (
+              <span className="ml-2">
+                (page {currentPage} of {totalPages})
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -458,10 +480,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           <div className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 text-sm font-medium text-muted-foreground border-b border-border">
             <div className="w-8">
               <Checkbox
-                checked={allTracksSelected}
+                checked={allCurrentPageSelected}
                 onCheckedChange={handleSelectAll}
-                className={someTracksSelected ? 'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground' : ''}
-                data-indeterminate={someTracksSelected}
+                className={someCurrentPageSelected ? 'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground' : ''}
+                data-indeterminate={someCurrentPageSelected}
               />
             </div>
             <div className="w-12"></div>
@@ -501,7 +523,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           </div>
 
           <div className="divide-y divide-border">
-            {sortedTracks.map((track, index) => (
+            {paginatedTracks.map((track, index) => (
               <div
                 key={track.id}
                 className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-2 md:gap-4 p-3 md:p-4 hover:bg-muted/30 transition-colors group items-center ${
@@ -550,7 +572,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <span className={`text-muted-foreground text-sm transition-opacity ${
                     isMobile ? 'opacity-0' : 'group-hover:opacity-0'
                   }`}>
-                    {index + 1}
+                    {startIndex + index + 1}
                   </span>
                 </div>
 
@@ -667,8 +689,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
               </div>
             ))}
             
-            {/* Render pending tracks */}
-            {pendingTracks.map((pendingTrack) => (
+            {/* Render pending tracks only on first page */}
+            {currentPage === 1 && pendingTracks.map((pendingTrack) => (
               <div
                 key={pendingTrack.id}
                 className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 bg-muted/20 transition-colors"
@@ -751,6 +773,114 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                      setSelectedTrackIds(new Set()); // Clear selection when changing pages
+                    }
+                  }}
+                  className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              
+              {/* First page */}
+              {currentPage > 3 && (
+                <>
+                  <PaginationItem>
+                    <PaginationLink 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(1);
+                        setSelectedTrackIds(new Set());
+                      }}
+                      className="cursor-pointer"
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                  {currentPage > 4 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                </>
+              )}
+              
+              {/* Pages around current page */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                if (pageNumber > totalPages) return null;
+                
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(pageNumber);
+                        setSelectedTrackIds(new Set());
+                      }}
+                      isActive={currentPage === pageNumber}
+                      className="cursor-pointer"
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              {/* Last page */}
+              {currentPage < totalPages - 2 && (
+                <>
+                  {currentPage < totalPages - 3 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  <PaginationItem>
+                    <PaginationLink 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(totalPages);
+                        setSelectedTrackIds(new Set());
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                </>
+              )}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                      setSelectedTrackIds(new Set()); // Clear selection when changing pages
+                    }
+                  }}
+                  className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
 
       {/* Bulk Add to Playlist Modal */}
