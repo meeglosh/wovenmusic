@@ -10,12 +10,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCreatePlaylist, usePlaylists, useAddTrackToPlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Track, getFileName } from "@/types/music";
 import { Search, Music, Plus, ListMusic, Upload } from "lucide-react";
 
@@ -40,6 +49,7 @@ const BulkAddToPlaylistModal = ({
   const createPlaylistMutation = useCreatePlaylist();
   const addTrackMutation = useAddTrackToPlaylist();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Filter playlists based on search query
   const filteredPlaylists = playlists.filter(playlist => 
@@ -122,6 +132,203 @@ const BulkAddToPlaylistModal = ({
     onOpenChange(false);
   };
 
+  const renderContent = () => (
+    <div className="space-y-4">
+      {/* Selected Tracks Preview */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Music className="w-4 h-4" />
+            Selected Tracks
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {selectedTracks.slice(0, 3).map((track) => (
+              <Badge key={track.id} variant="secondary" className="text-xs">
+                {getFileName(track)}
+              </Badge>
+            ))}
+            {selectedTracks.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{selectedTracks.length - 3} more
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="existing" className="flex items-center gap-2">
+            <ListMusic className="w-4 h-4" />
+            Existing Playlist
+          </TabsTrigger>
+          <TabsTrigger value="new" className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Create New
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="existing" className="space-y-4">
+          {/* Search Existing Playlists */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search playlists..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Playlist List */}
+          <ScrollArea className={`border rounded-md ${isMobile ? 'h-[250px]' : 'h-[300px]'}`}>
+            {filteredPlaylists.length === 0 ? (
+              <div className="text-center py-8">
+                {playlists.length === 0 ? (
+                  <>
+                    <ListMusic className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No playlists found. Create your first playlist!</p>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No playlists found matching "{searchQuery}"</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2 p-4">
+                {filteredPlaylists.map((playlist) => (
+                  <Card 
+                    key={playlist.id}
+                    className={`cursor-pointer transition-colors ${
+                      selectedPlaylistId === playlist.id 
+                        ? 'bg-primary/10 border-primary' 
+                        : 'hover:bg-muted/50'
+                    }`}
+                    onClick={() => setSelectedPlaylistId(playlist.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium text-primary">{playlist.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        {selectedPlaylistId === playlist.id && (
+                          <Badge className="bg-primary text-primary-foreground">
+                            Selected
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="new" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Create New Playlist</CardTitle>
+              <CardDescription>
+                Create a new playlist and add your selected tracks to it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="playlist-name">Playlist Name</Label>
+                <Input
+                  id="playlist-name"
+                  placeholder="Enter playlist name..."
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  const renderFooter = () => (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={handleClose}
+        disabled={isLoading}
+        className="text-primary"
+      >
+        Cancel
+      </Button>
+      {activeTab === "existing" ? (
+        <Button 
+          onClick={handleAddToExistingPlaylist} 
+          disabled={isLoading || !selectedPlaylistId || selectedTracks.length === 0}
+          className="min-w-[120px]"
+        >
+          {isLoading ? (
+            <>
+              <Upload className="w-4 h-4 mr-2 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            `Add to Playlist`
+          )}
+        </Button>
+      ) : (
+        <Button 
+          onClick={handleCreatePlaylistAndAdd} 
+          disabled={isLoading || !newPlaylistName.trim() || selectedTracks.length === 0}
+          className="min-w-[120px]"
+        >
+          {isLoading ? (
+            <>
+              <Upload className="w-4 h-4 mr-2 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            `Create & Add`
+          )}
+        </Button>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              Add {selectedTracks.length} Track{selectedTracks.length !== 1 ? 's' : ''} to Playlist
+            </DrawerTitle>
+            <DrawerDescription>
+              Choose an existing playlist or create a new one to add your selected tracks.
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <div className="flex-1 overflow-y-auto px-4">
+            {renderContent()}
+          </div>
+          
+          <DrawerFooter className="border-t bg-background/95 backdrop-blur">
+            {renderFooter()}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh]">
@@ -135,171 +342,10 @@ const BulkAddToPlaylistModal = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {/* Selected Tracks Preview */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Music className="w-4 h-4" />
-                Selected Tracks
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {selectedTracks.slice(0, 3).map((track) => (
-                  <Badge key={track.id} variant="secondary" className="text-xs">
-                    {getFileName(track)}
-                  </Badge>
-                ))}
-                {selectedTracks.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{selectedTracks.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="existing" className="flex items-center gap-2">
-                <ListMusic className="w-4 h-4" />
-                Existing Playlist
-              </TabsTrigger>
-              <TabsTrigger value="new" className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Create New
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="existing" className="space-y-4">
-              {/* Search Existing Playlists */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search playlists..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Playlist List */}
-              <ScrollArea className="h-[300px] border rounded-md">
-                {filteredPlaylists.length === 0 ? (
-                  <div className="text-center py-8">
-                    {playlists.length === 0 ? (
-                      <>
-                        <ListMusic className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-muted-foreground">No playlists found. Create your first playlist!</p>
-                      </>
-                    ) : (
-                      <>
-                        <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-muted-foreground">No playlists found matching "{searchQuery}"</p>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2 p-4">
-                    {filteredPlaylists.map((playlist) => (
-                      <Card 
-                        key={playlist.id}
-                        className={`cursor-pointer transition-colors ${
-                          selectedPlaylistId === playlist.id 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'hover:bg-muted/50'
-                        }`}
-                        onClick={() => setSelectedPlaylistId(playlist.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-medium text-primary">{playlist.name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                            {selectedPlaylistId === playlist.id && (
-                              <Badge className="bg-primary text-primary-foreground">
-                                Selected
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-            
-            <TabsContent value="new" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Create New Playlist</CardTitle>
-                  <CardDescription>
-                    Create a new playlist and add your selected tracks to it.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="playlist-name">Playlist Name</Label>
-                    <Input
-                      id="playlist-name"
-                      placeholder="Enter playlist name..."
-                      value={newPlaylistName}
-                      onChange={(e) => setNewPlaylistName(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+        {renderContent()}
         
         <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="text-primary"
-          >
-            Cancel
-          </Button>
-          {activeTab === "existing" ? (
-            <Button 
-              onClick={handleAddToExistingPlaylist} 
-              disabled={isLoading || !selectedPlaylistId || selectedTracks.length === 0}
-              className="min-w-[120px]"
-            >
-              {isLoading ? (
-                <>
-                  <Upload className="w-4 h-4 mr-2 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                `Add to Playlist`
-              )}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleCreatePlaylistAndAdd} 
-              disabled={isLoading || !newPlaylistName.trim() || selectedTracks.length === 0}
-              className="min-w-[120px]"
-            >
-              {isLoading ? (
-                <>
-                  <Upload className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                `Create & Add`
-              )}
-            </Button>
-          )}
+          {renderFooter()}
         </DialogFooter>
       </DialogContent>
     </Dialog>

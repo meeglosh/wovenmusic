@@ -9,11 +9,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAddTrackToPlaylist } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Track, getFileName } from "@/types/music";
 import { Search, Music, Plus } from "lucide-react";
 
@@ -39,6 +48,7 @@ const AddTracksModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const addTrackMutation = useAddTrackToPlaylist();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Filter tracks that aren't already in the playlist
   const availableTracks = allTracks.filter(track => !existingTrackIds.includes(track.id));
@@ -102,6 +112,147 @@ const AddTracksModal = ({
     onOpenChange(false);
   };
 
+  const renderContent = () => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Input
+          placeholder="Search tracks..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Select All */}
+      {filteredTracks.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSelectAll}
+            className="text-sm"
+          >
+            {selectedTracks.length === filteredTracks.length ? "Deselect All" : "Select All"}
+          </Button>
+          {selectedTracks.length > 0 && (
+            <Badge variant="secondary">
+              {selectedTracks.length} selected
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Track List */}
+      <ScrollArea className={`border rounded-md ${isMobile ? 'h-[250px]' : 'h-[400px]'}`}>
+        {filteredTracks.length === 0 ? (
+          <div className="text-center py-8">
+            {availableTracks.length === 0 ? (
+              <>
+                <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">All tracks are already in this playlist!</p>
+              </>
+            ) : (
+              <>
+                <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No tracks found matching "{searchQuery}"</p>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2 p-4">
+            {filteredTracks.map((track) => (
+              <div
+                key={track.id}
+                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  id={track.id}
+                  checked={selectedTracks.includes(track.id)}
+                  onCheckedChange={(checked) => 
+                    handleTrackSelect(track.id, checked as boolean)
+                  }
+                />
+                
+                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
+                  <div className="flex space-x-px">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 bg-primary/60 rounded-full"
+                        style={{ height: `${Math.random() * 16 + 4}px` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{getFileName(track)}</p>
+                  <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  {track.duration}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+
+  const renderFooter = () => (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={handleClose}
+        disabled={isLoading}
+        className="text-primary"
+      >
+        Cancel
+      </Button>
+      <Button 
+        onClick={handleAddTracks} 
+        disabled={isLoading || selectedTracks.length === 0}
+        className="min-w-[120px]"
+      >
+        {isLoading 
+          ? "Adding..." 
+          : `Add ${selectedTracks.length} Track${selectedTracks.length !== 1 ? 's' : ''}`
+        }
+      </Button>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              Add Tracks to "{playlistName}"
+            </DrawerTitle>
+            <DrawerDescription>
+              Select tracks from your library to add to this playlist.
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <div className="flex-1 overflow-y-auto px-4">
+            {renderContent()}
+          </div>
+          
+          <DrawerFooter className="border-t bg-background/95 backdrop-blur">
+            {renderFooter()}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh]">
@@ -115,115 +266,10 @@ const AddTracksModal = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search tracks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Select All */}
-          {filteredTracks.length > 0 && (
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSelectAll}
-                className="text-sm"
-              >
-                {selectedTracks.length === filteredTracks.length ? "Deselect All" : "Select All"}
-              </Button>
-              {selectedTracks.length > 0 && (
-                <Badge variant="secondary">
-                  {selectedTracks.length} selected
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Track List */}
-          <ScrollArea className="h-[400px] border rounded-md">
-            {filteredTracks.length === 0 ? (
-              <div className="text-center py-8">
-                {availableTracks.length === 0 ? (
-                  <>
-                    <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">All tracks are already in this playlist!</p>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">No tracks found matching "{searchQuery}"</p>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2 p-4">
-                {filteredTracks.map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <Checkbox
-                      id={track.id}
-                      checked={selectedTracks.includes(track.id)}
-                      onCheckedChange={(checked) => 
-                        handleTrackSelect(track.id, checked as boolean)
-                      }
-                    />
-                    
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20">
-                      <div className="flex space-x-px">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-0.5 bg-primary/60 rounded-full"
-                            style={{ height: `${Math.random() * 16 + 4}px` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{getFileName(track)}</p>
-                      <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      {track.duration}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
+        {renderContent()}
         
         <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="text-primary"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddTracks} 
-            disabled={isLoading || selectedTracks.length === 0}
-            className="min-w-[120px]"
-          >
-            {isLoading 
-              ? "Adding..." 
-              : `Add ${selectedTracks.length} Track${selectedTracks.length !== 1 ? 's' : ''}`
-            }
-          </Button>
+          {renderFooter()}
         </DialogFooter>
       </DialogContent>
     </Dialog>
