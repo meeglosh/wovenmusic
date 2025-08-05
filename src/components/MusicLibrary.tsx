@@ -777,9 +777,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination>
-            <PaginationContent>
+        <div className="flex justify-center px-4">
+          <Pagination className="w-full">
+            <PaginationContent className="flex flex-wrap justify-center gap-1 sm:gap-2">
               <PaginationItem>
                 <PaginationPrevious 
                   href="#"
@@ -790,7 +790,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       setSelectedTrackIds(new Set()); // Clear selection when changing pages
                     }
                   }}
-                  className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  className={`${currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} text-xs sm:text-sm`}
                 />
               </PaginationItem>
               
@@ -805,22 +805,22 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         setCurrentPage(1);
                         setSelectedTrackIds(new Set());
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer text-xs sm:text-sm"
                     >
                       1
                     </PaginationLink>
                   </PaginationItem>
                   {currentPage > 4 && (
-                    <PaginationItem>
+                    <PaginationItem className="hidden sm:block">
                       <PaginationEllipsis />
                     </PaginationItem>
                   )}
                 </>
               )}
               
-              {/* Pages around current page */}
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+              {/* Pages around current page - show fewer on mobile */}
+              {Array.from({ length: Math.min(isMobile ? 3 : 5, totalPages) }, (_, i) => {
+                const pageNumber = Math.max(1, Math.min(totalPages - (isMobile ? 2 : 4), currentPage - (isMobile ? 1 : 2))) + i;
                 if (pageNumber > totalPages) return null;
                 
                 return (
@@ -833,7 +833,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         setSelectedTrackIds(new Set());
                       }}
                       isActive={currentPage === pageNumber}
-                      className="cursor-pointer"
+                      className="cursor-pointer text-xs sm:text-sm min-w-[32px] h-8 sm:h-9"
                     >
                       {pageNumber}
                     </PaginationLink>
@@ -845,7 +845,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
               {currentPage < totalPages - 2 && (
                 <>
                   {currentPage < totalPages - 3 && (
-                    <PaginationItem>
+                    <PaginationItem className="hidden sm:block">
                       <PaginationEllipsis />
                     </PaginationItem>
                   )}
@@ -857,7 +857,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         setCurrentPage(totalPages);
                         setSelectedTrackIds(new Set());
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer text-xs sm:text-sm"
                     >
                       {totalPages}
                     </PaginationLink>
@@ -875,7 +875,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       setSelectedTrackIds(new Set()); // Clear selection when changing pages
                     }
                   }}
-                  className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  className={`${currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} text-xs sm:text-sm`}
                 />
               </PaginationItem>
             </PaginationContent>
