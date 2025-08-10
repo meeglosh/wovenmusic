@@ -228,3 +228,11 @@ export const formatFileSize = (bytes: number): string => {
 export const isOnline = (): boolean => {
   return navigator.onLine;
 };
+
+// New utility to check if running as PWA
+export const isPWAMode = (): boolean => {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.matchMedia('(display-mode: fullscreen)').matches ||
+         // @ts-ignore
+         window.navigator.standalone === true;
+};
