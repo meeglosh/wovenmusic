@@ -12,8 +12,8 @@ import ProfileProtectedRoute from "@/components/ProfileProtectedRoute";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import AuthVerify from "@/pages/AuthVerify";
-import PlaylistsPage from "@/pages/PlaylistsPage";
-import PlaylistViewPage from "@/pages/PlaylistViewPage";
+import { PlaylistsPage } from "@/pages/PlaylistsPage";
+import { PlaylistViewPage } from "@/pages/PlaylistViewPage";
 import PublicPlaylist from "@/pages/PublicPlaylist";
 import TestPublicPlaylist from "@/pages/TestPublicPlaylist";
 import Members from "@/pages/Members";
@@ -37,7 +37,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ThemeProvider>
         <TooltipProvider>
           <BrowserRouter>
             <AuthProvider>
