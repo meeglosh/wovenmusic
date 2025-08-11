@@ -1,6 +1,6 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import MusicLibrary from "@/components/MusicLibrary";
@@ -21,6 +21,7 @@ import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 const Index = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const hasRedirected = useRef(false);
 
   // Handle playlist share token in URL - MUST be before any early returns
@@ -38,7 +39,7 @@ const Index = () => {
   // State management
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
-  const [activeTab, setActiveTab] = useState<"library" | "playlists">("library");
+  const [activeTab, setActiveTab] = useState<"library" | "playlists">(() => (location.pathname.startsWith("/playlists") ? "playlists" : "library"));
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
@@ -89,6 +90,10 @@ const Index = () => {
     }
   }, [currentTrack]);
 
+  // Sync active tab with the current route
+  useEffect(() => {
+    setActiveTab(location.pathname.startsWith("/playlists") ? "playlists" : "library");
+  }, [location.pathname]);
   const handleMinimizePlayer = () => {
     setIsPlayerMinimized(true);
   };
@@ -287,9 +292,11 @@ const Index = () => {
               
               <Tabs value={activeTab} onValueChange={(value) => {
                 if (value === "playlists") {
-                  navigate("/playlists");
+                  setActiveTab("playlists");
+                  if (location.pathname !== "/playlists") navigate("/playlists");
                 } else {
                   setActiveTab("library");
+                  if (location.pathname !== "/") navigate("/");
                 }
               }}>
                 <TabsList className="bg-muted/50 p-1 mb-6 gap-3">

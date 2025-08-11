@@ -12,7 +12,7 @@ import ProfileProtectedRoute from "@/components/ProfileProtectedRoute";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import AuthVerify from "@/pages/AuthVerify";
-import { PlaylistsPage } from "@/pages/PlaylistsPage";
+
 import { PlaylistViewPage } from "@/pages/PlaylistViewPage";
 import PublicPlaylist from "@/pages/PublicPlaylist";
 import TestPublicPlaylist from "@/pages/TestPublicPlaylist";
@@ -64,7 +64,7 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ProfileProtectedRoute>
-                        <PlaylistsPage />
+                        <Index />
                       </ProfileProtectedRoute>
                     </ProtectedRoute>
                   }
