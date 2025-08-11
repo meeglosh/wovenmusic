@@ -285,7 +285,13 @@ const Index = () => {
                 </div>
               </div>
               
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "playlists")}>
+              <Tabs value={activeTab} onValueChange={(value) => {
+                if (value === "playlists") {
+                  navigate("/playlists");
+                } else {
+                  setActiveTab("library");
+                }
+              }}>
                 <TabsList className="bg-muted/50 p-1 mb-6 gap-3">
                   <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
                     Library
