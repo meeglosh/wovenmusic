@@ -157,10 +157,11 @@ const Auth = () => {
       <Card className="w-full max-w-sm sm:max-w-md">
         <CardHeader className="text-center">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">W</span>
+            {/*<span className="text-white font-bold text-lg">W</span>*/}
+            <img src="https://964c4d45-feaa-4b3e-9e2b-b8dbb89f0f2f.lovableproject.com/lovable-uploads/bce94625-29f4-468a-8445-869ab1fda164.png" />
           </div>
           <CardTitle className="text-xl sm:text-2xl font-rem font-thin bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-            Welcome to Wovenmusic
+            Wovenmusic Awaits
           </CardTitle>
           <CardDescription className="text-sm sm:text-base">
             Converge in resonance. Sculpt time from tone. Scatter rhythm into the communal void.
@@ -170,10 +171,20 @@ const Auth = () => {
         <CardContent>
           <Tabs defaultValue={inviteToken ? "invite" : "signin"} className="w-full">
             {!inviteToken && (
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
+              <TabsList className="grid w-full grid-cols-2 gap-1">
+  <TabsTrigger
+    value="signin"
+    className="data-[state=inactive]:border data-[state=inactive]:border-border"
+  >
+    Sign In
+  </TabsTrigger>
+  <TabsTrigger
+    value="signup"
+    className="data-[state=inactive]:border data-[state=inactive]:border-border"
+  >
+    Sign Up
+  </TabsTrigger>
+</TabsList>
             )}
             
             <TabsContent value="signin" className="space-y-4">
@@ -203,7 +214,7 @@ const Auth = () => {
                 </Button>
               </form>
               
-              <div className="relative">
+              {/*<div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
@@ -234,7 +245,7 @@ const Auth = () => {
                 >
                   <span className="w-4 h-4 flex items-center justify-center font-bold">𝕏</span>
                 </Button>
-              </div>
+              </div> */}
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
@@ -288,7 +299,7 @@ const Auth = () => {
                 </div>
               )}
               
-              <div className="relative">
+             {/* <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
@@ -319,7 +330,7 @@ const Auth = () => {
                 >
                   <span className="w-4 h-4 flex items-center justify-center font-bold">𝕏</span>
                 </Button>
-              </div>
+              </div> */}
             </TabsContent>
 
             {inviteToken && (
