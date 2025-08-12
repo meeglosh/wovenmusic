@@ -9,3 +9,9 @@ verify_jwt = false
 [functions.transcode-audio]
 runtime = "node"
 verify_jwt = false
+
+[functions.validate-invitation]
+verify_jwt = false
+
+[functions.use-invitation]
+verify_jwt = false

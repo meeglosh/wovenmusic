@@ -105,69 +105,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const acceptInvitation = async (token: string, password: string, fullName: string) => {
-    // Log the token for debugging
-    console.log('Accepting invitation with token:', token);
-    
-    // First, let's check if the record exists at all (without filters)
-    const { data: rawInvitation, error: rawError } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('token', token)
-      .maybeSingle();
+    // Validate invitation securely via Edge Function (no public table access)
+    const { data: validation, error: validationError } = await supabase.functions.invoke('validate-invitation', {
+      body: { token }
+    });
 
-    console.log('Raw invitation query result:', { rawInvitation, rawError });
-
-    if (rawInvitation) {
-      console.log('Raw invitation details:', {
-        token: rawInvitation.token,
-        used_at: rawInvitation.used_at,
-        expires_at: rawInvitation.expires_at,
-        currentTime: new Date().toISOString(),
-        isExpired: new Date(rawInvitation.expires_at) <= new Date(),
-        isUsed: rawInvitation.used_at !== null
-      });
+    if (validationError) {
+      return { error: { message: validationError.message || 'Error validating invitation' } };
     }
 
-    // Now get the invitation details with all filters
-    const { data: invitation, error: inviteError } = await supabase
-      .from('invitations')
-      .select('email, role, used_at, expires_at')
-      .eq('token', token)
-      .is('used_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    console.log('Filtered invitation query result:', { invitation, inviteError });
-
-    if (inviteError) {
-      console.error('Invitation query error:', inviteError);
-      return { error: { message: 'Error validating invitation' } };
-    }
-
-    if (!invitation) {
+    if (!validation?.email || !validation?.role) {
       return { error: { message: 'Invalid or expired invitation' } };
     }
 
-    // Sign up the user
+    // Sign up the user with validated email and attach invite metadata
     const { data: authData, error } = await supabase.auth.signUp({
-      email: invitation.email,
+      email: validation.email as string,
       password,
       options: {
         emailRedirectTo: `${CONFIG.BASE_URL}/auth`,
         data: {
           full_name: fullName,
-          invitation_role: invitation.role,
+          invitation_role: validation.role as string,
           invitation_token: token
         }
       }
     });
 
-    // If signup was successful, mark invitation as used
+    // Attempt to mark invitation as used (best-effort)
     if (!error && authData.user) {
-      await supabase
-        .from('invitations')
-        .update({ used_at: new Date().toISOString() })
-        .eq('token', token);
+      await supabase.functions.invoke('use-invitation', { body: { token } });
     }
 
     return { error };
