@@ -28,7 +28,7 @@ export interface Invitation {
   email: string;
   role: string;
   invited_by: string | null;
-  token: string;
+  token?: string;
   expires_at: string;
   used_at: string | null;
   created_at: string;
@@ -122,7 +122,7 @@ export const useInvitations = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invitations")
-        .select("*")
+        .select("id, email, role, invited_by, expires_at, used_at, created_at")
         .is("used_at", null)
         .order("created_at", { ascending: false });
       
