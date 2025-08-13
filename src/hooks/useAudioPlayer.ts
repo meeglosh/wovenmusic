@@ -331,59 +331,113 @@ export const useAudioPlayer = () => {
     };
   }, [currentTrack]);
 
-  // Time and duration updates
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+// Time, duration, and end-of-track behavior (repeat-all only when loop is ON)
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => {
-      const audioDuration = audio.duration || 0;
-      setDuration(audioDuration);
-      
-      // Update track duration in database if it's currently 0:00 and we have a valid duration
-      if (currentTrack && audioDuration > 0 && (currentTrack.duration === '0:00' || currentTrack.duration === '00:00')) {
-        const formattedDuration = formatTime(audioDuration);
-        console.log(`Updating track duration from ${currentTrack.duration} to ${formattedDuration}`);
-        updateTrackMutation.mutate({
-          id: currentTrack.id,
-          updates: { duration: formattedDuration }
-        });
-      }
-    };
-    const handleEnded = () => {
-      console.log('Track ended, playing next...');
-      // Keep isPlaying true for auto-advance to next track
-      setIsPlaying(true);
-      playNext();
-    };
+  // We control repeat ourselves (no native single-track loop)
+  audio.loop = false;
 
-    // Keep isPlaying state in sync with actual audio state
-    const handlePlay = () => {
-      console.log('Audio play event - syncing state');
-      setIsPlaying(true);
-    };
+  const updateTime = () => setCurrentTime(audio.currentTime);
 
-    const handlePause = () => {
-      console.log('Audio pause event - syncing state');
+  const updateDuration = () => {
+    const audioDuration = audio.duration || 0;
+    setDuration(audioDuration);
+
+    // Keep your DB duration update
+    if (
+      currentTrack &&
+      audioDuration > 0 &&
+      (currentTrack.duration === "0:00" || currentTrack.duration === "00:00")
+    ) {
+      const formattedDuration = formatTime(audioDuration);
+      console.log(
+        `Updating track duration from ${currentTrack.duration} to ${formattedDuration}`
+      );
+      updateTrackMutation.mutate({
+        id: currentTrack.id,
+        updates: { duration: formattedDuration },
+      });
+    }
+  };
+
+  const handleEnded = () => {
+    const total = playlist.length;
+    if (total === 0) {
       setIsPlaying(false);
+      return;
+    }
+
+    // Helper to advance to a specific index and keep playing
+    const goTo = (idx: number) => {
+      setCurrentTrackIndex(idx);
+      setCurrentTrack({ ...playlist[idx] });
+      setIsPlaying(true); // the load effect will auto-play
     };
 
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
+    // LOOP OFF → stop at the end (no wrap)
+    if (!isRepeatMode) {
+      if (isShuffleMode && shuffledOrder.length > 0) {
+        const pos = shuffledOrder.findIndex(i => i === currentTrackIndex);
+        const hasNext = pos >= 0 && pos < shuffledOrder.length - 1;
+        if (hasNext) {
+          goTo(shuffledOrder[pos + 1]);
+        } else {
+          setIsPlaying(false); // at end → stop
+        }
+      } else {
+        const hasNext = currentTrackIndex < total - 1;
+        if (hasNext) {
+          goTo(currentTrackIndex + 1);
+        } else {
+          setIsPlaying(false); // at end → stop
+        }
+      }
+      return;
+    }
 
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
-    };
-  }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode, currentTrack, updateTrackMutation]);
+    // LOOP ON (repeat-all) → advance and wrap
+    if (isShuffleMode && shuffledOrder.length > 0) {
+      const pos = shuffledOrder.findIndex(i => i === currentTrackIndex);
+      const nextPos = (pos + 1) % shuffledOrder.length;
+      goTo(shuffledOrder[nextPos]);
+    } else {
+      const next = (currentTrackIndex + 1) % total;
+      goTo(next);
+    }
+  };
 
+  const handlePlay = () => {
+    setIsPlaying(true);
+  };
+
+  const handlePause = () => {
+    setIsPlaying(false);
+  };
+
+  audio.addEventListener("timeupdate", updateTime);
+  audio.addEventListener("loadedmetadata", updateDuration);
+  audio.addEventListener("ended", handleEnded);
+  audio.addEventListener("play", handlePlay);
+  audio.addEventListener("pause", handlePause);
+
+  return () => {
+    audio.removeEventListener("timeupdate", updateTime);
+    audio.removeEventListener("loadedmetadata", updateDuration);
+    audio.removeEventListener("ended", handleEnded);
+    audio.removeEventListener("play", handlePlay);
+    audio.removeEventListener("pause", handlePause);
+  };
+}, [
+  playlist,
+  currentTrackIndex,
+  isShuffleMode,
+  shuffledOrder,
+  isRepeatMode,
+  currentTrack,
+  updateTrackMutation,
+]);
   // Volume control
   useEffect(() => {
     const audio = audioRef.current;
@@ -409,23 +463,27 @@ export const useAudioPlayer = () => {
   };
 
   const getNextTrackIndex = () => {
-    const currentIndex = getCurrentIndex();
-    const playlistLength = playlist.length;
-    
-    if (playlistLength === 0) return -1;
-    
-    if (isRepeatMode && playlistLength === 1) {
-      return currentTrackIndex; // Repeat single track
-    }
-    
-    if (isShuffleMode) {
-      const nextShuffleIndex = (currentIndex + 1) % shuffledOrder.length;
-      return shuffledOrder[nextShuffleIndex];
-    } else {
-      const nextIndex = (currentTrackIndex + 1) % playlistLength;
-      return nextIndex;
-    }
-  };
+  const total = playlist.length;
+  if (total === 0) return -1;
+
+  // If repeat mode means "repeat single track"
+  // set this flag accordingly; otherwise keep it false.
+  const repeatSingle = false;
+
+  if (repeatSingle) {
+    return currentTrackIndex; // repeat the same track
+  }
+
+  // If repeat-all is disabled (our default "loop" off):
+  if (!isRepeatMode) {
+    // stop at end instead of wrapping
+    if (currentTrackIndex >= total - 1) return -1;
+    return currentTrackIndex + 1;
+  }
+
+  // Repeat-all ON: advance and wrap
+  return (currentTrackIndex + 1) % total;
+};
 
   const getPreviousTrackIndex = () => {
     const currentIndex = getCurrentIndex();
