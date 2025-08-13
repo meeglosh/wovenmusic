@@ -39,7 +39,7 @@ const Index = () => {
   // State management
   const [currentView, setCurrentView] = useState<"library" | "playlist">("library");
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
-  const [activeTab, setActiveTab] = useState<"library" | "playlists">(() => (location.pathname.startsWith("/playlists") ? "playlists" : "library"));
+  const [activeTab, setActiveTab] = useState<"library" | "playlists">(() => (location.pathname.startsWith("/library") ? "library" : "playlists"));
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentLibraryTitle, setCurrentLibraryTitle] = useState("Driftspace");
@@ -92,7 +92,7 @@ const Index = () => {
 
   // Sync active tab with the current route
   useEffect(() => {
-    setActiveTab(location.pathname.startsWith("/playlists") ? "playlists" : "library");
+    setActiveTab(location.pathname.startsWith("/library") ? "library" : "playlists");
   }, [location.pathname]);
   const handleMinimizePlayer = () => {
     setIsPlayerMinimized(true);
@@ -234,7 +234,7 @@ const Index = () => {
         <EmptyLibraryState 
           onDropboxConnected={() => {
             setShowDropboxAccordion(true);
-            navigate('/'); // Navigate to main library
+            navigate('/library'); // Navigate to main library
           }}
         />
       </div>
@@ -296,15 +296,15 @@ const Index = () => {
                   if (location.pathname !== "/playlists") navigate("/playlists");
                 } else {
                   setActiveTab("library");
-                  if (location.pathname !== "/") navigate("/");
+                  if (location.pathname !== "/library") navigate("/library");
                 }
               }}>
-                <TabsList className="bg-muted/50 p-1 mb-6 gap-3">
-                  <TabsTrigger value="library" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
-                    Library
-                  </TabsTrigger>
-                  <TabsTrigger value="playlists" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6">
+                <TabsList className="bg-muted/50 p-1 mb-6 gap-3 rounded-full">
+                  <TabsTrigger value="playlists" className="rounded-full border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
                     Playlists
+                  </TabsTrigger>
+                  <TabsTrigger value="library" className="rounded-full border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
+                    Library
                   </TabsTrigger>
                 </TabsList>
                 
