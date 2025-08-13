@@ -299,11 +299,11 @@ const Index = () => {
                   if (location.pathname !== "/library") navigate("/library");
                 }
               }}>
-                <TabsList className="bg-muted/50 p-1 mb-6 gap-3 rounded-full">
-                  <TabsTrigger value="playlists" className="rounded-full border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
+                <TabsList className="bg-muted/50 p-1 mb-6 gap-3 rounded-md">
+                  <TabsTrigger value="playlists" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
                     Playlists
                   </TabsTrigger>
-                  <TabsTrigger value="library" className="rounded-full border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
+                  <TabsTrigger value="library" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
                     Library
                   </TabsTrigger>
                 </TabsList>
