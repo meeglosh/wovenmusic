@@ -48,6 +48,7 @@ function App() {
                 <Route path="/auth/verify" element={<AuthVerify />} />
                 <Route path="/playlist/:shareToken" element={<PublicPlaylist />} />
                 <Route path="/test-public-playlist" element={<TestPublicPlaylist />} />
+                <Route path="/dropbox-callback" element={<DropboxCallback />} />
                 <Route path="/dropbox/callback" element={<DropboxCallback />} />
                 <Route
                   path="/"
