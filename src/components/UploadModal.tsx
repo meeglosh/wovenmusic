@@ -377,8 +377,10 @@ const startUpload = async () => {
       case 'pending':
         return <Music className="h-4 w-4 text-muted-foreground" />;
       case 'uploading':
-      case 'transcoding':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
+      case 'transcoding':
+        // Remove the left spinner during transcoding to avoid duplicate spinners
+        return null;
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'error':
