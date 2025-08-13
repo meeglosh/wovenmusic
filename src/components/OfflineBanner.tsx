@@ -62,7 +62,7 @@ export const OfflineBanner: React.FC = () => {
 
         {/* Update Available Banner */}
         {showUpdatePrompt && (
-          <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2 [&>svg]:transform">
             <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertDescription className="text-blue-800 dark:text-blue-200 flex items-center justify-between">
               <span>A new version is available!</span>
@@ -71,7 +71,7 @@ export const OfflineBanner: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={dismissUpdate}
-                  className="text-xs"
+                  className="text-xs text-foreground"
                 >
                   Later
                 </Button>
