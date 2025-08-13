@@ -122,13 +122,13 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
           </DropdownMenu>
           <Button variant="outline" size="sm" onClick={() => setShowUploadModal(true)} className="text-primary">
             <Upload className="w-4 h-4 mr-2" />
-            Ascendra
+            Upload
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="text-primary">
                 <Settings className="w-4 h-4 mr-2" />
-                Ajustra
+                Settings
                 <ChevronDown className="w-3 h-3 ml-2" />
               </Button>
             </DropdownMenuTrigger>
