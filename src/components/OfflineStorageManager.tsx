@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Trash2, Download, Wifi, WifiOff, HardDrive } from "lucide-react";
 import { useOfflineStorage } from "@/hooks/useOfflineStorage";
+import { useTracks } from "@/hooks/useTracks";
+import { usePlaylists } from "@/hooks/usePlaylists";
 import { formatFileSize, isOnline } from "@/services/offlineStorageService";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,8 +31,22 @@ export const OfflineStorageManager: React.FC<OfflineStorageManagerProps> = ({
     isRemoving
   } = useOfflineStorage();
 
+  const { data: tracks = [] } = useTracks();
+  const { data: playlists = [] } = usePlaylists();
+
   const [showClearDialog, setShowClearDialog] = useState(false);
   const online = isOnline();
+
+  // Helper functions to get actual names
+  const getTrackName = (trackId: string) => {
+    const track = tracks.find(t => t.id === trackId);
+    return track ? `${track.artist} - ${track.title}` : `Track ${trackId}`;
+  };
+
+  const getPlaylistName = (playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    return playlist ? playlist.name : `Playlist ${playlistId}`;
+  };
 
   const handleClearAll = () => {
     clearAllOfflineData();
@@ -127,7 +143,7 @@ export const OfflineStorageManager: React.FC<OfflineStorageManagerProps> = ({
                     {downloadedPlaylists.map((playlist) => (
                       <div key={playlist.playlistId} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
-                          <div className="font-medium">Playlist {playlist.playlistId}</div>
+                          <div className="font-medium">{getPlaylistName(playlist.playlistId)}</div>
                           <div className="text-sm text-muted-foreground">
                             {playlist.trackIds.length} tracks • Downloaded {playlist.downloadedAt.toLocaleDateString()}
                           </div>
@@ -161,7 +177,7 @@ export const OfflineStorageManager: React.FC<OfflineStorageManagerProps> = ({
                     {downloadedTracks.map((track) => (
                       <div key={track.trackId} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex-1">
-                          <div className="font-medium">Track {track.trackId}</div>
+                          <div className="font-medium">{getTrackName(track.trackId)}</div>
                           <div className="text-sm text-muted-foreground">
                             {formatFileSize(track.fileSize)} • Downloaded {track.downloadedAt.toLocaleDateString()}
                           </div>
