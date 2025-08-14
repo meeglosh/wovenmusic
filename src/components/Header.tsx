@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2, HardDrive } from "lucide-react";
+import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, Volume2, HardDrive, X } from "lucide-react";
 import { OfflineStorageManager } from "@/components/OfflineStorageManager";
 import { OfflineStatusIndicator } from "@/components/OfflineStatusIndicator";
 import { useNavigate } from "react-router-dom";
@@ -88,10 +88,18 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input 
               placeholder="Scour the drift..." 
-              className="pl-10 bg-muted/30 border border-border text-primary"
+              className="pl-10 pr-10 bg-muted/30 border border-border text-primary"
               value={searchTerm}
               onChange={(e) => onSearchChange?.(e.target.value)}
             />
+            {searchTerm && (
+              <button
+                onClick={() => onSearchChange?.('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
