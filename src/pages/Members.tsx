@@ -239,7 +239,7 @@ const Members = () => {
                   
                   {/* Action buttons in bottom right */}
                   <div className="absolute bottom-3 right-3 flex space-x-1">
-                    {isAdmin && (
+                    {(isAdmin || member.id === user?.id) && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -249,7 +249,7 @@ const Members = () => {
                         <Settings className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     )}
-                    {isAdmin && (
+                    {(isAdmin || member.id === user?.id) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
