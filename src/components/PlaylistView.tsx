@@ -1029,7 +1029,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                          }}
                          disabled={assignCategoryMutation.isPending || removeCategoryMutation.isPending}
                        >
-                         <SelectTrigger>
+                         <SelectTrigger className="border-border">
                            <SelectValue placeholder="Select a category" />
                          </SelectTrigger>
                          <SelectContent>
@@ -1053,17 +1053,17 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                       {categories.length === 0 && (
                         <p className="text-sm text-muted-foreground mb-2">No categories available.</p>
                       )}
-                      {!showNewCategoryInput ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowNewCategoryInput(true)}
-                          className="w-full justify-start"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create new category
-                        </Button>
+                       {!showNewCategoryInput ? (
+                         <Button
+                           type="button"
+                           variant="default"
+                           size="sm"
+                           onClick={() => setShowNewCategoryInput(true)}
+                           className="w-full justify-start"
+                         >
+                           <Plus className="w-4 h-4 mr-2" />
+                           Create new category
+                         </Button>
                       ) : (
                         <div className="space-y-2">
                           <Input
