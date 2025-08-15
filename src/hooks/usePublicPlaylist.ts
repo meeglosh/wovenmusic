@@ -20,9 +20,10 @@ export const usePublicPlaylist = (playlistId: string) => {
 
       try {
         // First check if playlist is public
+        // Note: share_token is intentionally excluded for security
         const { data: playlist, error: playlistError } = await publicSupabase
           .from("playlists")
-          .select("*")
+          .select("id, name, image_url, created_at, updated_at, is_public")
           .eq("id", playlistId)
           .eq("is_public", true)
           .single();
@@ -85,7 +86,7 @@ export const usePublicPlaylist = (playlistId: string) => {
           imageUrl: playlist.image_url,
           tracks: publicTracks,
           isPublic: playlist.is_public,
-          shareToken: playlist.share_token,
+          // Note: share_token intentionally omitted for security
           createdAt: new Date(playlist.created_at)
         };
       } catch (error) {
@@ -107,10 +108,10 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
       console.log("Fetching public playlist by token:", shareToken);
 
       try {
-        // First check if playlist exists with token and is public
+        // Access playlist via share token (this is allowed by the new RLS policy)
         const { data: playlist, error: playlistError } = await publicSupabase
           .from("playlists")
-          .select("*")
+          .select("id, name, image_url, created_at, updated_at, is_public")
           .eq("share_token", shareToken)
           .eq("is_public", true)
           .single();
@@ -173,7 +174,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
           imageUrl: playlist.image_url,
           tracks: publicTracks,
           isPublic: playlist.is_public,
-          shareToken: playlist.share_token,
+          // Note: share_token intentionally omitted for security
           createdAt: new Date(playlist.created_at)
         };
       } catch (error) {

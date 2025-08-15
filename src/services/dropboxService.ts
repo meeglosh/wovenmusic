@@ -223,7 +223,7 @@ export class DropboxService {
       if (data?.access_token) {
         crossLog('=== ACCESS TOKEN RECEIVED ===');
         crossLog('Token length:', data.access_token.length);
-        crossLog('Token preview:', `${data.access_token.substring(0, 6)}...`);
+        // Note: Token previews removed for security
         
         this.accessToken = data.access_token;
         this.refreshToken = data.refresh_token;
@@ -277,7 +277,7 @@ export class DropboxService {
     console.log('Getting stored token from localStorage:', stored ? 'FOUND' : 'NOT FOUND');
     
     if (stored) {
-      console.log('Token preview:', `${stored.substring(0, 6)}...`);
+      // Note: Token previews removed for security
       
       // Check if token is expired
       if (expiresAt && Date.now() > parseInt(expiresAt)) {
@@ -370,9 +370,9 @@ export class DropboxService {
     let token = this.getStoredToken();
     console.log('=== LISTFILES TOKEN CHECK ===', {
       hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'NONE',
+      // Note: Token previews removed for security
       isAuthenticating: this.isAuthenticating,
-      instanceToken: this.accessToken ? `${this.accessToken.substring(0, 10)}...` : 'NONE'
+      instanceToken: !!this.accessToken
     });
 
     if (!token) {
@@ -394,7 +394,7 @@ export class DropboxService {
     console.log('=== ENHANCED DROPBOX API DEBUGGING WITH PAGINATION ===');
     console.log('Listing files in folder:', folder);
     console.log('Token exists:', !!token);
-    console.log('Token preview:', token ? `${token.substring(0, 6)}...` : 'NONE');
+    // Note: Token previews removed for security
 
     let allEntries: DropboxFile[] = [];
     let hasMore = true;
