@@ -3,6 +3,9 @@ project_id = "woakvdhlpludrttjixxq"
 [functions.send-invitation]
 verify_jwt = false
 
+[functions.send-mention-notification]
+verify_jwt = true
+
 [functions.refresh-dropbox-token]
 verify_jwt = false
 

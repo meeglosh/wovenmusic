@@ -110,9 +110,11 @@ export const useAddPlaylistComment = () => {
 
       // Check for @mentions and send notifications - updated regex to handle names with spaces
       const mentions = comment.content.match(/@([^@\s]+(?:\s+[^@\s]+)*)/g);
+      console.log("Debug: Found mentions:", mentions);
       if (mentions && mentions.length > 0) {
+        console.log("Debug: Sending mention notifications for:", mentions.map(m => m.substring(1)));
         try {
-          await supabase.functions.invoke('send-mention-notification', {
+          const result = await supabase.functions.invoke('send-mention-notification', {
             body: {
               playlistId: comment.playlistId,
               commentId: data.id,
@@ -120,8 +122,9 @@ export const useAddPlaylistComment = () => {
               mentions: mentions.map(m => m.substring(1)), // Remove @ symbol
             }
           });
+          console.log("Debug: Mention notification result:", result);
         } catch (error) {
-          console.warn("Failed to send mention notifications:", error);
+          console.error("Failed to send mention notifications:", error);
         }
       }
 
