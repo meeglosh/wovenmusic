@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
         .from("profiles")
         .select("id, email, full_name, is_band_member")
         .eq("is_band_member", true)
-        .or(`full_name.ilike.${mention},email.ilike.${mention}`)
+        .or(`full_name.ilike.%${mention}%,email.ilike.%${mention}%`)
     );
 
     const mentionResults = await Promise.all(mentionQueries);
