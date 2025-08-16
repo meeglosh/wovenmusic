@@ -61,6 +61,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Find mentioned users by their exact display names or emails (case insensitive)
+    console.log("Searching for mentions:", mentions);
+    
     const mentionQueries = mentions.map(mention => 
       supabase
         .from("profiles")
@@ -70,6 +72,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const mentionResults = await Promise.all(mentionQueries);
+    console.log("Mention query results:", mentionResults.map(r => ({ data: r.data, error: r.error })));
+    
     const mentionedUsers = mentionResults
       .filter(result => !result.error && result.data)
       .flatMap(result => result.data)
@@ -77,6 +81,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Remove duplicates based on user ID
         index === self.findIndex(u => u.id === user.id)
       );
+
+    console.log("Found mentioned users:", mentionedUsers);
 
     if (!mentionedUsers || mentionedUsers.length === 0) {
       console.log("No valid mentioned users found");
