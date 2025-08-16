@@ -2,7 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.2";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resendApiKey = Deno.env.get("RESEND_API_KEY");
+if (!resendApiKey) {
+  console.error("RESEND_API_KEY environment variable is not set");
+}
+const resend = new Resend(resendApiKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,6 +133,9 @@ const handler = async (req: Request): Promise<Response> => {
             If you didn't expect this notification, you can safely ignore this email.
           </p>
         `,
+      }).catch(error => {
+        console.error(`Failed to send email to ${mentionedUser.email}:`, error);
+        throw error;
       });
     });
 
