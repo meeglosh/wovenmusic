@@ -4,13 +4,13 @@ project_id = "woakvdhlpludrttjixxq"
 verify_jwt = false
 
 [functions.send-mention-notification]
-verify_jwt = true
+verify_jwt = false  
 
 [functions.refresh-dropbox-token]
 verify_jwt = false
 
 [functions.transcode-audio]
-runtime = "node"
+# runtime = "node" 
 verify_jwt = false
 
 [functions.validate-invitation]
