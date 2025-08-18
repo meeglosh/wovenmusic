@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 import { Comment } from "@/types/music";
 
 const TrackView = () => {
-  const { trackId } = useParams<{ trackId: string }>();
+  const { id: trackId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: tracks, isLoading } = useTracks();
   const audioPlayer = useAudioPlayer();
