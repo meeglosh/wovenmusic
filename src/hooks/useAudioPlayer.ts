@@ -644,6 +644,103 @@ export const useAudioPlayer = () => {
     setVolume(Math.max(0, Math.min(1, newVolume)));
   };
 
+  // Media Session API integration
+  useEffect(() => {
+    // Check if Media Session API is supported
+    if (!('mediaSession' in navigator)) {
+      return;
+    }
+
+    // Update metadata when track changes
+    if (currentTrack) {
+      const { title, artist } = currentTrack;
+      
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title || 'Unknown Title',
+        artist: artist || 'Unknown Artist',
+        album: 'Woven Music',
+        artwork: [
+          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    } else {
+      navigator.mediaSession.metadata = null;
+    }
+  }, [currentTrack]);
+
+  // Update playback state for Media Session
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
+  // Update position state for Media Session
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrack && duration > 0) {
+      navigator.mediaSession.setPositionState({
+        duration: duration,
+        position: currentTime,
+        playbackRate: 1.0
+      });
+    }
+  }, [currentTime, duration, currentTrack]);
+
+  // Register Media Session action handlers
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) {
+      return;
+    }
+
+    const actionHandlers = {
+      play: () => {
+        if (!isPlaying) {
+          togglePlayPause();
+        }
+      },
+      pause: () => {
+        if (isPlaying) {
+          togglePlayPause();
+        }
+      },
+      previoustrack: () => {
+        if (playlist.length > 1) {
+          playPrevious();
+        }
+      },
+      nexttrack: () => {
+        if (playlist.length > 1) {
+          playNext();
+        }
+      },
+      seekto: (details) => {
+        if (details.seekTime != null) {
+          seekTo(details.seekTime);
+        }
+      }
+    };
+
+    // Set action handlers
+    Object.entries(actionHandlers).forEach(([action, handler]) => {
+      try {
+        navigator.mediaSession.setActionHandler(action as MediaSessionAction, handler);
+      } catch (error) {
+        console.warn(`The media session action "${action}" is not supported.`);
+      }
+    });
+
+    // Cleanup function to remove handlers
+    return () => {
+      Object.keys(actionHandlers).forEach((action) => {
+        try {
+          navigator.mediaSession.setActionHandler(action as MediaSessionAction, null);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      });
+    };
+  }, [isPlaying, playlist.length, togglePlayPause, playNext, playPrevious, seekTo]);
 
   return {
     currentTrack,
