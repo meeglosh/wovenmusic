@@ -122,9 +122,47 @@ export const useAddPlaylistComment = () => {
               mentions: mentions.map(m => m.substring(1)), // Remove @ symbol
             }
           });
-          console.log("Debug: Mention notification result:", result);
+          
+          // Enhanced logging for debugging
+          console.log("Debug: Complete mention notification response:", {
+            success: !result.error,
+            data: result.data,
+            error: result.error,
+            timestamp: new Date().toISOString()
+          });
+          
+          if (result.error) {
+            console.error("Mention notification failed:", result.error);
+            toast({
+              title: "Mention notification failed",
+              description: `Error: ${result.error.message || 'Unknown error'}`,
+              variant: "destructive",
+            });
+          } else if (result.data) {
+            console.log("Mention notification details:", {
+              totalMentioned: result.data.totalMentioned || 0,
+              sent: result.data.sent || 0,
+              failed: result.data.failed || 0,
+              recipients: result.data.recipients || [],
+              delivery: result.data.delivery || []
+            });
+            
+            if (result.data.sent > 0) {
+              toast({
+                title: "Mentions sent",
+                description: `Notified ${result.data.sent} user(s)`,
+              });
+            } else if (result.data.totalMentioned === 0) {
+              console.warn("No matching users found for mentions:", mentions);
+            }
+          }
         } catch (error) {
           console.error("Failed to send mention notifications:", error);
+          toast({
+            title: "Mention notification error",
+            description: "Network error sending notifications",
+            variant: "destructive",
+          });
         }
       }
 
