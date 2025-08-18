@@ -2,9 +2,6 @@
 import { serve } from "https://deno.land/std@0.220.1/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.2";
 
-// IMPORTANT: do NOT instantiate Resend at top-level.
-// Some npm modules can throw during module init under the edge runtime.
-// We'll import & init it lazily inside the POST branch.
 type ResendType = typeof import("npm:resend@2.0.0").Resend;
 
 const ALLOWED_ORIGINS = new Set<string>([
@@ -37,62 +34,71 @@ interface MentionNotificationRequest {
 serve(async (req: Request): Promise<Response> => {
   const cors = buildCors(req);
 
-  // 1) CORS preflight: return immediately, no body parsing, no imports
+  // Preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
   }
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405, headers: cors });
+  }
 
   try {
-    if (req.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405, headers: cors });
-    }
-
-    // 2) Parse request body (POST only)
+    // Body
     const { playlistId, commentId, content, mentions }: MentionNotificationRequest = await req.json();
 
-    // 3) Create Supabase client. Authorization is ONLY required on POST; preflight doesn't send it.
+    // Clients: user-scoped (for identity) + service-role (for cross-user reads)
     const authHeader = req.headers.get("Authorization") ?? "";
-    const supabase = createClient(
+    const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: authHeader ? { Authorization: authHeader } : {} } }
     );
 
-    // 4) Get commenter
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = serviceRoleKey
+      ? createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey)
+      : supabaseUser; // fallback if not set (RLS may block lookups)
+
+    // Who is commenting?
+    const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "User not authenticated" }), {
+      return new Response(JSON.stringify({ ok: false, code: "unauthorized", message: "User not authenticated" }), {
         status: 401,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
+    // Commenter profile (optional)
     const { data: commenterProfile } = await supabase
       .from("profiles")
       .select("full_name, email")
       .eq("id", user.id)
       .maybeSingle();
 
-    // 5) Get playlist
+    // Playlist (use service client to avoid RLS surprises)
     const { data: playlist, error: playlistError } = await supabase
       .from("playlists")
       .select("name, share_token, id")
       .eq("id", playlistId)
       .single();
     if (playlistError || !playlist) {
-      return new Response(JSON.stringify({ error: "Playlist not found" }), {
+      return new Response(JSON.stringify({ ok: false, code: "playlist_not_found", playlistId }), {
         status: 404,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
-    // 6) Lookup mentioned users (band members only) by name/email (ilike)
+    // Mentions lookup:
+    //   allow band members OR admins,
+    //   match full_name/email (ilike),
+    //   dedupe,
+    //   exclude commenter
     const mentionResults = await Promise.all(
       (mentions ?? []).map((m) =>
         supabase
           .from("profiles")
-          .select("id, email, full_name, is_band_member")
-          .eq("is_band_member", true)
+          .select("id, email, full_name, is_band_member, role")
+          .or("is_band_member.eq.true,role.eq.admin") // broadened
           .or(`full_name.ilike.%${m}%,email.ilike.%${m}%`)
       )
     );
@@ -101,26 +107,25 @@ serve(async (req: Request): Promise<Response> => {
       .filter((r) => !r.error && r.data)
       .flatMap((r) => r.data!)
       .filter((u, i, arr) => i === arr.findIndex((x) => x.id === u.id))
-      .filter((u) => u.id !== user.id); // don’t email the commenter
+      .filter((u) => u.id !== user.id);
 
-    // If nobody to notify, return success
     if (!mentionedUsers.length) {
-      return new Response(JSON.stringify({ success: true, sent: 0, totalMentioned: 0 }), {
-        status: 200,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        ok: true, sent: 0, failed: 0, totalMentioned: 0, recipients: [],
+        info: "no_matching_profiles",
+      }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // 7) Build deep link
+    // Deep link
     const baseUrl = Deno.env.get("BASE_URL") || "https://wovenmusic.app";
     const playlistUrl = playlist.share_token
       ? `${baseUrl}/?playlist=${playlist.share_token}#comments`
       : `${baseUrl}/?playlist=${playlist.id}&comment=${commentId}#comments`;
 
-    // 8) Lazy import & init Resend (POST only; won’t affect OPTIONS)
+    // Resend
     const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
     if (!resendKey) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY not set" }), {
+      return new Response(JSON.stringify({ ok: false, code: "resend_key_missing", message: "RESEND_API_KEY not set" }), {
         status: 500,
         headers: { ...cors, "Content-Type": "application/json" },
       });
@@ -128,8 +133,7 @@ serve(async (req: Request): Promise<Response> => {
     const { Resend } = await import("npm:resend@2.0.0") as unknown as { Resend: ResendType };
     const resend = new Resend(resendKey);
 
-    // 9) Send emails
-    const sender = "Wovenmusic <noreply@wovenmusic.app>";
+    const sender = "Wovenmusic <noreply@wovenmusic.app>"; // use a verified sender domain in Resend
     const commentAuthor = commenterProfile?.full_name || commenterProfile?.email || "Someone";
 
     const emailJobs = mentionedUsers.map((u) =>
@@ -153,18 +157,28 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     const results = await Promise.allSettled(emailJobs);
-    const sent = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.length - sent;
+    const delivery = results.map((r, i) => ({
+      recipient: mentionedUsers[i]?.email,
+      status: r.status,
+      reason: r.status === "rejected" ? String((r as PromiseRejectedResult).reason) : undefined,
+    }));
+    const sent = delivery.filter((d) => d.status === "fulfilled").length;
 
-    return new Response(JSON.stringify({ success: true, sent, failed, totalMentioned: mentionedUsers.length }), {
+    return new Response(JSON.stringify({
+      ok: true,
+      sent,
+      failed: delivery.length - sent,
+      totalMentioned: mentionedUsers.length,
+      recipients: mentionedUsers.map(u => ({ id: u.id, email: u.email, name: u.full_name })),
+      delivery
+    }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
-    // Always respond with CORS headers, even on errors
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ ok: false, code: "exception", message: String(e) }), {
       status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...buildCors(req), "Content-Type": "application/json" },
     });
   }
 });
