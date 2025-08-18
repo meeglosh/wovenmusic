@@ -154,7 +154,7 @@ const Waveform = ({ audioRef, currentTime, duration, onSeek, comments, onAddComm
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const clickTime = (x / canvas.width) * duration;
+    const clickTime = (x / rect.width) * duration;
     
     if (e.shiftKey) {
       // Shift+click to add comment
