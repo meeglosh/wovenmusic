@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
     const shareUrl = `${baseUrl}/?playlist=${playlist.share_token}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Wovenmusic <onboarding@resend.dev>",
+      from: "Wovenmusic <noreply@wovenmusic.app>",
       to: [email],
       subject: `${inviterName || "Someone"} shared a playlist with you: ${playlistName}`,
       html: `

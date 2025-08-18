@@ -129,7 +129,7 @@ serve(async (req: Request): Promise<Response> => {
     const resend = new Resend(resendKey);
 
     // 9) Send emails
-    const sender = "Wovenmusic <onboarding@resend.dev>"; // consider verified domain
+    const sender = "Wovenmusic <noreply@wovenmusic.app>";
     const commentAuthor = commenterProfile?.full_name || commenterProfile?.email || "Someone";
 
     const emailJobs = mentionedUsers.map((u) =>
