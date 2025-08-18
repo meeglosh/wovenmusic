@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export interface PlaylistComment {
   id: string;
@@ -225,17 +226,25 @@ export const useUpdatePlaylistComment = () => {
 export const useDeletePlaylistComment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isAdmin } = usePermissions();
 
   return useMutation({
     mutationFn: async ({ commentId, playlistId }: { commentId: string; playlistId: string }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("User not authenticated");
 
-      const { error } = await supabase
+      // Build the delete query
+      let deleteQuery = supabase
         .from("playlist_comments")
         .delete()
-        .eq("id", commentId)
-        .eq("user_id", user.user.id);
+        .eq("id", commentId);
+
+      // Only add user_id filter if user is not an admin
+      if (!isAdmin) {
+        deleteQuery = deleteQuery.eq("user_id", user.user.id);
+      }
+
+      const { error } = await deleteQuery;
 
       if (error) throw error;
     },
