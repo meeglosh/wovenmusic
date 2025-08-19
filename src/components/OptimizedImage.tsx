@@ -105,7 +105,7 @@ export const OptimizedImage = ({
 
   return (
     <div
-      className={cn('relative overflow-hidden', className)}
+      className={cn('relative overflow-hidden bg-neutral-900', className)}
       style={{ aspectRatio, width, height }}
     >
       {/* Placeholder */}
@@ -124,7 +124,7 @@ export const OptimizedImage = ({
         sizes={sizes}
         alt={alt}
         className={cn(
-          'w-full h-full object-cover transition-opacity duration-300',
+          'w-full h-full object-contain transition-opacity duration-300',
           isLoaded ? 'opacity-100' : 'opacity-0'
         )}
         loading={priority ? 'eager' : 'lazy'}
