@@ -10,6 +10,7 @@ import { Track, Playlist, getCleanTitle, calculatePlaylistDuration } from "@/typ
 import AddTracksModal from "./AddTracksModal";
 import SharePlaylistModal from "./SharePlaylistModal";
 import { useReorderPlaylistTracks, useRemoveTrackFromPlaylist, useUpdatePlaylist, useDeletePlaylist, useUploadPlaylistImage, useDeletePlaylistImage, usePlaylists } from "@/hooks/usePlaylists";
+import { PlaylistThumbnail } from "@/components/PlaylistThumbnail";
 import { useUpdatePlaylistVisibility } from "@/hooks/usePlaylistSharing";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,12 +73,13 @@ interface SortableTrackItemProps {
   index: number;
   onPlay: (track: Track, playlist?: Track[]) => void;
   onRemove: (trackId: string) => void;
-  playlist: Track[];
+  playlistTracks: Track[];
+  playlistName: string;
   playlistImageUrl?: string;
   canManagePlaylistTracks: boolean;
 }
 
-const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistImageUrl, canManagePlaylistTracks }: SortableTrackItemProps) => {
+const SortableTrackItem = ({ track, index, onPlay, onRemove, playlistTracks, playlistName, playlistImageUrl, canManagePlaylistTracks }: SortableTrackItemProps) => {
   const {
     attributes,
     listeners,
@@ -115,7 +117,7 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
           variant="ghost"
           size="sm"
           className="w-6 h-6 sm:w-8 sm:h-8 p-0 opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity"
-          onClick={() => onPlay(track, playlist)}
+          onClick={() => onPlay(track, playlistTracks)}
         >
           <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
         </Button>
@@ -128,10 +130,11 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
       <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden hidden sm:block">
           {playlistImageUrl ? (
-            <img 
-              src={playlistImageUrl} 
-              alt="Track thumbnail" 
-              className="w-full h-full object-cover"
+            <PlaylistThumbnail
+              imageUrl={playlistImageUrl}
+              name={playlistName}
+              size="sm"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center border border-primary/20">
@@ -570,10 +573,12 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
           {playlist.imageUrl ? (
-            <img 
-              src={playlist.imageUrl} 
-              alt={playlist.name} 
-              className="w-full h-full object-cover"
+            <PlaylistThumbnail
+              imageUrl={playlist.imageUrl}
+              name={playlist.name}
+              className="w-full h-full"
+              priority={true}
+              size="lg"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
@@ -819,7 +824,8 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   index={index}
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
-                  playlist={playlistTracks}
+                  playlistTracks={playlistTracks}
+                  playlistName={playlist.name}
                   playlistImageUrl={playlist.imageUrl}
                   canManagePlaylistTracks={canManagePlaylistTracks(playlist)}
                 />
@@ -964,10 +970,11 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
                   {playlist.imageUrl ? (
-                    <img 
-                      src={playlist.imageUrl} 
-                      alt={playlist.name} 
-                      className="w-full h-full object-cover"
+                    <PlaylistThumbnail
+                      imageUrl={playlist.imageUrl}
+                      name={playlist.name}
+                      className="w-20 h-20"
+                      size="sm"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
