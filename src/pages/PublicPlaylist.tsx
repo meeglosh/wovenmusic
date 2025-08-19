@@ -121,7 +121,11 @@ const PublicPlaylist = () => {
 
   const handlePlayPlaylist = () => {
     if (playlist?.tracks && playlist.tracks.length > 0) {
-      playPlaylist(playlist.tracks, 0);
+      playPlaylist(playlist.tracks, 0, {
+        id: playlist.id,
+        name: playlist.name,
+        imageUrl: playlist.imageUrl
+      });
     }
   };
 

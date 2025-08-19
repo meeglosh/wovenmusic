@@ -18,7 +18,11 @@ export const PlaylistsPage: React.FC = () => {
     const ordered = playlist.trackIds
       .map((id) => tracks.find((t) => t.id === id))
       .filter((t): t is Track => !!t);
-    playPlaylist(ordered, 0);
+    playPlaylist(ordered, 0, {
+      id: playlist.id,
+      name: playlist.name,
+      imageUrl: playlist.imageUrl
+    });
   };
 
   return (

@@ -15,6 +15,8 @@ export const PlaylistViewPage: React.FC = () => {
       playlistId={id!}
       onPlayTrack={(_track: Track, playlistTracks?: Track[]) => {
         if (!playlistTracks) return;
+        // Note: This might not have playlist context since it's called from track selection
+        // The calling component would need to be updated to pass playlist info
         playPlaylist(playlistTracks, 0);
       }}
       onBack={() => navigate(-1)}

@@ -47,6 +47,13 @@ export const useAudioPlayer = () => {
   const [isShuffleMode, setIsShuffleMode] = useState(false);
   const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
   const [isRepeatMode, setIsRepeatMode] = useState(false);
+  
+  // Current playlist context for Media Session
+  const [currentPlaylistContext, setCurrentPlaylistContext] = useState<{
+    id?: string;
+    name?: string;
+    imageUrl?: string;
+  } | null>(null);
 
   // Create or get the audio element with mobile optimizations
   useEffect(() => {
@@ -480,17 +487,19 @@ export const useAudioPlayer = () => {
     }
   };
 
-  const playPlaylist = (tracks: Track[], startIndex: number = 0) => {
+  const playPlaylist = (tracks: Track[], startIndex: number = 0, playlistContext?: { id?: string; name?: string; imageUrl?: string }) => {
     console.log('=== PLAY PLAYLIST ===');
     console.log('Tracks count:', tracks.length);
     console.log('Start index:', startIndex);
     console.log('First track details:', tracks[0]);
+    console.log('Playlist context:', playlistContext);
     console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
     
     if (tracks.length === 0) return;
     
     setPlaylist(tracks);
     setCurrentTrackIndex(startIndex);
+    setCurrentPlaylistContext(playlistContext || null);
     const trackToPlay = tracks[startIndex];
     console.log('Setting current track:', trackToPlay);
     
@@ -655,19 +664,34 @@ export const useAudioPlayer = () => {
     if (currentTrack) {
       const { title, artist } = currentTrack;
       
+      // Determine artwork - prefer playlist image, then fallback to app icons
+      let artwork = [
+        { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
+      ];
+      
+      // If playing from a playlist with an image, use the playlist artwork
+      if (currentPlaylistContext?.imageUrl) {
+        artwork = [
+          { src: currentPlaylistContext.imageUrl, sizes: '512x512', type: 'image/jpeg' },
+          { src: currentPlaylistContext.imageUrl, sizes: '192x192', type: 'image/jpeg' },
+          ...artwork // Fallback to app icons
+        ];
+      }
+      
+      // Determine album name - use playlist name if playing from playlist, otherwise default
+      const album = currentPlaylistContext?.name || 'Woven Music';
+      
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title || 'Unknown Title',
         artist: artist || 'Unknown Artist',
-        album: 'Woven Music',
-        artwork: [
-          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
-        ]
+        album: album,
+        artwork: artwork
       });
     } else {
       navigator.mediaSession.metadata = null;
     }
-  }, [currentTrack]);
+  }, [currentTrack, currentPlaylistContext]);
 
   // Update playback state for Media Session
   useEffect(() => {
