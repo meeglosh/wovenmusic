@@ -469,6 +469,9 @@ export type Database = {
           is_public: boolean
           play_count: number
           source_folder: string | null
+          storage_key: string | null
+          storage_type: string | null
+          storage_url: string | null
           title: string
           updated_at: string
         }
@@ -483,6 +486,9 @@ export type Database = {
           is_public?: boolean
           play_count?: number
           source_folder?: string | null
+          storage_key?: string | null
+          storage_type?: string | null
+          storage_url?: string | null
           title: string
           updated_at?: string
         }
@@ -497,6 +503,9 @@ export type Database = {
           is_public?: boolean
           play_count?: number
           source_folder?: string | null
+          storage_key?: string | null
+          storage_type?: string | null
+          storage_url?: string | null
           title?: string
           updated_at?: string
         }
