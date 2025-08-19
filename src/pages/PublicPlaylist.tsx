@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { PlaylistThumbnail } from "@/components/PlaylistThumbnail";
 import { useToast } from "@/hooks/use-toast";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { usePublicPlaylist, usePublicPlaylistByToken } from "@/hooks/usePublicPlaylist";
@@ -260,13 +259,19 @@ const PublicPlaylist = () => {
         {/* Playlist Header */}
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <div className="flex-shrink-0">
-            <PlaylistThumbnail
-              imageUrl={playlist.imageUrl}
-              name={playlist.name}
-              className="w-48 h-48 shadow-lg"
-              priority={true}
-              size="lg"
-            />
+            {playlist.imageUrl ? (
+              <img 
+                src={playlist.imageUrl} 
+                alt={playlist.name}
+                className="w-48 h-48 rounded-lg object-cover shadow-lg"
+              />
+            ) : (
+              <div className="w-48 h-48 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center shadow-lg">
+                <span className="text-4xl font-bold text-primary">
+                  {playlist.name.charAt(0)}
+                </span>
+              </div>
+            )}
           </div>
           
           <div className="flex-1 space-y-4">

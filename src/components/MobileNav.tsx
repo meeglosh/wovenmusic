@@ -5,7 +5,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Menu, Music, ListMusic, List, Lock, Globe } from "lucide-react";
 import { Playlist, calculatePlaylistDuration } from "@/types/music";
-import { PlaylistThumbnail } from "@/components/PlaylistThumbnail";
 import { cn } from "@/lib/utils";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 
@@ -98,11 +97,10 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
               {playlist.imageUrl ? (
-                <PlaylistThumbnail
-                  imageUrl={playlist.imageUrl}
-                  name={playlist.name}
-                  size="sm"
-                  className="w-8 h-8 rounded"
+                <img 
+                  src={playlist.imageUrl} 
+                  alt={`${playlist.name} cover`}
+                  className="w-full h-full object-cover rounded"
                 />
               ) : (
                 <List className="w-4 h-4 text-primary" />

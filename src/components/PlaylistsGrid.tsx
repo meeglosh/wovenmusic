@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlaylistThumbnail } from "@/components/PlaylistThumbnail";
 import { Playlist, Track, calculatePlaylistDuration } from "@/types/music";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 
@@ -110,13 +109,19 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                 onClick={() => handlePlaylistClick(playlist)}
               >
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-                  <PlaylistThumbnail
-                    imageUrl={playlist.imageUrl}
-                    name={playlist.name}
-                    className="transition-transform duration-200 group-hover:scale-105"
-                    priority={false}
-                    size="md"
-                  />
+                  {playlist.imageUrl ? (
+                    <img
+                      src={playlist.imageUrl}
+                      alt={playlist.name}
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-muted-foreground/60">
+                        {playlist.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Play button overlay - positioned in bottom right corner to avoid scroll interference */}
                   <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
