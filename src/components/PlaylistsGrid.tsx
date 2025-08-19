@@ -4,6 +4,7 @@ import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Playlist, Track, calculatePlaylistDuration } from "@/types/music";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface PlaylistsGridProps {
   playlists: Playlist[];
@@ -110,10 +111,12 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
               >
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                   {playlist.imageUrl ? (
-                    <img
+                    <OptimizedImage
                       src={playlist.imageUrl}
                       alt={playlist.name}
-                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      className="w-full h-full transition-transform duration-200 group-hover:scale-105"
+                      sizes="(max-width: 640px) 160px, (max-width: 768px) 200px, (max-width: 1024px) 240px, 280px"
+                      objectFit="cover"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">

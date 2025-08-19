@@ -15,6 +15,7 @@ import { User } from "@supabase/supabase-js";
 import Player from "@/components/Player";
 import { useClosedBeta } from "@/hooks/useClosedBeta";
 import ClosedBetaSplash from "@/components/ClosedBetaSplash";
+import OptimizedImage from "@/components/OptimizedImage";
 
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
@@ -260,10 +261,13 @@ const PublicPlaylist = () => {
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <div className="flex-shrink-0">
             {playlist.imageUrl ? (
-              <img 
+              <OptimizedImage
                 src={playlist.imageUrl} 
                 alt={playlist.name}
-                className="w-48 h-48 rounded-lg object-cover shadow-lg"
+                className="w-48 h-48 rounded-lg shadow-lg"
+                sizes="192px"
+                objectFit="cover"
+                priority={true}
               />
             ) : (
               <div className="w-48 h-48 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center shadow-lg">

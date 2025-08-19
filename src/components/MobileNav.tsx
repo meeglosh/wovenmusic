@@ -7,6 +7,7 @@ import { Menu, Music, ListMusic, List, Lock, Globe } from "lucide-react";
 import { Playlist, calculatePlaylistDuration } from "@/types/music";
 import { cn } from "@/lib/utils";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface MobileNavProps {
   playlists: Playlist[];
@@ -97,10 +98,13 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
               {playlist.imageUrl ? (
-                <img 
+                <OptimizedImage
                   src={playlist.imageUrl} 
                   alt={`${playlist.name} cover`}
-                  className="w-full h-full object-cover rounded"
+                  className="w-full h-full rounded"
+                  sizes="32px"
+                  objectFit="cover"
+                  loading="lazy"
                 />
               ) : (
                 <List className="w-4 h-4 text-primary" />

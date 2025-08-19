@@ -18,6 +18,7 @@ import { useTracks } from "@/hooks/useTracks";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
 import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
+import OptimizedImage from "@/components/OptimizedImage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,10 +129,13 @@ const SortableTrackItem = ({ track, index, onPlay, onRemove, playlist, playlistI
       <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden hidden sm:block">
           {playlistImageUrl ? (
-            <img 
+            <OptimizedImage
               src={playlistImageUrl} 
               alt="Track thumbnail" 
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              sizes="40px"
+              objectFit="cover"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center border border-primary/20">
@@ -570,10 +574,13 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
           {playlist.imageUrl ? (
-            <img 
+            <OptimizedImage
               src={playlist.imageUrl} 
               alt={playlist.name} 
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              sizes="192px"
+              objectFit="cover"
+              priority={true}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
@@ -962,12 +969,15 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             <div className="space-y-3">
               <Label>Playlist image</Label>
               <div className="flex items-start gap-4">
-                <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                 <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
                   {playlist.imageUrl ? (
-                    <img 
+                    <OptimizedImage
                       src={playlist.imageUrl} 
                       alt={playlist.name} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full"
+                      sizes="80px"
+                      objectFit="cover"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
