@@ -16,12 +16,12 @@ const sizeConfig = {
     sizes: '96px',
   },
   md: {
-    dimensions: { width: 160, height: 160 },
+    dimensions: { width: 384, height: 384 },
     textSize: 'text-xl',
-    sizes: '(max-width: 640px) 50vw, (max-width: 768px) 33vw, 160px',
+    sizes: '(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw',
   },
   lg: {
-    dimensions: { width: 256, height: 256 },
+    dimensions: { width: 512, height: 512 },
     textSize: 'text-2xl',
     sizes: '(max-width: 640px) 80vw, (max-width: 768px) 50vw, 256px',
   },
@@ -40,10 +40,10 @@ export const PlaylistThumbnail = ({
     return (
       <div
         className={cn(
-          'bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center rounded-lg',
+          'w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center rounded-lg',
           className
         )}
-        style={{ aspectRatio: '1', ...config.dimensions }}
+        style={{ aspectRatio: '1' }}
       >
         <div className={cn('font-bold text-muted-foreground/60', config.textSize)}>
           {name.charAt(0).toUpperCase()}
