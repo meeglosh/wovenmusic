@@ -7,6 +7,7 @@ import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
 import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
+import { r2StorageService } from "@/services/r2StorageService";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -103,9 +104,31 @@ export const useAudioPlayer = () => {
         if (audioUrl) {
           console.log('Using offline cached track');
         } else {
-          // Fall back to streaming if not cached or if online
-          console.log('Track not cached or offline mode not available, using streaming');
-          audioUrl = currentTrack.fileUrl;
+          // Handle R2 storage vs legacy storage
+          if (currentTrack.storage_type === 'r2') {
+            console.log('Track uses R2 storage');
+            
+            if (currentTrack.is_public && currentTrack.storage_url) {
+              // Public track - use direct URL
+              audioUrl = currentTrack.storage_url;
+              console.log('Using public R2 URL:', audioUrl);
+            } else {
+              // Private track or no stored URL - get signed URL
+              console.log('Getting signed URL for R2 track');
+              try {
+                const urlResult = await r2StorageService.getTrackUrl(currentTrack.id);
+                audioUrl = urlResult.fileUrl;
+                console.log('Got signed R2 URL:', audioUrl);
+              } catch (error) {
+                console.error('Failed to get R2 signed URL:', error);
+                throw new Error('Failed to get track URL from R2');
+              }
+            }
+          } else {
+            // Legacy Supabase storage
+            console.log('Track uses legacy Supabase storage');
+            audioUrl = currentTrack.fileUrl;
+          }
           
           // Show helpful message if offline and track not downloaded
           if (!isOnline()) {

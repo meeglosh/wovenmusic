@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock, Globe } from "lucide-react";
-import { useUpdateTrack } from "@/hooks/useTracks";
+import { useTrackPrivacy } from "@/hooks/useTrackPrivacy";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -14,7 +14,7 @@ interface TrackPrivacySettingsProps {
 
 export function TrackPrivacySettings({ track }: TrackPrivacySettingsProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const updateTrackMutation = useUpdateTrack();
+  const trackPrivacyMutation = useTrackPrivacy();
   const { toast } = useToast();
   const { canEditTrackPrivacy } = usePermissions();
 
@@ -35,14 +35,14 @@ export function TrackPrivacySettings({ track }: TrackPrivacySettingsProps) {
 
     setIsUpdating(true);
     try {
-      await updateTrackMutation.mutateAsync({
-        id: track.id,
-        updates: { is_public: isPublic }
+      await trackPrivacyMutation.mutateAsync({
+        trackId: track.id,
+        newIsPublic: isPublic
       });
       
       toast({
         title: "Privacy updated",
-        description: `Track is now ${isPublic ? 'public' : 'private'}`,
+        description: `Track is now ${isPublic ? 'public' : 'private'}. ${track.storage_type === 'r2' ? 'File has been moved between storage buckets.' : ''}`,
       });
     } catch (error) {
       toast({

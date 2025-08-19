@@ -11,6 +11,9 @@ export interface Track {
   is_public?: boolean;
   play_count?: number;
   created_by?: string;
+  storage_type?: string;
+  storage_key?: string;
+  storage_url?: string;
 }
 
 export interface PendingTrack {

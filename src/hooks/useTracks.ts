@@ -25,7 +25,10 @@ export const useTracks = () => {
         dropbox_path: track.dropbox_path,
         is_public: track.is_public,
         play_count: track.play_count || 0,
-        created_by: track.created_by
+        created_by: track.created_by,
+        storage_type: track.storage_type,
+        storage_key: track.storage_key,
+        storage_url: track.storage_url
       })) as Track[];
     }
   });
@@ -48,7 +51,10 @@ export const useAddTrack = () => {
           file_url: track.fileUrl,
           source_folder: track.source_folder,
           dropbox_path: track.dropbox_path,
-          created_by: user.id
+          created_by: user.id,
+          storage_type: track.storage_type || 'supabase',
+          storage_key: track.storage_key,
+          storage_url: track.storage_url
         })
         .select()
         .single();
@@ -66,7 +72,7 @@ export const useUpdateTrack = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string; is_public: boolean; play_count: number }> }) => {
+    mutationFn: async ({ id, updates }: { id: string, updates: Partial<{ duration: string; title: string; artist: string; is_public: boolean; play_count: number; storage_type: string; storage_key: string; storage_url: string }> }) => {
       const { data, error } = await supabase
         .from("tracks")
         .update(updates)

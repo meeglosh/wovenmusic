@@ -1,6 +1,9 @@
+import { r2StorageService, R2UploadResult } from './r2StorageService';
+
 export interface TranscodeResult {
   publicUrl: string;
   originalFilename?: string;
+  r2Result?: R2UploadResult;
 }
 
 export class ImportTranscodingService {
@@ -8,7 +11,9 @@ export class ImportTranscodingService {
     audioUrl: string,
     fileName: string,
     outputFormat: 'mp3' | 'aac' | 'alac' = 'mp3',
-    retries = 3
+    retries = 3,
+    isPublic = false,
+    trackId?: string
   ): Promise<TranscodeResult> {
     let lastError: Error | null = null;
 
@@ -56,9 +61,25 @@ export class ImportTranscodingService {
 
         if (!data?.publicUrl) throw new Error('No public URL returned');
 
+        // Also upload to R2 if trackId provided
+        let r2Result;
+        if (trackId) {
+          try {
+            // Download transcoded file and upload to R2
+            const fileResponse = await fetch(data.publicUrl);
+            const blob = await fileResponse.blob();
+            const file = new File([blob], fileName, { type: `audio/${outputFormat}` });
+            
+            r2Result = await r2StorageService.uploadFile(file, fileName, isPublic, trackId);
+          } catch (r2Error) {
+            console.warn('R2 upload failed, falling back to transcoding server:', r2Error);
+          }
+        }
+
         return {
           publicUrl: data.publicUrl,
           originalFilename: data.originalFilename,
+          r2Result,
         };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));

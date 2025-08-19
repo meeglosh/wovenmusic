@@ -18,3 +18,12 @@ verify_jwt = false
 
 [functions.use-invitation]
 verify_jwt = false
+
+[functions.r2-upload]
+verify_jwt = true
+
+[functions.track-url]
+verify_jwt = true
+
+[functions.r2-transfer]
+verify_jwt = true
