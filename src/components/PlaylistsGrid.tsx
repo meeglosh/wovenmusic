@@ -115,7 +115,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                       src={playlist.imageUrl}
                       alt={playlist.name}
                       className="w-full h-full transition-transform duration-200 group-hover:scale-105"
-                      sizes="(max-width: 640px) 160px, (max-width: 768px) 200px, (max-width: 1024px) 240px, 280px"
+                      sizes="(max-width: 640px) calc(50vw - 2rem), (max-width: 768px) calc(33.333vw - 2rem), (max-width: 1024px) calc(25vw - 2rem), (max-width: 1280px) calc(20vw - 2rem), calc(16.666vw - 2rem)"
                       objectFit="cover"
                     />
                   ) : (

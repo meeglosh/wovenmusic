@@ -13,7 +13,7 @@ interface OptimizedImageProps {
   fallback?: React.ReactNode;
 }
 
-// Generate responsive image URLs
+// Generate responsive image URLs with mobile-optimized quality
 const generateImageSrcSet = (src: string): string => {
   // If it's already a Supabase storage URL, generate responsive variants
   if (src.includes('supabase') && src.includes('storage')) {
@@ -24,17 +24,17 @@ const generateImageSrcSet = (src: string): string => {
     const filename = pathParts[pathParts.length - 1];
     const basePath = url.origin + url.pathname.replace(filename, '');
     
-    // Generate WebP variants at different sizes
+    // Generate WebP variants at different sizes with mobile-optimized quality
     const variants = [
-      { size: 128, format: 'webp' },
-      { size: 256, format: 'webp' },
-      { size: 384, format: 'webp' },
-      { size: 512, format: 'webp' },
+      { size: 128, format: 'webp', quality: 65 },
+      { size: 256, format: 'webp', quality: 70 },
+      { size: 384, format: 'webp', quality: 75 },
+      { size: 512, format: 'webp', quality: 75 },
     ];
     
     return variants
-      .map(({ size, format }) => 
-        `${basePath}${filename}?width=${size}&height=${size}&resize=cover&format=${format}&quality=75 ${size}w`
+      .map(({ size, format, quality }) => 
+        `${basePath}${filename}?width=${size}&height=${size}&resize=cover&format=${format}&quality=${quality} ${size}w`
       )
       .join(', ');
   }
@@ -43,11 +43,11 @@ const generateImageSrcSet = (src: string): string => {
   return `${src} 512w`;
 };
 
-// Generate image sources for next-gen formats
+// Generate image sources for next-gen formats with mobile-optimized fallbacks
 const generateImageSources = (src: string) => {
   if (src.includes('supabase') && src.includes('storage')) {
     const webpSrcSet = generateImageSrcSet(src);
-    const avifSrcSet = generateImageSrcSet(src).replace(/format=webp/g, 'format=avif');
+    const avifSrcSet = generateImageSrcSet(src).replace(/format=webp&quality=\d+/g, 'format=avif&quality=60');
     
     return [
       { srcSet: avifSrcSet, type: 'image/avif' },
@@ -62,7 +62,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   src,
   alt,
   className,
-  sizes = "(max-width: 640px) 128px, (max-width: 768px) 256px, (max-width: 1024px) 384px, 512px",
+  sizes = "(max-width: 640px) 160px, (max-width: 768px) 200px, (max-width: 1024px) 240px, 280px",
   loading = "lazy",
   priority = false,
   aspectRatio = "square",
@@ -125,6 +125,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             className={imageClasses}
             loading={priority ? "eager" : loading}
             decoding="async"
+            fetchPriority={priority ? "high" : "low"}
             srcSet={srcSet}
             sizes={sizes}
             width={512}
@@ -140,6 +141,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           className={imageClasses}
           loading={priority ? "eager" : loading}
           decoding="async"
+          fetchPriority={priority ? "high" : "low"}
           width={512}
           height={512}
           onLoad={handleImageLoad}
