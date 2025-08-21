@@ -80,6 +80,12 @@ serve(async (req: Request) => {
   try {
     const { trackId, newIsPublic }: R2TransferRequest = await req.json()
     
+    if (!trackId || typeof newIsPublic !== 'boolean') {
+      throw new Error('trackId and newIsPublic are required')
+    }
+    
+    console.log(`Processing R2 transfer for track ${trackId} to ${newIsPublic ? 'public' : 'private'}`)
+    
     // Validate user auth
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -94,17 +100,52 @@ serve(async (req: Request) => {
       throw new Error('Unauthorized')
     }
 
-    // Get track details
+    // Get track details and verify ownership
     const { data: track, error: trackError } = await supabase
       .from('tracks')
       .select('*')
       .eq('id', trackId)
-      .eq('created_by', user.id)
       .single()
     
     if (trackError || !track) {
-      throw new Error('Track not found or access denied')
+      throw new Error('Track not found')
     }
+    
+    // Verify user has permission to transfer this track (owner or admin)
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+    
+    const isAdmin = userProfile?.is_admin || false
+    
+    if (track.created_by !== user.id && !isAdmin) {
+      // Log security violation
+      await supabase.rpc('log_security_event', {
+        p_event_type: 'unauthorized_track_transfer_attempt',
+        p_event_details: {
+          track_id: trackId,
+          track_owner: track.created_by,
+          attempted_by: user.id,
+          is_admin: isAdmin
+        },
+        p_user_id: user.id
+      })
+      throw new Error('Access denied: You can only transfer tracks you created')
+    }
+    
+    // Log transfer attempt
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'r2_track_transfer_attempt',
+      p_event_details: {
+        track_id: trackId,
+        from_public: track.is_public,
+        to_public: newIsPublic,
+        initiated_by_admin: isAdmin
+      },
+      p_user_id: user.id
+    })
     
     // Skip if not R2 storage or no change needed
     if (track.storage_type !== 'r2' || track.is_public === newIsPublic) {
@@ -146,11 +187,22 @@ serve(async (req: Request) => {
       .from('tracks')
       .update(updateData)
       .eq('id', trackId)
-      .eq('created_by', user.id)
     
     if (updateError) {
       throw updateError
     }
+    
+    // Log successful transfer
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'r2_track_transfer_success',
+      p_event_details: {
+        track_id: trackId,
+        from_bucket: fromBucket,
+        to_bucket: toBucket,
+        new_storage_key: newKey
+      },
+      p_user_id: user.id
+    })
     
     return new Response(
       JSON.stringify({

@@ -57,10 +57,28 @@ serve(async (req: Request) => {
     }
     
     // Check access permissions
-    const hasAccess = track.is_public || 
-                     track.created_by === user.id ||
-                     // Check if user is band member and track creator is band member
-                     false // TODO: Implement band member check
+    let hasAccess = track.is_public || track.created_by === user.id;
+    
+    // If not already granted access, check band member access
+    if (!hasAccess) {
+      // Check if current user is a band member
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_band_member')
+        .eq('id', user.id)
+        .single()
+      
+      if (!profileError && currentUserProfile?.is_band_member) {
+        // Check if track creator is also a band member
+        const { data: trackCreatorProfile, error: creatorError } = await supabase
+          .from('profiles')
+          .select('is_band_member')
+          .eq('id', track.created_by)
+          .single()
+        
+        hasAccess = !creatorError && trackCreatorProfile?.is_band_member
+      }
+    }
     
     if (!hasAccess) {
       throw new Error('Access denied')

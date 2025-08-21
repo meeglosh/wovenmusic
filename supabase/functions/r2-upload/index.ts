@@ -71,7 +71,36 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { fileName, contentType, isPublic, trackId }: R2UploadRequest = await req.json()
+    // Get file from FormData first to validate it
+    const formData = await req.formData()
+    const file = formData.get('file') as File
+    
+    if (!file) {
+      throw new Error('No file provided')
+    }
+    
+    // Validate file type (audio files only)
+    const allowedTypes = [
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/flac', 
+      'audio/aac', 'audio/ogg', 'audio/webm', 'audio/m4a'
+    ]
+    
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error(`Unsupported file type: ${file.type}. Only audio files are allowed.`)
+    }
+    
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024 // 100MB
+    if (file.size > maxSize) {
+      throw new Error(`File too large: ${file.size} bytes. Maximum size is ${maxSize} bytes.`)
+    }
+    
+    // Get additional parameters from FormData
+    const fileName = formData.get('fileName') as string || file.name
+    const isPublic = formData.get('isPublic') === 'true'
+    const trackId = formData.get('trackId') as string | null
+    const contentType = file.type
+    console.log('Processing upload for file:', fileName, 'Size:', file.size, 'Type:', contentType)
     
     // Validate user auth
     const authHeader = req.headers.get('Authorization')
@@ -87,16 +116,21 @@ serve(async (req: Request) => {
       throw new Error('Unauthorized')
     }
 
+    // Log security event
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'r2_file_upload_attempt',
+      p_event_details: {
+        file_name: fileName,
+        file_size: file.size,
+        file_type: contentType,
+        is_public: isPublic,
+        track_id: trackId
+      },
+      p_user_id: user.id
+    })
+
     const bucketName = isPublic ? 'wovenmusic-public' : 'wovenmusic-private'
-    const key = `${user.id}/${Date.now()}-${fileName}`
-    
-    // Get file data from request
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-    
-    if (!file) {
-      throw new Error('No file provided')
-    }
+    const key = `tracks/${user.id}/${Date.now()}-${fileName}`
     
     const fileData = new Uint8Array(await file.arrayBuffer())
     
@@ -122,13 +156,25 @@ serve(async (req: Request) => {
         .from('tracks')
         .update(updateData)
         .eq('id', trackId)
-        .eq('created_by', user.id)
+        .eq('created_by', user.id) // Ensure only track owner can update
       
       if (updateError) {
         console.error('Failed to update track:', updateError)
-        throw updateError
+        throw new Error(`Failed to update track: ${updateError.message}`)
       }
     }
+    
+    // Log successful upload
+    await supabase.rpc('log_security_event', {
+      p_event_type: 'r2_file_upload_success',
+      p_event_details: {
+        file_name: fileName,
+        storage_key: uploadedKey,
+        bucket_name: bucketName,
+        track_id: trackId
+      },
+      p_user_id: user.id
+    })
     
     return new Response(
       JSON.stringify({
