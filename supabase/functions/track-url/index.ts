@@ -18,6 +18,33 @@ async function generateSignedUrl(bucketName: string, key: string, expiresIn = 36
   return `${endpoint}/${bucketName}/${key}?signed=true&expires=${Date.now() + expiresIn * 1000}`
 }
 
+async function checkBandMemberAccess(track: any, userId: string): Promise<boolean> {
+  try {
+    // Check if current user is a band member
+    const { data: currentUserProfile } = await supabase
+      .from('profiles')
+      .select('is_band_member')
+      .eq('id', userId)
+      .single()
+    
+    if (!currentUserProfile?.is_band_member) {
+      return false
+    }
+    
+    // Check if track creator is a band member
+    const { data: trackCreatorProfile } = await supabase
+      .from('profiles')
+      .select('is_band_member')
+      .eq('id', track.created_by)
+      .single()
+    
+    return trackCreatorProfile?.is_band_member || false
+  } catch (error) {
+    console.error('Error checking band member access:', error)
+    return false
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -57,28 +84,9 @@ serve(async (req: Request) => {
     }
     
     // Check access permissions
-    let hasAccess = track.is_public || track.created_by === user.id;
-    
-    // If not already granted access, check band member access
-    if (!hasAccess) {
-      // Check if current user is a band member
-      const { data: currentUserProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_band_member')
-        .eq('id', user.id)
-        .single()
-      
-      if (!profileError && currentUserProfile?.is_band_member) {
-        // Check if track creator is also a band member
-        const { data: trackCreatorProfile, error: creatorError } = await supabase
-          .from('profiles')
-          .select('is_band_member')
-          .eq('id', track.created_by)
-          .single()
-        
-        hasAccess = !creatorError && trackCreatorProfile?.is_band_member
-      }
-    }
+    const hasAccess = track.is_public || 
+                     track.created_by === user.id ||
+                     await checkBandMemberAccess(track, user.id)
     
     if (!hasAccess) {
       throw new Error('Access denied')
