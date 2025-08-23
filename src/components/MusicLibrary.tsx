@@ -527,7 +527,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
               <div
                 key={track.id}
                 className={`grid items-center gap-x-3 p-3 md:p-4 hover:bg-muted/30 transition-colors group
-                  grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem,1.75rem]
+                  grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem]
+                  sm:grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem,1.75rem]
                   md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] md:gap-4 ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
@@ -624,7 +625,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 {/* Privacy Icon */}
-                <div className="w-7 justify-self-center" title={track.is_public ? "Public track" : "Private track"}>
+                <div className="w-7 justify-self-center hidden sm:block" title={track.is_public ? "Public track" : "Private track"}>
                   {track.is_public ? (
                     <Globe className="h-3 w-3 text-green-600" />
                   ) : (
