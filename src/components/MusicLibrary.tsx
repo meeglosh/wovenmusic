@@ -526,18 +526,22 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
             {paginatedTracks.map((track, index) => (
               <div
                 key={track.id}
-                className={`grid grid-cols-[auto,auto,1fr,auto,auto,auto] md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-2 md:gap-4 p-3 md:p-4 hover:bg-muted/30 transition-colors group items-center ${
+                className={`grid items-center gap-x-3 p-3 md:p-4 hover:bg-muted/30 transition-colors group
+                  grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem,1.75rem]
+                  md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] md:gap-4 ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
               >
-                <div className="w-8 flex items-center">
+                {/* Checkbox */}
+                <div className="w-8 justify-self-center">
                   <Checkbox
                     checked={selectedTrackIds.has(track.id)}
                     onCheckedChange={(checked) => handleSelectTrack(track.id, checked as boolean)}
                   />
                 </div>
-                <div className="w-12 flex items-center">
-                  {/* Show play/pause button based on current track and playing state */}
+
+                {/* Play/Pause Button */}
+                <div className="w-5 h-5 justify-self-center flex items-center">
                   {track.duration === 'Transcoding...' ? (
                     // Show nothing during transcoding
                     null
@@ -569,13 +573,14 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <Play className="w-4 h-4 fill-current" />
                     </Button>
                   )}
-                  <span className={`text-muted-foreground text-sm transition-opacity ${
+                  <span className={`text-muted-foreground text-sm transition-opacity absolute ${
                     isMobile ? 'opacity-0' : 'group-hover:opacity-0'
                   }`}>
                     {startIndex + index + 1}
                   </span>
                 </div>
 
+                {/* Title */}
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded flex items-center justify-center border border-primary/20 hidden md:flex">
                     <div className="flex space-x-px">
@@ -588,31 +593,29 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div>
-                      <button 
-                        className={`text-left font-medium hover:text-primary transition-colors cursor-pointer block max-w-[140px] sm:max-w-none truncate sm:overflow-visible sm:text-clip sm:whitespace-normal ${
-                          track.duration === 'Transcoding...' ? 'opacity-50' : ''
-                        }`}
-                        onClick={() => navigate(`/track/${track.id}`)}
-                        title="Open track view with comments"
-                      >
-                        {track.title}
-                      </button>
-                    </div>
-                  </div>
+                  <button 
+                    className={`text-left font-medium hover:text-primary transition-colors cursor-pointer 
+                      truncate whitespace-nowrap overflow-hidden
+                      sm:overflow-visible sm:text-clip sm:whitespace-normal ${
+                      track.duration === 'Transcoding...' ? 'opacity-50' : ''
+                    }`}
+                    onClick={() => navigate(`/track/${track.id}`)}
+                    title="Open track view with comments"
+                  >
+                    {track.title}
+                  </button>
                 </div>
 
-                <div className="flex items-center text-muted-foreground text-sm md:text-base">
+                {/* Duration */}
+                <div className="w-[3.5rem] text-right tabular-nums text-muted-foreground text-sm md:text-base">
                   {track.duration === 'Transcoding...' ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-xs md:text-sm">Transcoding...</span>
+                    <div className="flex items-center justify-end space-x-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     </div>
                   ) : track.duration === 'Failed' ? (
-                    <span className="text-destructive text-xs md:text-sm">Failed</span>
+                    <span className="text-destructive text-xs">Fail</span>
                   ) : (
-                    <span className="text-xs md:text-sm font-mono">{track.duration}</span>
+                    <span className="text-xs md:text-sm">{track.duration}</span>
                   )}
                 </div>
 
@@ -620,7 +623,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <span className="truncate">{track.addedAt.toLocaleDateString()}</span>
                 </div>
 
-                <div className="w-8 flex items-center justify-center" title={track.is_public ? "Public track" : "Private track"}>
+                {/* Privacy Icon */}
+                <div className="w-7 justify-self-center" title={track.is_public ? "Public track" : "Private track"}>
                   {track.is_public ? (
                     <Globe className="h-3 w-3 text-green-600" />
                   ) : (
@@ -628,21 +632,26 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   )}
                 </div>
 
-                <div className="w-12 flex items-center gap-1">
+                {/* Download Button */}
+                <div className="w-7 justify-self-center">
                   <OfflineDownloadButton 
                     track={track}
                     variant="ghost"
                     size="icon"
-                    className={`w-8 h-8 transition-opacity ${
+                    className={`w-7 h-7 transition-opacity ${
                       isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                     }`}
                   />
+                </div>
+
+                {/* More Menu */}
+                <div className="w-7 justify-self-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`w-8 h-8 p-0 transition-opacity ${
+                        className={`w-7 h-7 p-0 transition-opacity ${
                           isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                         }`}
                       >
