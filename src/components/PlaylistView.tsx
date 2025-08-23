@@ -45,6 +45,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -246,6 +247,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const sensors = useSensors(
     useSensor(PointerSensor, { 
       activationConstraint: { distance: 8 }
+    }),
+    useSensor(TouchSensor, {   
+      activationConstraint: { delay: 150, tolerance: 8 }
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
