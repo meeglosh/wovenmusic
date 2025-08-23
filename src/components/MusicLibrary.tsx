@@ -288,6 +288,13 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
       });
     }
   };
+
+  // Helper function to truncate track titles for mobile consistency
+  const truncateTitle = (title: string) => {
+    if (!isMobile) return title;
+    const maxLength = 18; // Consistent character count for mobile alignment
+    return title.length > maxLength ? title.substring(0, maxLength) + '…' : title;
+  };
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -597,7 +604,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                         onClick={() => navigate(`/track/${track.id}`)}
                         title="Open track view with comments"
                       >
-                        {track.title}
+                        {truncateTitle(track.title)}
                       </button>
                     </div>
                   </div>
