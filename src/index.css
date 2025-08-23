@@ -426,6 +426,20 @@
     @apply font-rem font-light;
   }
 
+  /* Route-specific scroll container for first-scroll fix */
+  html.use-main-scroller,
+  html.use-main-scroller body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  html.use-main-scroller main.app-main {
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

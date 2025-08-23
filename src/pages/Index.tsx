@@ -24,6 +24,21 @@ const Index = () => {
   const location = useLocation();
   const hasRedirected = useRef(false);
 
+  // Toggle scroll container for playlists and library pages only
+  useEffect(() => {
+    const html = document.documentElement;
+    if (location.pathname.startsWith("/playlists") || location.pathname.startsWith("/library")) {
+      html.classList.add("use-main-scroller");
+    } else {
+      html.classList.remove("use-main-scroller");
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      html.classList.remove("use-main-scroller");
+    };
+  }, [location.pathname]);
+
   // Handle playlist share token in URL - MUST be before any early returns
   const playlistToken = searchParams.get('playlist');
   
@@ -278,7 +293,7 @@ const Index = () => {
           />
         </div>
         
-        <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
+        <main className={`flex-1 app-main overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
           {currentView === "library" ? (
             <div className="p-6 pb-2">
               {/* Mobile Search - Only show on mobile */}
