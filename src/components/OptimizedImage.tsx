@@ -12,6 +12,7 @@ interface OptimizedImageProps {
   objectFit?: "cover" | "contain";
   fallback?: React.ReactNode;
   draggable?: boolean;
+  onDragStart?: (e: React.DragEvent<HTMLImageElement>) => void;
 }
 
 // Generate responsive image URLs with mobile-optimized quality
@@ -69,7 +70,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   aspectRatio = "square",
   objectFit = "cover",
   fallback,
-  draggable = true
+  draggable = false,
+  onDragStart
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -134,8 +136,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             height={512}
             onLoad={handleImageLoad}
             onError={handleImageError}
-            onDragStart={(e) => e.preventDefault()}
+            onDragStart={onDragStart || ((e) => e.preventDefault())}
             draggable={draggable}
+            style={{ 
+              WebkitUserDrag: draggable ? 'auto' : 'none', 
+              userSelect: 'none' 
+            } as React.CSSProperties}
           />
         </picture>
       ) : (
@@ -150,8 +156,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={512}
           onLoad={handleImageLoad}
           onError={handleImageError}
-          onDragStart={(e) => e.preventDefault()}
+          onDragStart={onDragStart || ((e) => e.preventDefault())}
           draggable={draggable}
+          style={{ 
+            WebkitUserDrag: draggable ? 'auto' : 'none', 
+            userSelect: 'none' 
+          } as React.CSSProperties}
         />
       )}
     </div>

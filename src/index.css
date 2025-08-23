@@ -480,5 +480,26 @@
 }
 
 .overlay-decor > * { 
-  pointer-events: auto; 
+  pointer-events: auto;
+}
+
+/* Safe scroll debug mode - disable potential scroll-blocking overlays */
+.safe-scroll-mode [data-overlay], 
+.safe-scroll-mode .overlay,
+.safe-scroll-mode .modal-backdrop,
+.safe-scroll-mode .glasspane {
+  pointer-events: none !important;
+}
+
+/* Enhanced scroll container setup for grid/library pages */
+.scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: auto;
+  touch-action: pan-y;
+}
+
+/* Disable any scroll snap that might interfere */
+.no-scroll-snap, .no-scroll-snap * {
+  scroll-snap-type: none !important;
 }

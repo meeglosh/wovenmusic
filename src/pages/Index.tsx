@@ -261,9 +261,9 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col no-scroll-snap">
       <audio ref={audioRef} />
-      <Header 
+      <Header
         playlists={filteredPlaylists}
         currentView={currentView}
         onViewChange={(view) => {
@@ -293,7 +293,7 @@ const Index = () => {
           />
         </div>
         
-        <main className="flex-1 min-h-screen overflow-y-auto overscroll-auto" style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 min-h-screen scroll-container">
           <div className={`${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
             {currentView === "library" ? (
               <div className="p-6 pb-2">
