@@ -289,7 +289,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     }
   };
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 library-scroll-scope">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-primary">{randomLibraryTitle.title}</h2>

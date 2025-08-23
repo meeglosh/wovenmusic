@@ -134,6 +134,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             height={512}
             onLoad={handleImageLoad}
             onError={handleImageError}
+            onDragStart={(e) => e.preventDefault()}
             draggable={draggable}
           />
         </picture>
@@ -149,6 +150,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={512}
           onLoad={handleImageLoad}
           onError={handleImageError}
+          onDragStart={(e) => e.preventDefault()}
           draggable={draggable}
         />
       )}
