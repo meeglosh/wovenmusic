@@ -94,6 +94,21 @@ const Index = () => {
   useEffect(() => {
     setActiveTab(location.pathname.startsWith("/library") ? "library" : "playlists");
   }, [location.pathname]);
+
+  // Cleanup any scroll-blocking states from modals/sheets
+  useEffect(() => {
+    const cleanup = () => {
+      document.documentElement.classList.remove('overflow-hidden');
+      document.body.classList.remove('overflow-hidden');
+      document.documentElement.style.removeProperty('overflow');
+      document.body.style.removeProperty('overflow');
+    };
+    
+    cleanup();
+    
+    // Cleanup on route changes
+    return cleanup;
+  }, [location.pathname, activeTab]);
   const handleMinimizePlayer = () => {
     setIsPlayerMinimized(true);
   };
@@ -244,21 +259,6 @@ const Index = () => {
       </div>
     );
   }
-
-  // Cleanup any scroll-blocking states from modals/sheets
-  useEffect(() => {
-    const cleanup = () => {
-      document.documentElement.classList.remove('overflow-hidden');
-      document.body.classList.remove('overflow-hidden');
-      document.documentElement.style.removeProperty('overflow');
-      document.body.style.removeProperty('overflow');
-    };
-    
-    cleanup();
-    
-    // Cleanup on route changes
-    return cleanup;
-  }, [location.pathname, activeTab]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
