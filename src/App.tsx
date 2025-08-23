@@ -33,26 +33,6 @@ function App() {
   useEffect(() => {
     // Initialize PWA service
     pwaService.init().catch(console.error);
-    
-    // Add build stamp for verification
-    console.info('Woven build:', import.meta.env.MODE, import.meta.env.VITE_COMMIT || Date.now());
-    
-    // Install scroll diagnostics in development
-    if (import.meta.env.DEV) {
-      import('./dev/scrollProbe').then(m => m.installScrollProbe()).catch(console.error);
-    }
-  }, []);
-
-  // Safe scroll mode toggle for debugging overlays
-  useEffect(() => {
-    const apply = () => {
-      const on = location.hash.includes('safescroll=1');
-      document.documentElement.classList.toggle('safe-scroll-mode', on);
-      if (on) console.info('[SafeScroll] Mode enabled - overlays disabled');
-    };
-    apply();
-    window.addEventListener('hashchange', apply);
-    return () => window.removeEventListener('hashchange', apply);
   }, []);
 
   return (

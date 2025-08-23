@@ -413,16 +413,12 @@
     @apply bg-background;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
     width: 100%;
     min-height: 100%;
-    overflow: auto;
-    overscroll-behavior: auto;
   }
 
   /* Global heading styles - use REM light font for all headings */
@@ -462,44 +458,3 @@
 .wave-bar:nth-child(3) { animation-delay: 0.2s; }
 .wave-bar:nth-child(4) { animation-delay: 0.3s; }
 .wave-bar:nth-child(5) { animation-delay: 0.4s; }
-
-/* Scrolling fixes for playlist grid and library */
-.playlist-scroll-scope, .playlist-card, .library-scroll-scope {
-  touch-action: pan-y;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.playlist-card img, .playlist-card .optimized-img {
-  -webkit-user-drag: none;
-  user-drag: none;
-}
-
-.overlay-decor { 
-  pointer-events: none; 
-}
-
-.overlay-decor > * { 
-  pointer-events: auto;
-}
-
-/* Safe scroll debug mode - disable potential scroll-blocking overlays */
-.safe-scroll-mode [data-overlay], 
-.safe-scroll-mode .overlay,
-.safe-scroll-mode .modal-backdrop,
-.safe-scroll-mode .glasspane {
-  pointer-events: none !important;
-}
-
-/* Enhanced scroll container setup for grid/library pages */
-.scroll-container {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: auto;
-  touch-action: pan-y;
-}
-
-/* Disable any scroll snap that might interfere */
-.no-scroll-snap, .no-scroll-snap * {
-  scroll-snap-type: none !important;
-}

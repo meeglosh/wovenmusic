@@ -94,21 +94,6 @@ const Index = () => {
   useEffect(() => {
     setActiveTab(location.pathname.startsWith("/library") ? "library" : "playlists");
   }, [location.pathname]);
-
-  // Cleanup any scroll-blocking states from modals/sheets
-  useEffect(() => {
-    const cleanup = () => {
-      document.documentElement.classList.remove('overflow-hidden');
-      document.body.classList.remove('overflow-hidden');
-      document.documentElement.style.removeProperty('overflow');
-      document.body.style.removeProperty('overflow');
-    };
-    
-    cleanup();
-    
-    // Cleanup on route changes
-    return cleanup;
-  }, [location.pathname, activeTab]);
   const handleMinimizePlayer = () => {
     setIsPlayerMinimized(true);
   };
@@ -261,9 +246,9 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col no-scroll-snap">
+    <div className="min-h-screen bg-background flex flex-col">
       <audio ref={audioRef} />
-      <Header
+      <Header 
         playlists={filteredPlaylists}
         currentView={currentView}
         onViewChange={(view) => {
@@ -293,89 +278,87 @@ const Index = () => {
           />
         </div>
         
-        <main className="flex-1 min-h-screen scroll-container">
-          <div className={`${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
-            {currentView === "library" ? (
-              <div className="p-6 pb-2">
-                {/* Mobile Search - Only show on mobile */}
-                <div className="md:hidden mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input 
-                      placeholder="Search tracks, playlists..." 
-                      className="pl-10 bg-muted/30 border-muted"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
+        <main className={`flex-1 overflow-auto ${currentTrack ? 'pb-20 sm:pb-24' : ''}`}>
+          {currentView === "library" ? (
+            <div className="p-6 pb-2">
+              {/* Mobile Search - Only show on mobile */}
+              <div className="md:hidden mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input 
+                    placeholder="Search tracks, playlists..." 
+                    className="pl-10 bg-muted/30 border-muted"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-                
-                <Tabs value={activeTab} onValueChange={(value) => {
-                  if (value === "playlists") {
-                    setActiveTab("playlists");
-                    if (location.pathname !== "/playlists") navigate("/playlists");
-                  } else {
-                    setActiveTab("library");
-                    if (location.pathname !== "/library") navigate("/library");
-                  }
-                }}>
-                  <TabsList className="bg-muted/50 p-1 mb-6 gap-3 rounded-md">
-                    <TabsTrigger value="playlists" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
-                      Playlists
-                    </TabsTrigger>
-                    <TabsTrigger value="library" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
-                      Library
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="library" className="mt-0 -m-6">
-                    <MusicLibrary 
-                      tracks={filteredTracks} 
-                      onPlayTrack={handlePlayTrack}
-                      currentTrack={currentTrack}
-                      isPlaying={isPlaying}
-                      searchTerm={searchTerm}
-                      onTitleChange={setCurrentLibraryTitle}
-                      showDropboxAccordion={showDropboxAccordion}
-                      pendingTracks={pendingTracks}
-                      onRetryPendingTrack={() => {/* TODO: Implement retry logic */}}
-                      onPendingTracksChange={setPendingTracks}
-                    />
-                  </TabsContent>
-                  
-                   <TabsContent value="playlists" className="mt-0 -m-6">
-                     <PlaylistsGrid 
-                       playlists={filteredPlaylists}
-                       tracks={tracks}
-                        onPlayPlaylist={(playlistId) => {
-                          const playlist = playlists.find(p => p.id === playlistId);
-                          if (playlist) {
-                            const ordered = playlist.trackIds
-                              .map((id) => tracks.find((t) => t.id === id))
-                              .filter((t): t is Track => !!t);
-                            playPlaylist(ordered, 0, {
-                              id: playlist.id,
-                              name: playlist.name,
-                              imageUrl: playlist.imageUrl
-                            });
-                          }
-                        }}
-                       onPlaylistSelect={handleViewPlaylist}
-                     />
-                   </TabsContent>
-                </Tabs>
               </div>
-            ) : (
-              <PlaylistView 
-                playlistId={selectedPlaylist?.id || ""}
-                onPlayTrack={handlePlayTrack}
-                onBack={() => {
-                  setCurrentView("library");
-                  setSelectedPlaylist(null);
-                }}
-              />
-            )}
-          </div>
+              
+              <Tabs value={activeTab} onValueChange={(value) => {
+                if (value === "playlists") {
+                  setActiveTab("playlists");
+                  if (location.pathname !== "/playlists") navigate("/playlists");
+                } else {
+                  setActiveTab("library");
+                  if (location.pathname !== "/library") navigate("/library");
+                }
+              }}>
+                <TabsList className="bg-muted/50 p-1 mb-6 gap-3 rounded-md">
+                  <TabsTrigger value="playlists" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
+                    Playlists
+                  </TabsTrigger>
+                  <TabsTrigger value="library" className="rounded-md border border-border data-[state=active]:border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold text-base leading-6 touch-manipulation select-none cursor-pointer">
+                    Library
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="library" className="mt-0 -m-6">
+                  <MusicLibrary 
+                    tracks={filteredTracks} 
+                    onPlayTrack={handlePlayTrack}
+                    currentTrack={currentTrack}
+                    isPlaying={isPlaying}
+                    searchTerm={searchTerm}
+                    onTitleChange={setCurrentLibraryTitle}
+                    showDropboxAccordion={showDropboxAccordion}
+                    pendingTracks={pendingTracks}
+                    onRetryPendingTrack={() => {/* TODO: Implement retry logic */}}
+                    onPendingTracksChange={setPendingTracks}
+                  />
+                </TabsContent>
+                
+                 <TabsContent value="playlists" className="mt-0 -m-6">
+                   <PlaylistsGrid 
+                     playlists={filteredPlaylists}
+                     tracks={tracks}
+                      onPlayPlaylist={(playlistId) => {
+                        const playlist = playlists.find(p => p.id === playlistId);
+                        if (playlist) {
+                          const ordered = playlist.trackIds
+                            .map((id) => tracks.find((t) => t.id === id))
+                            .filter((t): t is Track => !!t);
+                          playPlaylist(ordered, 0, {
+                            id: playlist.id,
+                            name: playlist.name,
+                            imageUrl: playlist.imageUrl
+                          });
+                        }
+                      }}
+                     onPlaylistSelect={handleViewPlaylist}
+                   />
+                 </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+            <PlaylistView 
+              playlistId={selectedPlaylist?.id || ""}
+              onPlayTrack={handlePlayTrack}
+              onBack={() => {
+                setCurrentView("library");
+                setSelectedPlaylist(null);
+              }}
+            />
+          )}
         </main>
       </div>
 
