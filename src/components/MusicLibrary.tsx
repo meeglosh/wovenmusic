@@ -591,7 +591,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <div className="flex items-center space-x-2">
                     <div>
                       <button 
-                        className={`text-left font-medium hover:text-primary transition-colors cursor-pointer ${
+                        className={`text-left font-medium hover:text-primary transition-colors cursor-pointer block max-w-[140px] sm:max-w-none truncate sm:overflow-visible sm:text-clip sm:whitespace-normal ${
                           track.duration === 'Transcoding...' ? 'opacity-50' : ''
                         }`}
                         onClick={() => navigate(`/track/${track.id}`)}
