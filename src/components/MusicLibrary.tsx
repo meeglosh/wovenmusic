@@ -529,7 +529,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 className={`grid items-center gap-x-3 p-3 md:p-4 hover:bg-muted/30 transition-colors group
                   grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem]
                   sm:grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem,1.75rem]
-                  md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] md:gap-4 ${
+                  md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] md:gap-4
+                  min-h-[3.5rem] sm:min-h-0 ${
                   selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
                 }`}
               >
@@ -596,8 +597,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   </div>
                   <button 
                     className={`text-left font-medium hover:text-primary transition-colors cursor-pointer 
-                      truncate whitespace-nowrap overflow-hidden
-                      sm:overflow-visible sm:text-clip sm:whitespace-normal ${
+                      line-clamp-2 whitespace-normal break-words hyphens-auto
+                      sm:truncate sm:whitespace-nowrap sm:overflow-hidden sm:line-clamp-1 ${
                       track.duration === 'Transcoding...' ? 'opacity-50' : ''
                     }`}
                     onClick={() => navigate(`/track/${track.id}`)}
@@ -608,7 +609,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 {/* Duration */}
-                <div className="w-[3.5rem] text-right tabular-nums text-muted-foreground text-sm md:text-base">
+                <div className="w-[3.5rem] text-right tabular-nums text-muted-foreground text-sm md:text-base self-center">
                   {track.duration === 'Transcoding...' ? (
                     <div className="flex items-center justify-end space-x-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -634,7 +635,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 {/* Download Button */}
-                <div className="w-7 justify-self-center">
+                <div className="w-7 justify-self-center self-center">
                   <OfflineDownloadButton 
                     track={track}
                     variant="ghost"
@@ -646,7 +647,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
 
                 {/* More Menu */}
-                <div className="w-7 justify-self-center">
+                <div className="w-7 justify-self-center self-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
