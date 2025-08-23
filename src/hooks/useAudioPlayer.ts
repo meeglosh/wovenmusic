@@ -8,6 +8,7 @@ import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 import { dropboxService } from "@/services/dropboxService";
 import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
 import { r2StorageService } from "@/services/r2StorageService";
+import { generateMediaSessionArtwork } from "@/lib/utils";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -693,13 +694,15 @@ export const useAudioPlayer = () => {
         { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
       ];
       
-      // If playing from a playlist with an image, use the playlist artwork
+      // If playing from a playlist with an image, generate JPEG variants for car compatibility
       if (currentPlaylistContext?.imageUrl) {
-        artwork = [
-          { src: currentPlaylistContext.imageUrl, sizes: '512x512', type: 'image/jpeg' },
-          { src: currentPlaylistContext.imageUrl, sizes: '192x192', type: 'image/jpeg' },
-          ...artwork // Fallback to app icons
-        ];
+        const jpegArtwork = generateMediaSessionArtwork(currentPlaylistContext.imageUrl);
+        if (jpegArtwork.length > 0) {
+          artwork = [
+            ...jpegArtwork,
+            ...artwork // Fallback to app icons
+          ];
+        }
       }
       
       // Determine album name - use playlist name if playing from playlist, otherwise default
