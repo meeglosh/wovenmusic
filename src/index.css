@@ -458,3 +458,18 @@
 .wave-bar:nth-child(3) { animation-delay: 0.2s; }
 .wave-bar:nth-child(4) { animation-delay: 0.3s; }
 .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+/* Scrolling fixes for playlist grid */
+.playlist-grid, .playlist-card { 
+  touch-action: pan-y; 
+}
+
+.playlist-card img, .playlist-card .optimized-img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  user-select: none;
+}
+
+.playlist-card .overlay-decor {
+  pointer-events: none;
+}

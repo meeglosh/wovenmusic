@@ -11,6 +11,7 @@ interface OptimizedImageProps {
   aspectRatio?: "square" | "auto";
   objectFit?: "cover" | "contain";
   fallback?: React.ReactNode;
+  draggable?: boolean;
 }
 
 // Generate responsive image URLs with mobile-optimized quality
@@ -67,7 +68,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   priority = false,
   aspectRatio = "square",
   objectFit = "cover",
-  fallback
+  fallback,
+  draggable = true
 }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -132,6 +134,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             height={512}
             onLoad={handleImageLoad}
             onError={handleImageError}
+            draggable={draggable}
           />
         </picture>
       ) : (
@@ -146,6 +149,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={512}
           onLoad={handleImageLoad}
           onError={handleImageError}
+          draggable={draggable}
         />
       )}
     </div>

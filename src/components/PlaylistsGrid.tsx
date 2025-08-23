@@ -85,7 +85,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8 playlist-grid">
       {playlistGroups.map((group) => (
         <div key={group.name} className="space-y-4">
           <div className="flex items-center justify-between">
@@ -106,7 +106,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
             {getVisiblePlaylists(group).map((playlist) => (
               <div
                 key={playlist.id}
-                className="group cursor-pointer space-y-2"
+                className="group cursor-pointer space-y-2 playlist-card"
                 onClick={() => handlePlaylistClick(playlist)}
               >
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
@@ -114,9 +114,10 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                     <OptimizedImage
                       src={playlist.imageUrl}
                       alt={playlist.name}
-                      className="w-full h-full transition-transform duration-200 group-hover:scale-105"
+                      className="w-full h-full transition-transform duration-200 group-hover:scale-105 optimized-img"
                       sizes="(max-width: 640px) calc(50vw - 2rem), (max-width: 768px) calc(33.333vw - 2rem), (max-width: 1024px) calc(25vw - 2rem), (max-width: 1280px) calc(20vw - 2rem), calc(16.666vw - 2rem)"
                       objectFit="cover"
+                      draggable={false}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
@@ -127,7 +128,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                   )}
                   
                   {/* Play button overlay - positioned in bottom right corner to avoid scroll interference */}
-                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ pointerEvents: 'auto' }}>
                     <Button
                       size="icon"
                       variant="default"
