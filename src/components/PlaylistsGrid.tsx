@@ -85,7 +85,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8 pb-[calc(env(safe-area-inset-bottom)+120px)]">
       {playlistGroups.map((group) => (
         <div key={group.name} className="space-y-4">
           <div className="flex items-center justify-between">

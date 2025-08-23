@@ -434,10 +434,11 @@
   }
 
   html.use-main-scroller main.app-main {
-    height: 100vh;
+    height: 100dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: auto;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 120px);
   }
 
   /* Custom scrollbar */
