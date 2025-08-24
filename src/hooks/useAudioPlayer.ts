@@ -383,10 +383,28 @@ export const useAudioPlayer = () => {
       }
     };
     const handleEnded = () => {
-      console.log('Track ended, playing next...');
-      // Keep isPlaying true for auto-advance to next track
-      setIsPlaying(true);
-      playNext();
+      console.log('Track ended');
+      
+      try {
+        // Check if we should loop or stop at end of playlist
+        const nextIndex = getNextTrackIndex();
+        const isLastTrack = isShuffleMode 
+          ? (getCurrentIndex() + 1) >= shuffledOrder.length
+          : (currentTrackIndex + 1) >= playlist.length;
+          
+        if (isRepeatMode || !isLastTrack) {
+          console.log('Auto-advancing to next track...');
+          setIsPlaying(true);
+          playNext({ wrap: true });
+        } else {
+          console.log('End of playlist reached, stopping playback');
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }
+      } catch (error) {
+        console.error('Error in handleEnded:', error);
+        setIsPlaying(false);
+      }
     };
 
     // Keep isPlaying state in sync with actual audio state
@@ -439,7 +457,7 @@ export const useAudioPlayer = () => {
     return currentTrackIndex;
   };
 
-  const getNextTrackIndex = () => {
+  const getNextTrackIndex = (wrap: boolean = false) => {
     const currentIndex = getCurrentIndex();
     const playlistLength = playlist.length;
     
@@ -450,10 +468,18 @@ export const useAudioPlayer = () => {
     }
     
     if (isShuffleMode) {
-      const nextShuffleIndex = (currentIndex + 1) % shuffledOrder.length;
+      const nextShuffleIndex = currentIndex + 1;
+      if (nextShuffleIndex >= shuffledOrder.length) {
+        // End of shuffled playlist
+        return (wrap || isRepeatMode) ? shuffledOrder[0] : -1;
+      }
       return shuffledOrder[nextShuffleIndex];
     } else {
-      const nextIndex = (currentTrackIndex + 1) % playlistLength;
+      const nextIndex = currentTrackIndex + 1;
+      if (nextIndex >= playlistLength) {
+        // End of playlist
+        return (wrap || isRepeatMode) ? 0 : -1;
+      }
       return nextIndex;
     }
   };
@@ -604,29 +630,36 @@ export const useAudioPlayer = () => {
     }
   };
 
-  const playNext = () => {
+  const playNext = (options: { wrap?: boolean } = {}) => {
     console.log('=== PLAY NEXT DEBUG ===');
     console.log('Current track index:', currentTrackIndex);
     console.log('Playlist length:', playlist.length);
     console.log('Is repeat mode:', isRepeatMode);
     console.log('Is shuffle mode:', isShuffleMode);
     console.log('Current playing state:', isPlaying);
+    console.log('Wrap option:', options.wrap);
     
-    const nextIndex = getNextTrackIndex();
-    console.log('Next index calculated:', nextIndex);
-    
-    if (nextIndex !== -1 && playlist[nextIndex]) {
-      console.log(`Moving to next track: ${nextIndex} (${playlist[nextIndex].title})`);
-      setCurrentTrackIndex(nextIndex);
-      const nextTrack = playlist[nextIndex];
+    try {
+      const nextIndex = getNextTrackIndex(options.wrap);
+      console.log('Next index calculated:', nextIndex);
       
-      // Force a new object reference to trigger track loading
-      setCurrentTrack({ ...nextTrack });
-      
-      // Keep playing state - the track loading effect will handle auto-play
-      console.log('Next track set, keeping isPlaying state for auto-continue');
-    } else {
-      console.log('No next track available, stopping playback');
+      if (nextIndex !== -1 && playlist[nextIndex]) {
+        console.log(`Moving to next track: ${nextIndex} (${playlist[nextIndex].title})`);
+        setCurrentTrackIndex(nextIndex);
+        const nextTrack = playlist[nextIndex];
+        
+        // Force a new object reference to trigger track loading
+        setCurrentTrack({ ...nextTrack });
+        
+        // Keep playing state - the track loading effect will handle auto-play
+        console.log('Next track set, keeping isPlaying state for auto-continue');
+      } else {
+        console.log('No next track available, stopping playback');
+        setIsPlaying(false);
+        setCurrentTime(0);
+      }
+    } catch (error) {
+      console.error('Error in playNext:', error);
       setIsPlaying(false);
     }
   };
