@@ -14,6 +14,7 @@ interface OptimizedImageProps {
 }
 
 // Generate responsive image URLs with mobile-optimized quality
+// Use stable URLs for better caching
 const generateImageSrcSet = (src: string): string => {
   // If it's already a Supabase storage URL, generate responsive variants
   if (src.includes('supabase') && src.includes('storage')) {
@@ -24,11 +25,10 @@ const generateImageSrcSet = (src: string): string => {
     const filename = pathParts[pathParts.length - 1];
     const basePath = url.origin + url.pathname.replace(filename, '');
     
-    // Generate WebP variants at different sizes with mobile-optimized quality
+    // Generate WebP variants at different sizes with consistent quality for better caching
+    // Using fewer variants with stable parameters to improve cache hit rates
     const variants = [
-      { size: 128, format: 'webp', quality: 65 },
-      { size: 256, format: 'webp', quality: 70 },
-      { size: 384, format: 'webp', quality: 75 },
+      { size: 256, format: 'webp', quality: 75 },
       { size: 512, format: 'webp', quality: 75 },
     ];
     
@@ -44,10 +44,12 @@ const generateImageSrcSet = (src: string): string => {
 };
 
 // Generate image sources for next-gen formats with mobile-optimized fallbacks
+// Use consistent quality settings for better cache performance
 const generateImageSources = (src: string) => {
   if (src.includes('supabase') && src.includes('storage')) {
     const webpSrcSet = generateImageSrcSet(src);
-    const avifSrcSet = generateImageSrcSet(src).replace(/format=webp&quality=\d+/g, 'format=avif&quality=60');
+    // Use consistent quality for AVIF to improve caching
+    const avifSrcSet = generateImageSrcSet(src).replace(/format=webp&quality=75/g, 'format=avif&quality=65');
     
     return [
       { srcSet: avifSrcSet, type: 'image/avif' },

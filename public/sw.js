@@ -21,11 +21,41 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // Cache strategies for different asset types
 
-// Static assets from CDNs (fonts, images, etc.)
+// Playlist cover images from Supabase storage - aggressive caching for instant loading
+registerRoute(
+  ({ request, url }) => 
+    request.destination === 'image' && 
+    url.origin.includes('supabase') && 
+    url.pathname.includes('storage'),
+  new StaleWhileRevalidate({
+    cacheName: 'playlist-covers',
+    plugins: [{
+      cacheKeyWillBeUsed: async ({ request }) => {
+        // Create stable cache key based on the base URL without changing transformation params
+        const url = new URL(request.url);
+        // Keep format, width, height params but normalize them for better cache hits
+        const width = url.searchParams.get('width') || '512';
+        const height = url.searchParams.get('height') || '512';
+        const format = url.searchParams.get('format') || 'webp';
+        return `${url.origin}${url.pathname}?width=${width}&height=${height}&format=${format}`;
+      },
+      cacheWillUpdate: async ({ response }) => {
+        // Cache successful responses and common image formats
+        return response && response.status === 200 && 
+               response.headers.get('content-type')?.startsWith('image/');
+      }
+    }],
+    matchOptions: {
+      ignoreVary: true
+    }
+  })
+);
+
+// Static assets from CDNs (fonts, other images, etc.)
 registerRoute(
   ({ request, url }) => 
     request.destination === 'font' ||
-    request.destination === 'image' ||
+    (request.destination === 'image' && !url.origin.includes('supabase')) ||
     url.origin === 'https://fonts.googleapis.com' ||
     url.origin === 'https://fonts.gstatic.com',
   new StaleWhileRevalidate({
