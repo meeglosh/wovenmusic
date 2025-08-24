@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -243,6 +243,26 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   
   // Find the current playlist from the fresh data
   const playlist = playlists.find(p => p.id === playlistId) || null;
+
+  // Reset edit form state when playlist changes or dialog closes
+  useEffect(() => {
+    if (!showEditDialog) {
+      // Clear form when dialog closes
+      setEditPlaylistName("");
+      setEditArtistName("");
+      setSelectedEditCategoryId("");
+    }
+  }, [showEditDialog]);
+
+  // Initialize form with current playlist data when playlist changes
+  useEffect(() => {
+    if (playlist && showEditDialog) {
+      setEditPlaylistName(playlist.name);
+      setEditArtistName(playlist.artistName || "");
+      const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "none";
+      setSelectedEditCategoryId(currentCategoryId);
+    }
+  }, [playlist, playlistCategories, showEditDialog]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -935,12 +955,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
             });
           }, 50);
         } else {
-          // Pre-fill with current values when opening
-          setEditPlaylistName(playlist.name);
-          setEditArtistName(playlist.artistName || "");
-          const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "none";
-          console.log('Setting selectedEditCategoryId on dialog open:', { currentCategoryId, playlistCategories });
-          setSelectedEditCategoryId(currentCategoryId);
+          // Dialog is opening - the useEffect will handle initialization
         }
       }}>
         <DialogContent className="sm:max-w-md">
