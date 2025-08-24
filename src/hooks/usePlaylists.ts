@@ -39,6 +39,7 @@ export const usePlaylists = () => {
       return data.map(playlist => ({
         id: playlist.id,
         name: playlist.name,
+        artistName: playlist.artist_name,
         imageUrl: playlist.image_url,
         trackIds: playlist.playlist_tracks
           .sort((a, b) => a.position - b.position)
@@ -58,7 +59,7 @@ export const useCreatePlaylist = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, artistName }: { name: string; artistName?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
       
@@ -66,6 +67,7 @@ export const useCreatePlaylist = () => {
         .from("playlists")
         .insert({ 
           name,
+          artist_name: artistName?.trim() || null,
           created_by: user.id
         })
         .select()
@@ -179,10 +181,11 @@ export const useUpdatePlaylist = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, name, imageUrl }: { id: string; name?: string; imageUrl?: string }) => {
+    mutationFn: async ({ id, name, imageUrl, artistName }: { id: string; name?: string; imageUrl?: string; artistName?: string | null }) => {
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;
       if (imageUrl !== undefined) updateData.image_url = imageUrl;
+      if (artistName !== undefined) updateData.artist_name = artistName;
       
       const { data, error } = await supabase
         .from("playlists")

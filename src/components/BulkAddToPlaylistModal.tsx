@@ -96,7 +96,9 @@ const BulkAddToPlaylistModal = ({
     
     try {
       // Create new playlist
-      const newPlaylist = await createPlaylistMutation.mutateAsync(newPlaylistName.trim());
+          const newPlaylist = await createPlaylistMutation.mutateAsync({ 
+            name: newPlaylistName.trim() 
+          });
       
       // Add tracks to the new playlist
       for (const track of selectedTracks) {

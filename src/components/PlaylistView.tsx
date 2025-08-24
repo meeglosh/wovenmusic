@@ -214,6 +214,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
   const [orderedTrackIds, setOrderedTrackIds] = useState<string[]>([]);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editPlaylistName, setEditPlaylistName] = useState("");
+  const [editArtistName, setEditArtistName] = useState("");
   const [selectedEditCategoryId, setSelectedEditCategoryId] = useState<string>("");
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -429,12 +430,13 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     try {
       await updatePlaylistMutation.mutateAsync({
         id: playlist.id,
-        name: editPlaylistName.trim()
+        name: editPlaylistName.trim(),
+        artistName: editArtistName.trim() || null
       });
       
       toast({
         title: "Playlist updated",
-        description: `Playlist renamed to "${editPlaylistName.trim()}".`,
+        description: `Playlist updated successfully.`,
       });
       
       setShowEditDialog(false);
@@ -618,6 +620,10 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               </Badge>
             )}
           </div>
+          
+          {playlist.artistName && (
+            <div className="text-xl md:text-2xl text-muted-foreground mb-2">{playlist.artistName}</div>
+          )}
           
           <h1 className="text-3xl md:text-5xl font-bold mb-4 text-primary break-words">{playlist.name}</h1>
           
@@ -931,6 +937,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         } else {
           // Pre-fill with current values when opening
           setEditPlaylistName(playlist.name);
+          setEditArtistName(playlist.artistName || "");
           const currentCategoryId = playlistCategories.length > 0 ? playlistCategories[0].id : "none";
           console.log('Setting selectedEditCategoryId on dialog open:', { currentCategoryId, playlistCategories });
           setSelectedEditCategoryId(currentCategoryId);
@@ -945,6 +952,21 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* Artist Name Section */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-artist-name">Artist name (optional)</Label>
+              <Input
+                id="edit-artist-name"
+                value={editArtistName}
+                onChange={(e) => setEditArtistName(e.target.value)}
+                placeholder="e.g., Widespread Panic"
+                maxLength={120}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank for compilations or various artists • {editArtistName.length}/120 characters
+              </p>
+            </div>
+
             {/* Rename Section */}
             <div className="space-y-2">
               <Label htmlFor="edit-playlist-name">Playlist name</Label>

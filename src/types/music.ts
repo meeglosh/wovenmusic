@@ -59,6 +59,7 @@ export const getCleanTitle = (track: Track): string => {
 export interface Playlist {
   id: string;
   name: string;
+  artistName?: string | null;
   imageUrl?: string;
   trackIds: string[];
   createdAt: Date;

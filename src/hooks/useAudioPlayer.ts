@@ -55,6 +55,7 @@ export const useAudioPlayer = () => {
     id?: string;
     name?: string;
     imageUrl?: string;
+    artistName?: string;
   } | null>(null);
 
   // Create or get the audio element with mobile optimizations
@@ -743,7 +744,7 @@ export const useAudioPlayer = () => {
       
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title || 'Unknown Title',
-        artist: artist || 'Unknown Artist',
+        artist: currentPlaylistContext?.artistName || artist || 'Unknown Artist',
         album: album,
         artwork: artwork
       });

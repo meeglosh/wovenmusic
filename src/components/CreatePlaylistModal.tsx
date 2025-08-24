@@ -23,6 +23,7 @@ interface CreatePlaylistModalProps {
 }
 
 const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) => {
+  const [artistName, setArtistName] = useState("");
   const [playlistName, setPlaylistName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +57,10 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
     setIsLoading(true);
     
     try {
-      const newPlaylist = await createPlaylistMutation.mutateAsync(playlistName.trim());
+      const newPlaylist = await createPlaylistMutation.mutateAsync({ 
+        name: playlistName.trim(),
+        artistName: artistName.trim() || undefined
+      });
       
       // Assign category if one was selected
       if (selectedCategoryId && selectedCategoryId !== "none" && newPlaylist) {
@@ -76,6 +80,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
         description: `"${playlistName}" has been added to your library.`,
       });
       
+      setArtistName("");
       setPlaylistName("");
       setSelectedCategoryId("");
       onOpenChange(false);
@@ -91,6 +96,7 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
   };
 
   const handleClose = () => {
+    setArtistName("");
     setPlaylistName("");
     setSelectedCategoryId("");
     onOpenChange(false);
@@ -143,6 +149,21 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
+              <Label htmlFor="artistName">Artist name (optional)</Label>
+              <Input
+                id="artistName"
+                placeholder="e.g., Widespread Panic"
+                value={artistName}
+                onChange={(e) => setArtistName(e.target.value)}
+                className="col-span-3"
+                maxLength={120}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank for compilations or various artists • {artistName.length}/120 characters
+              </p>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="name">Playlist name</Label>
               <Input
                 id="name"
@@ -150,7 +171,6 @@ const CreatePlaylistModal = ({ open, onOpenChange }: CreatePlaylistModalProps) =
                 value={playlistName}
                 onChange={(e) => setPlaylistName(e.target.value)}
                 className="col-span-3"
-                autoFocus
                 maxLength={100}
               />
               <p className="text-xs text-muted-foreground">

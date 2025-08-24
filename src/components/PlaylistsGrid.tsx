@@ -140,6 +140,9 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                 </div>
 
                 <div className="space-y-1">
+                  {playlist.artistName && (
+                    <div className="text-xs text-muted-foreground/80 truncate">{playlist.artistName}</div>
+                  )}
                   <h3 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
                     {playlist.name}
                   </h3>

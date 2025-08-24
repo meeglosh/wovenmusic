@@ -345,6 +345,7 @@ export type Database = {
       }
       playlists: {
         Row: {
+          artist_name: string | null
           created_at: string
           created_by: string | null
           created_by_user: string | null
@@ -356,6 +357,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          artist_name?: string | null
           created_at?: string
           created_by?: string | null
           created_by_user?: string | null
@@ -367,6 +369,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          artist_name?: string | null
           created_at?: string
           created_by?: string | null
           created_by_user?: string | null

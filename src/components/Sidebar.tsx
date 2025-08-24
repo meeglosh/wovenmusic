@@ -102,6 +102,9 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
               )}
             </div>
             <div className="flex-1 min-w-0">
+              {playlist.artistName && (
+                <p className="text-xs text-muted-foreground/80 truncate leading-tight mb-0.5">{playlist.artistName}</p>
+              )}
               <p className="text-base font-semibold text-primary break-words whitespace-normal leading-tight">{playlist.name}</p>
               <p className="text-xs text-muted-foreground">
                 {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''} • {duration}
