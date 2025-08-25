@@ -551,7 +551,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`w-10 h-10 p-0 transition-all hover:bg-accent hover:text-foreground active:bg-accent active:text-background rounded-full ${
+                      className={`w-10 h-10 p-0 transition-all hover:bg-accent rounded-full ${
                         isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}
                       onClick={() => onPlayTrack(track)}
@@ -563,7 +563,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`w-10 h-10 p-0 transition-all hover:bg-accent hover:text-foreground active:bg-accent active:text-background rounded-full ${
+                      className={`w-10 h-10 p-0 transition-all hover:bg-accent rounded-full ${
                         track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
                       } ${
                         isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
