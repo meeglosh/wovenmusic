@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ProfileProtectedRoute from "@/components/ProfileProtectedRoute";
 import Index from "@/pages/Index";
@@ -41,95 +42,97 @@ function App() {
         <TooltipProvider>
           <BrowserRouter>
             <AuthProvider>
-              <OfflineBanner />
-              <PWAInstallPrompt />
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/auth/verify" element={<AuthVerify />} />
-                <Route path="/playlist/:shareToken" element={<PublicPlaylist />} />
-                <Route path="/test-public-playlist" element={<TestPublicPlaylist />} />
-                <Route path="/dropbox-callback" element={<DropboxCallback />} />
-                <Route path="/dropbox/callback" element={<DropboxCallback />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <Navigate to="/playlists" replace />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/library"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <Index />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/playlists"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <Index />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/playlists/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <PlaylistViewPage />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/members"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <Members />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/track/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <TrackView />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile-setup"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileSetup />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/privacy-settings"
-                  element={
-                    <ProtectedRoute>
-                      <ProfileProtectedRoute>
-                        <PrivacySettings />
-                      </ProfileProtectedRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <ErrorBoundary>
+                <OfflineBanner />
+                <PWAInstallPrompt />
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/verify" element={<AuthVerify />} />
+                  <Route path="/playlist/:shareToken" element={<PublicPlaylist />} />
+                  <Route path="/test-public-playlist" element={<TestPublicPlaylist />} />
+                  <Route path="/dropbox-callback" element={<DropboxCallback />} />
+                  <Route path="/dropbox/callback" element={<DropboxCallback />} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <Navigate to="/playlists" replace />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/library"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <Index />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/playlists"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <Index />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/playlists/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <PlaylistViewPage />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/members"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <Members />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/track/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <TrackView />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile-setup"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileSetup />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/privacy-settings"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileProtectedRoute>
+                          <PrivacySettings />
+                        </ProfileProtectedRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
             </AuthProvider>
           </BrowserRouter>
           <Toaster />

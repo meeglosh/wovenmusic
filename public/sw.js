@@ -26,7 +26,9 @@ registerRoute(
   ({ request, url }) => 
     request.destination === 'image' && 
     url.origin.includes('supabase') && 
-    url.pathname.includes('storage'),
+    url.pathname.includes('storage') &&
+    // Exclude Media Session artwork (JPEG) from service worker caching for car compatibility
+    !url.searchParams.has('format') || url.searchParams.get('format') !== 'jpeg',
   new StaleWhileRevalidate({
     cacheName: 'playlist-covers',
     plugins: [{

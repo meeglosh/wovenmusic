@@ -79,7 +79,15 @@ class OfflineStorageService {
     const response = await this.cache!.match(this.getTrackCacheKey(trackId));
     if (response) {
       const blob = await response.blob();
-      return URL.createObjectURL(blob);
+      
+      // Verify the blob is valid before creating URL
+      if (blob && blob.size > 0) {
+        return URL.createObjectURL(blob);
+      } else {
+        console.warn(`Invalid blob for track ${trackId}, removing from cache`);
+        await this.removeTrack(trackId);
+        return null;
+      }
     }
     return null;
   }

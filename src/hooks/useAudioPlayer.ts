@@ -314,6 +314,12 @@ export const useAudioPlayer = () => {
         } catch (error) {
         console.error('Failed to load track:', error);
         
+        // Clean up any audio source on error to prevent hanging
+        if (audio.src) {
+          audio.removeAttribute('src');
+          audio.load();
+        }
+        
         // Only dispatch auth events if we haven't recently re-authenticated
         // This prevents loops after successful re-auth
         if (!recentlyReauthed) {
@@ -328,10 +334,27 @@ export const useAudioPlayer = () => {
           } else if (error.message === 'DROPBOX_CONNECTION_ERROR') {
             console.error('Dropbox connection error');
             // Could add a toast or other UI feedback here
+          } else if (error.message === 'TRACK_NOT_AVAILABLE_OFFLINE') {
+            console.error('Track not available offline');
+            toast({
+              title: "Track not available offline",
+              description: `"${currentTrack.title}" is not downloaded and you're offline`,
+              variant: "destructive"
+            });
+            
+            // Try to find next downloadable track if in a playlist
+            if (playlist.length > 1 && isPlaying) {
+              console.log('Attempting to skip to next downloadable track...');
+              playNext({ wrap: true });
+              return;
+            }
           }
         } else {
           console.log('Skipping auth event dispatch - recently re-authenticated');
         }
+        
+        // Stop playback on error to prevent hanging
+        setIsPlaying(false);
       }
     };
     
@@ -383,7 +406,7 @@ export const useAudioPlayer = () => {
         });
       }
     };
-    const handleEnded = () => {
+    const handleEnded = async () => {
       console.log('Track ended');
       
       try {
@@ -395,8 +418,12 @@ export const useAudioPlayer = () => {
           
         if (isRepeatMode || !isLastTrack) {
           console.log('Auto-advancing to next track...');
-          setIsPlaying(true);
-          playNext({ wrap: true });
+          const success = await playNext({ wrap: true });
+          if (!success) {
+            console.log('Failed to advance to next track, stopping playback');
+            setIsPlaying(false);
+            setCurrentTime(0);
+          }
         } else {
           console.log('End of playlist reached, stopping playback');
           setIsPlaying(false);
@@ -458,28 +485,25 @@ export const useAudioPlayer = () => {
     return currentTrackIndex;
   };
 
-  const getNextTrackIndex = (wrap: boolean = false) => {
-    const currentIndex = getCurrentIndex();
-    const playlistLength = playlist.length;
+  const getNextTrackIndex = (shouldWrap = false, fromIndex?: number): number => {
+    if (playlist.length === 0) return -1;
     
-    if (playlistLength === 0) return -1;
-    
-    if (isRepeatMode && playlistLength === 1) {
-      return currentTrackIndex; // Repeat single track
-    }
+    const startIndex = fromIndex !== undefined ? fromIndex : currentTrackIndex;
     
     if (isShuffleMode) {
-      const nextShuffleIndex = currentIndex + 1;
+      const currentShuffleIndex = fromIndex !== undefined 
+        ? shuffledOrder.indexOf(fromIndex)
+        : getCurrentIndex();
+      const nextShuffleIndex = currentShuffleIndex + 1;
+      
       if (nextShuffleIndex >= shuffledOrder.length) {
-        // End of shuffled playlist
-        return (wrap || isRepeatMode) ? shuffledOrder[0] : -1;
+        return shouldWrap ? shuffledOrder[0] : -1;
       }
       return shuffledOrder[nextShuffleIndex];
     } else {
-      const nextIndex = currentTrackIndex + 1;
-      if (nextIndex >= playlistLength) {
-        // End of playlist
-        return (wrap || isRepeatMode) ? 0 : -1;
+      const nextIndex = startIndex + 1;
+      if (nextIndex >= playlist.length) {
+        return shouldWrap ? 0 : -1;
       }
       return nextIndex;
     }
@@ -631,7 +655,7 @@ export const useAudioPlayer = () => {
     }
   };
 
-  const playNext = (options: { wrap?: boolean } = {}) => {
+  const playNext = async (options: { wrap?: boolean } = {}): Promise<boolean> => {
     console.log('=== PLAY NEXT DEBUG ===');
     console.log('Current track index:', currentTrackIndex);
     console.log('Playlist length:', playlist.length);
@@ -645,23 +669,70 @@ export const useAudioPlayer = () => {
       console.log('Next index calculated:', nextIndex);
       
       if (nextIndex !== -1 && playlist[nextIndex]) {
-        console.log(`Moving to next track: ${nextIndex} (${playlist[nextIndex].title})`);
-        setCurrentTrackIndex(nextIndex);
         const nextTrack = playlist[nextIndex];
+        console.log(`Moving to next track: ${nextIndex} (${nextTrack.title})`);
         
+        // Check if the next track is available offline when we're offline
+        if (!isOnline()) {
+          const isDownloaded = await offlineStorageService.isTrackDownloaded(nextTrack.id);
+          if (!isDownloaded) {
+            console.log('Track not available offline, trying to find next downloadable track');
+            toast({
+              title: "Track not downloaded",
+              description: `"${nextTrack.title}" is not available offline`,
+              variant: "destructive"
+            });
+            
+            // Try to find next downloadable track
+            let foundDownloadedTrack = false;
+            let searchIndex = nextIndex;
+            
+            for (let attempts = 0; attempts < playlist.length; attempts++) {
+              // Move to next index manually since we need to search from a specific starting point
+              searchIndex = searchIndex + 1;
+              if (searchIndex >= playlist.length) {
+                searchIndex = options.wrap ? 0 : -1;
+              }
+              if (searchIndex === -1) break;
+              
+              const candidateTrack = playlist[searchIndex];
+              const candidateDownloaded = await offlineStorageService.isTrackDownloaded(candidateTrack.id);
+              
+              if (candidateDownloaded) {
+                console.log(`Found downloaded track at index ${searchIndex}: ${candidateTrack.title}`);
+                setCurrentTrackIndex(searchIndex);
+                setCurrentTrack({ ...candidateTrack });
+                foundDownloadedTrack = true;
+                return true;
+              }
+            }
+            
+            if (!foundDownloadedTrack) {
+              console.log('No more downloaded tracks available');
+              setIsPlaying(false);
+              setCurrentTime(0);
+              return false;
+            }
+          }
+        }
+        
+        setCurrentTrackIndex(nextIndex);
         // Force a new object reference to trigger track loading
         setCurrentTrack({ ...nextTrack });
         
         // Keep playing state - the track loading effect will handle auto-play
         console.log('Next track set, keeping isPlaying state for auto-continue');
+        return true;
       } else {
         console.log('No next track available, stopping playback');
         setIsPlaying(false);
         setCurrentTime(0);
+        return false;
       }
     } catch (error) {
       console.error('Error in playNext:', error);
       setIsPlaying(false);
+      return false;
     }
   };
 
