@@ -7,8 +7,8 @@ import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 // Import the existing DropboxService singleton
 import { dropboxService } from "@/services/dropboxService";
 import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
-import { r2StorageService } from "@/services/r2StorageService";
 import { generateMediaSessionArtwork } from "@/lib/utils";
+import { resolveTrackUrl } from "@/services/trackUrls";
 
 // Shuffle function using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -107,30 +107,38 @@ export const useAudioPlayer = () => {
           console.log('Using offline cached track');
         } else {
           // Handle R2 storage vs legacy storage
-          if (currentTrack.storage_type === 'r2') {
-            console.log('Track uses R2 storage');
-            
-            if (currentTrack.is_public && currentTrack.storage_url) {
-              // Public track - use direct URL
-              audioUrl = currentTrack.storage_url;
-              console.log('Using public R2 URL:', audioUrl);
-            } else {
-              // Private track or no stored URL - get signed URL
-              console.log('Getting signed URL for R2 track');
-              try {
-                const urlResult = await r2StorageService.getTrackUrl(currentTrack.id);
-                audioUrl = urlResult.fileUrl;
-                console.log('Got signed R2 URL:', audioUrl);
-              } catch (error) {
-                console.error('Failed to get R2 signed URL:', error);
-                throw new Error('Failed to get track URL from R2');
-              }
-            }
-          } else {
-            // Legacy Supabase storage
-            console.log('Track uses legacy Supabase storage');
-            audioUrl = currentTrack.fileUrl;
-          }
+		if (currentTrack.storage_type === "r2") {
+		  console.log("Track uses R2 storage");
+		
+		  if (currentTrack.is_public && currentTrack.storage_url) {
+		    // Public track - use direct URL
+		    audioUrl = currentTrack.storage_url;
+		    console.log("Using public R2 URL:", audioUrl);
+		  } else {
+		    // Private (or missing stored URL) → ask our Edge Function for a signed URL
+		    console.log("Getting signed URL via Edge Function for R2 track");
+		    try {
+		      audioUrl = await resolveTrackUrl(currentTrack.id);
+		      console.log("Got signed R2 URL:", audioUrl);
+		    } catch (error) {
+		      console.error("Failed to get signed URL from Edge Function:", error);
+		      // Optional: fall back to old client method if you want belt-and-suspenders
+		      // try {
+		      //   const urlResult = await r2StorageService.getTrackUrl(currentTrack.id);
+		      //   audioUrl = urlResult.fileUrl;
+		      //   console.log("Fallback signed URL via r2StorageService:", audioUrl);
+		      // } catch (fallbackErr) {
+		      //   console.error("Fallback also failed:", fallbackErr);
+		      //   throw new Error("Failed to get track URL from R2");
+		      // }
+		      throw new Error("Failed to get track URL from R2");
+		    }
+		  }
+		} else {
+		  // Legacy Supabase storage
+		  console.log("Track uses legacy Supabase storage");
+		  audioUrl = currentTrack.fileUrl;
+		}
           
           // Show helpful message if offline and track not downloaded
           if (!isOnline()) {
