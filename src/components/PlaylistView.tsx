@@ -19,7 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
 import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
 import OptimizedImage from "@/components/OptimizedImage";
-import { resolveImageUrl } from "@/services/cdn";
+import { playlistImageSrc } from "@/services/imageFor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -598,9 +598,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
           {playlist.imageUrl || playlist.image_key ? (
             <OptimizedImage
-              src={playlist.image_key
-                ? resolveImageUrl(null, playlist.image_key)
-                : resolveImageUrl(playlist.imageUrl)}
+              src={playlistImageSrc(playlist)}
               alt={playlist.name} 
               className="w-full h-full"
               sizes="192px"
@@ -856,7 +854,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
                   playlist={playlistTracks}
-                  playlistImageUrl={playlist.imageUrl}
+                  playlistImageUrl={playlistImageSrc(playlist)}
                   canManagePlaylistTracks={canManagePlaylistTracks(playlist)}
                 />
               ))}
@@ -1010,18 +1008,16 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Label>Playlist image</Label>
               <div className="flex items-start gap-4">
                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                  {playlist.imageUrl || playlist.image_key ? (
-                    <OptimizedImage
-                      src={playlist.image_key
-                        ? resolveImageUrl(null, playlist.image_key)
-                        : resolveImageUrl(playlist.imageUrl)} 
-                      alt={playlist.name} 
-                      className="w-full h-full"
-                      sizes="80px"
-                      objectFit="cover"
-                      loading="lazy"
-                    />
-                  ) : (
+                   {playlist.imageUrl || playlist.image_key ? (
+                     <OptimizedImage
+                       src={playlistImageSrc(playlist)} 
+                       alt={playlist.name} 
+                       className="w-full h-full"
+                       sizes="80px"
+                       objectFit="cover"
+                       loading="lazy"
+                     />
+                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
                       <div className="text-xl text-primary/60">♪</div>
                     </div>

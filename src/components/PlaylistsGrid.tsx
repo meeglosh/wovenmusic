@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Playlist, Track, calculatePlaylistDuration } from "@/types/music";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 import OptimizedImage from "@/components/OptimizedImage";
-import { resolveImageUrl } from "@/services/cdn";
+import { playlistImageSrc } from "@/services/imageFor";
 
 interface PlaylistsGridProps {
   playlists: Playlist[];
@@ -113,9 +113,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                   {playlist.imageUrl || playlist.image_key ? (
                     <OptimizedImage
-                      src={playlist.image_key
-                        ? resolveImageUrl(null, playlist.image_key)
-                        : resolveImageUrl(playlist.imageUrl)}
+                      src={playlistImageSrc(playlist)}
                       alt={playlist.name}
                       className="w-full h-full transition-transform duration-200 group-hover:scale-105"
                       sizes="(max-width: 640px) calc(50vw - 2rem), (max-width: 768px) calc(33.333vw - 2rem), (max-width: 1024px) calc(25vw - 2rem), (max-width: 1280px) calc(20vw - 2rem), calc(16.666vw - 2rem)"
