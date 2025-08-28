@@ -14,7 +14,7 @@ import { Upload, User, ArrowLeft, X } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
 import { useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { Switch } from "@/components/ui/switch";
-import { getImageUrl } from "@/lib/imageUtils";
+import { resolveImageUrl } from "@/services/cdn";
 
 const ProfileSetup = () => {
   const { user } = useAuth();
@@ -210,7 +210,7 @@ const ProfileSetup = () => {
             {/* Avatar Upload */}
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="w-20 h-20 border-2 border-border">
-                <AvatarImage src={avatarUrl} />
+                <AvatarImage src={resolveImageUrl(avatarUrl) || avatarUrl} />
                 <AvatarFallback>
                   <User className="w-8 h-8" />
                 </AvatarFallback>

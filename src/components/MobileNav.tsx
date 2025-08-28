@@ -8,7 +8,7 @@ import { Playlist, calculatePlaylistDuration } from "@/types/music";
 import { cn } from "@/lib/utils";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 import OptimizedImage from "@/components/OptimizedImage";
-import { getImageUrl } from "@/lib/imageUtils";
+import { resolveImageUrl } from "@/services/cdn";
 
 interface MobileNavProps {
   playlists: Playlist[];
@@ -100,7 +100,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
             <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
               {playlist.imageUrl ? (
                 <OptimizedImage
-                  src={getImageUrl(playlist.imageUrl)} 
+                  src={resolveImageUrl(playlist.imageUrl)} 
                   alt={`${playlist.name} cover`}
                   className="w-full h-full rounded"
                   sizes="32px"

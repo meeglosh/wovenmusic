@@ -7,7 +7,7 @@ import { Search, Upload, Users, Settings, Shield, LogOut, Palette, ChevronDown, 
 import { OfflineStorageManager } from "@/components/OfflineStorageManager";
 import { OfflineStatusIndicator } from "@/components/OfflineStatusIndicator";
 import { useNavigate } from "react-router-dom";
-import { getImageUrl } from "@/lib/imageUtils";
+import { resolveImageUrl } from "@/services/cdn";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, THEMES, type Theme } from "@/hooks/useTheme";
 import UploadModal from "./UploadModal";
@@ -146,7 +146,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <>
                   <div className="flex items-center gap-3 p-3 border-b border-border">
                     <Avatar className="h-10 w-10 shrink-0">
-                       <AvatarImage src={getImageUrl(userProfile.avatar_url)} alt={userProfile.full_name || ''} />
+                        <AvatarImage src={resolveImageUrl(userProfile.avatar_url)} alt={userProfile.full_name || ''} />
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
                       </AvatarFallback>
@@ -219,7 +219,7 @@ const Header = ({ playlists = [], currentView = "library", onViewChange, onPlayl
                 <>
                   <div className="flex items-center gap-2 p-3 border-b border-border">
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={getImageUrl(userProfile.avatar_url)} alt={userProfile.full_name || ''} />
+                      <AvatarImage src={resolveImageUrl(userProfile.avatar_url)} alt={userProfile.full_name || ''} />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                         {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || '?'}
                       </AvatarFallback>

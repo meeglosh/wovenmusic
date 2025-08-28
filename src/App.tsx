@@ -32,6 +32,9 @@ const queryClient = new QueryClient();
 
 function App() {
   useEffect(() => {
+    // REMOVE after verification
+    console.log("CDN base:", import.meta.env.VITE_CDN_BASE);
+    
     // Initialize PWA service
     pwaService.init().catch(console.error);
   }, []);

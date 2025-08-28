@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import CreatePlaylistModal from "./CreatePlaylistModal";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 import OptimizedImage from "@/components/OptimizedImage";
-import { getImageUrl } from "@/lib/imageUtils";
+import { resolveImageUrl } from "@/services/cdn";
 
 interface SidebarProps {
   playlists: Playlist[];
@@ -91,7 +91,7 @@ const Sidebar = ({ playlists, currentView, onViewChange, onPlaylistSelect, libra
             <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
               {playlist.imageUrl ? (
                 <OptimizedImage
-                  src={getImageUrl(playlist.imageUrl)} 
+                  src={resolveImageUrl(playlist.imageUrl)} 
                   alt={`${playlist.name} cover`}
                   className="w-full h-full rounded"
                   sizes="32px"
