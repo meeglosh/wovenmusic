@@ -16,6 +16,7 @@ import Player from "@/components/Player";
 import { useClosedBeta } from "@/hooks/useClosedBeta";
 import ClosedBetaSplash from "@/components/ClosedBetaSplash";
 import OptimizedImage from "@/components/OptimizedImage";
+import { getImageUrl } from "@/lib/imageUtils";
 
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
@@ -262,7 +263,7 @@ const PublicPlaylist = () => {
           <div className="flex-shrink-0">
             {playlist.imageUrl ? (
               <OptimizedImage
-                src={playlist.imageUrl} 
+                src={getImageUrl(playlist.imageUrl)} 
                 alt={playlist.name}
                 className="w-48 h-48 rounded-lg shadow-lg"
                 sizes="192px"

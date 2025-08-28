@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { getImageUrl } from "@/lib/imageUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useBandMembers } from "@/hooks/useBandMembers";
 
@@ -138,7 +139,7 @@ export const MentionAutocomplete = ({
             onClick={() => handleMentionSelect(member)}
           >
             <Avatar className="h-6 w-6">
-              <AvatarImage src={member.avatar_url || undefined} />
+              <AvatarImage src={getImageUrl(member.avatar_url)} />
               <AvatarFallback className="text-xs bg-primary/20 text-primary">
                 {getInitials(member.full_name, member.email)}
               </AvatarFallback>

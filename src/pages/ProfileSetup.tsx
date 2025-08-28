@@ -14,6 +14,7 @@ import { Upload, User, ArrowLeft, X } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
 import { useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { Switch } from "@/components/ui/switch";
+import { getImageUrl } from "@/lib/imageUtils";
 
 const ProfileSetup = () => {
   const { user } = useAuth();

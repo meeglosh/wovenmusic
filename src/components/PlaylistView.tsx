@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
 import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
 import OptimizedImage from "@/components/OptimizedImage";
+import { getImageUrl } from "@/lib/imageUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -597,7 +598,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
           {playlist.imageUrl ? (
             <OptimizedImage
-              src={playlist.imageUrl} 
+              src={getImageUrl(playlist.imageUrl)}
               alt={playlist.name} 
               className="w-full h-full"
               sizes="192px"
@@ -1009,7 +1010,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
                   {playlist.imageUrl ? (
                     <OptimizedImage
-                      src={playlist.imageUrl} 
+                      src={getImageUrl(playlist.imageUrl)} 
                       alt={playlist.name} 
                       className="w-full h-full"
                       sizes="80px"
