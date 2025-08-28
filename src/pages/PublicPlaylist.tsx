@@ -261,9 +261,11 @@ const PublicPlaylist = () => {
         {/* Playlist Header */}
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <div className="flex-shrink-0">
-            {playlist.imageUrl ? (
+            {playlist.imageUrl || (playlist as any).image_key ? (
               <OptimizedImage
-                src={resolveImageUrl(playlist.imageUrl)} 
+                src={(playlist as any).image_key
+                  ? resolveImageUrl(null, (playlist as any).image_key)
+                  : resolveImageUrl(playlist.imageUrl)} 
                 alt={playlist.name}
                 className="w-48 h-48 rounded-lg shadow-lg"
                 sizes="192px"

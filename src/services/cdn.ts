@@ -4,20 +4,22 @@ const CDN = import.meta.env.VITE_CDN_BASE?.replace(/\/+$/, "") || "";
 function rewriteLegacyHost(u: string) {
   try {
     const url = new URL(u);
-    // Legacy CDN host that currently has no DNS. Rewrite to R2 base:
+
+    // 1) Legacy "cdn.wovenmusic.app" links (often with %2F)
     if (url.hostname === "cdn.wovenmusic.app") {
-      // Keep the path exactly as-is (don’t double-encode slashes)
-      return `${CDN}${url.pathname}${url.search}${url.hash}`;
+      // decode %2F etc. back to normal slashes
+      const decodedPath = decodeURIComponent(url.pathname);
+      // Keep query/hash if present
+      return `${CDN}${decodedPath}${url.search}${url.hash}`;
     }
-    // Legacy Supabase public bucket host → rewrite to R2 if needed (optional)
+
+    // 2) Supabase public storage URLs → rewrite into R2 path
     if (url.hostname.endsWith(".supabase.co")) {
-      // If your DB stored full Supabase URLs for images, map their path into R2’s layout:
-      // Example: /storage/v1/object/public/images/playlists/<file>
-      // becomes: /images/playlists/<file>
       const m = url.pathname.match(/\/storage\/v1\/object\/public\/(.+)$/);
       if (m?.[1]) return `${CDN}/${m[1]}`;
     }
-    return u; // pass-through for any other http(s) URLs (Dropbox, etc.)
+
+    return u;
   } catch {
     return u;
   }

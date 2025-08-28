@@ -61,6 +61,7 @@ export interface Playlist {
   name: string;
   artistName?: string | null;
   imageUrl?: string;
+  image_key?: string;
   trackIds: string[];
   createdAt: Date;
   sharedWith: string[];
