@@ -117,7 +117,6 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
       }, 15000);
       
       audio.preload = 'metadata';
-      audio.crossOrigin = 'anonymous';
       audio.src = url;
     });
   };

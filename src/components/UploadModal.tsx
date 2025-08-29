@@ -223,7 +223,6 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       }, 15000);
       
       audio.preload = 'metadata';
-      audio.crossOrigin = 'anonymous';
       audio.src = url;
     });
   };

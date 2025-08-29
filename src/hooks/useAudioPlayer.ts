@@ -62,7 +62,6 @@ export const useAudioPlayer = () => {
   useEffect(() => {
     if (!audioRef.current) {
       const audio = document.createElement('audio');
-      audio.crossOrigin = 'anonymous';
       
       // Mobile-specific audio optimizations
       audio.setAttribute('playsinline', 'true'); // Prevent fullscreen on iOS
@@ -72,7 +71,6 @@ export const useAudioPlayer = () => {
       audioRef.current = audio;
       console.log('Audio element created with mobile optimizations');
       console.log('Audio attributes:', {
-        crossOrigin: audio.crossOrigin,
         playsinline: audio.getAttribute('playsinline'),
         preload: audio.preload
       });
