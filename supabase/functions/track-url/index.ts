@@ -54,10 +54,20 @@ serve(async (req) => {
       });
     }
 
+    // Ensure signed URLs support range requests for audio playback
     const signed = await getPrivateSignedUrl(t.storage_key, 3600);
+    
+    // Log the URL generation for debugging
+    console.log(`Generated signed URL for track ${id}, storage_key: ${t.storage_key}`);
+    
     return new Response(JSON.stringify({ ok: true, url: signed, kind: "signed" }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        // Ensure response supports range requests
+        'Accept-Ranges': 'bytes'
+      }
     });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { 

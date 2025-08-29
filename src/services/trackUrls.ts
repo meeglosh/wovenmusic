@@ -1,19 +1,18 @@
-const FN_URL =
-  import.meta.env.VITE_SUPABASE_FUNCTIONS_URL ||
-  "https://woakvdhlpludrttjixxq.functions.supabase.co";
-
-const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { supabase } from "@/integrations/supabase/client";
 
 export async function resolveTrackUrl(trackId: string): Promise<string> {
-  const res = await fetch(`${FN_URL}/track-url?id=${encodeURIComponent(trackId)}`, {
-    headers: {
-      apikey: API_KEY,
-      Authorization: `Bearer ${API_KEY}`,
-    },
+  // Use GET request with query parameter since that's what the function expects
+  const { data, error } = await supabase.functions.invoke(`track-url?id=${encodeURIComponent(trackId)}`, {
+    method: 'GET'
   });
-  const json = await res.json();
-  if (!json?.ok || !json?.url) {
-    throw new Error(json?.error || "Failed to resolve URL");
+  
+  if (error) {
+    throw new Error(`Failed to resolve track URL: ${error.message}`);
   }
-  return json.url as string;
+  
+  if (!data?.ok || !data?.url) {
+    throw new Error(data?.error || "Failed to resolve URL");
+  }
+  
+  return data.url as string;
 }
