@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { profileAvatarSrc } from "@/services/imageFor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, User, ArrowLeft, X } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
@@ -22,7 +23,7 @@ const ProfileSetup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string>(user?.user_metadata?.avatar_url || "");
+  const [avatarUrl, setAvatarUrl] = useState<string>(profileAvatarSrc(user?.user_metadata || {}) || "");
   const [profileData, setProfileData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -48,7 +49,7 @@ const ProfileSetup = () => {
           
           if (data) {
             setProfileData(data);
-            setAvatarUrl(data.avatar_url || "");
+            setAvatarUrl(profileAvatarSrc(data) || "");
             // Set selected roles from existing data
             if (data.roles && data.roles.length > 0) {
               setSelectedRoles(data.roles);

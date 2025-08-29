@@ -596,7 +596,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
 
       <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
-          {playlist.imageUrl || playlist.image_key ? (
+          {playlistImageSrc(playlist) ? (
             <OptimizedImage
               src={playlistImageSrc(playlist)}
               alt={playlist.name} 
@@ -1008,7 +1008,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Label>Playlist image</Label>
               <div className="flex items-start gap-4">
                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                   {playlist.imageUrl || playlist.image_key ? (
+                   {playlistImageSrc(playlist) ? (
                      <OptimizedImage
                        src={playlistImageSrc(playlist)} 
                        alt={playlist.name} 
@@ -1033,9 +1033,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     className="w-full justify-start"
                   >
                     <Image className="w-4 h-4 mr-2" />
-                    {playlist.imageUrl ? "Change image" : "Upload image"}
+                    {playlistImageSrc(playlist) ? "Change image" : "Upload image"}
                   </Button>
-                  {playlist.imageUrl && (
+                  {playlistImageSrc(playlist) && (
                     <Button
                       type="button"
                       variant="outline"

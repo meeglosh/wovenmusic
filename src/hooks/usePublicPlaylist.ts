@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@supabase/supabase-js";
+import { playlistImageSrc } from "@/services/imageFor";
 
 // Create a separate Supabase client without auth for public access
 const publicSupabase = createClient(
@@ -83,7 +84,7 @@ export const usePublicPlaylist = (playlistId: string) => {
         return {
           id: playlist.id,
           name: playlist.name,
-          imageUrl: playlist.image_url,
+          imageUrl: playlistImageSrc(playlist),
           tracks: publicTracks,
           isPublic: playlist.is_public,
           // Note: share_token intentionally omitted for security
@@ -171,7 +172,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
         return {
           id: playlist.id,
           name: playlist.name,
-          imageUrl: playlist.image_url,
+          imageUrl: playlistImageSrc(playlist),
           tracks: publicTracks,
           isPublic: playlist.is_public,
           // Note: share_token intentionally omitted for security

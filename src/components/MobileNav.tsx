@@ -98,7 +98,7 @@ const MobileNav = ({ playlists, currentView, onViewChange, onPlaylistSelect, lib
         <div className="flex items-center w-full">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="w-8 h-8 bg-muted rounded flex items-center justify-center overflow-hidden">
-              {playlist.imageUrl || playlist.image_key ? (
+              {playlistImageSrc(playlist) ? (
                 <OptimizedImage
                   src={playlistImageSrc(playlist)} 
                   alt={`${playlist.name} cover`}

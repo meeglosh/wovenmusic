@@ -111,7 +111,7 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
                 onClick={() => handlePlaylistClick(playlist)}
               >
                 <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-                   {playlist.imageUrl || playlist.image_key ? (
+                   {playlistImageSrc(playlist) ? (
                      <OptimizedImage
                        src={playlistImageSrc(playlist)}
                        alt={playlist.name}
