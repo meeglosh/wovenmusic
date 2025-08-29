@@ -138,6 +138,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             height={512}
             onLoad={handleImageLoad}
             onError={handleImageError}
+            data-debug-src={finalSrc}
           />
         </picture>
       ) : (
@@ -152,6 +153,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={512}
           onLoad={handleImageLoad}
           onError={handleImageError}
+          data-debug-src={finalSrc}
         />
       )}
     </div>
