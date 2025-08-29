@@ -4,18 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { profileAvatarSrc } from "@/services/imageFor";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, User, ArrowLeft, X } from "lucide-react";
 import { MultiRoleSelector } from "@/components/MultiRoleSelector";
 import { useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { Switch } from "@/components/ui/switch";
-import { resolveImageUrl } from "@/services/cdn";
 
 const ProfileSetup = () => {
   const { user } = useAuth();
@@ -23,7 +21,7 @@ const ProfileSetup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string>(profileAvatarSrc(user?.user_metadata || {}) || "");
+  const [avatarUrl, setAvatarUrl] = useState<string>(user?.user_metadata?.avatar_url || "");
   const [profileData, setProfileData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -49,7 +47,7 @@ const ProfileSetup = () => {
           
           if (data) {
             setProfileData(data);
-            setAvatarUrl(profileAvatarSrc(data) || "");
+            setAvatarUrl(data.avatar_url || "");
             // Set selected roles from existing data
             if (data.roles && data.roles.length > 0) {
               setSelectedRoles(data.roles);
@@ -211,7 +209,7 @@ const ProfileSetup = () => {
             {/* Avatar Upload */}
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="w-20 h-20 border-2 border-border">
-                <AvatarImage src={resolveImageUrl(avatarUrl) || avatarUrl} />
+                <AvatarImage src={avatarUrl} />
                 <AvatarFallback>
                   <User className="w-8 h-8" />
                 </AvatarFallback>

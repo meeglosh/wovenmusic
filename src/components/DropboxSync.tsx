@@ -538,6 +538,7 @@ const DropboxSync = () => {
         resolve(0); // Return 0 if we can't get duration
       });
       
+      audio.crossOrigin = 'anonymous';
       audio.src = fileUrl;
     });
   };

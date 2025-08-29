@@ -106,6 +106,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       setTimeout(() => cleanup(), 15000);
       
       audio.preload = 'metadata';
+      audio.crossOrigin = 'anonymous';
       audio.src = url;
     });
   };

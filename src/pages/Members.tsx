@@ -13,7 +13,6 @@ import { useNavigate } from "react-router-dom";
 import { useBandMembers, useInvitations, useCustomRoles, useCurrentUserProfile } from "@/hooks/useBandMembers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { profileAvatarSrc } from "@/services/imageFor";
 
 const Members = () => {
   const navigate = useNavigate();
@@ -215,7 +214,7 @@ const Members = () => {
                 <CardHeader className="pb-3">
                   <div className="flex flex-col items-center text-center space-y-3">
                     <Avatar className="w-[70px] h-[70px]">
-                      <AvatarImage src={profileAvatarSrc(member)} alt={member.full_name || member.email || 'User'} />
+                      <AvatarImage src={member.avatar_url || ''} alt={member.full_name || member.email || 'User'} />
                       <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white text-xl font-medium">
                         {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
                       </AvatarFallback>

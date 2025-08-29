@@ -8,7 +8,6 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBandMembers } from "@/hooks/useBandMembers";
 import { MentionAutocomplete } from "@/components/MentionAutocomplete";
-import { profileAvatarSrc } from "@/services/imageFor";
 import {
   usePlaylistComments,
   useAddPlaylistComment,
@@ -194,7 +193,7 @@ export const PlaylistComments = ({ playlistId, playlistName }: PlaylistCommentsP
     return (
       <div key={comment.id} className={`flex gap-3 group ${isReply ? 'ml-8 mt-4 pl-4 bg-primary/10 rounded-lg border-l-2 border-primary/25' : ''}`}>
         <Avatar className="h-8 w-8 mt-1">
-          <AvatarImage src={profileAvatarSrc(userProfile || {})} />
+          <AvatarImage src={userProfile?.avatar_url || undefined} />
           <AvatarFallback className="text-xs bg-primary/20 text-primary">
             {getInitials(
               userProfile?.full_name || comment.userFullName, 

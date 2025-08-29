@@ -100,10 +100,6 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     return <>{fallback}</>;
   }
 
-  // Don't re-encode already absolute URLs
-  const isAbsolute = /^https?:\/\//i.test(src);
-  const finalSrc = isAbsolute ? src : src;
-
   return (
     <div className={cn("relative overflow-hidden", aspectRatio === "square" && "aspect-square")}>
       {/* Loading placeholder */}
@@ -126,7 +122,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             />
           ))}
           <img
-            src={finalSrc}
+            src={src}
             alt={alt}
             className={imageClasses}
             loading={priority ? "eager" : loading}
@@ -138,12 +134,11 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             height={512}
             onLoad={handleImageLoad}
             onError={handleImageError}
-            data-debug-src={finalSrc}
           />
         </picture>
       ) : (
         <img
-          src={finalSrc}
+          src={src}
           alt={alt}
           className={imageClasses}
           loading={priority ? "eager" : loading}
@@ -153,7 +148,6 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={512}
           onLoad={handleImageLoad}
           onError={handleImageError}
-          data-debug-src={finalSrc}
         />
       )}
     </div>
