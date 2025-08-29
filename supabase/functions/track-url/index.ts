@@ -23,6 +23,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
+    const debug = url.searchParams.get("debug") === "1";
     
     if (!id) {
       return new Response(JSON.stringify({ ok: false, error: "missing id" }), { 
@@ -70,6 +71,44 @@ serve(async (req) => {
     console.log(`Generating signed URL for track ${id}, storage_key: "${t.storage_key}"`);
     const signed = await getPrivateSignedUrl(t.storage_key, 3600);
     console.log(`Generated signed URL: ${signed}`);
+    
+    // Debug mode: check actual R2 response headers
+    if (debug) {
+      try {
+        console.log(`Debug mode: checking headers for ${signed.substring(0, 200)}...`);
+        const response = await fetch(signed, { method: 'HEAD' });
+        const debugInfo = {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          contentLength: response.headers.get('content-length'),
+          acceptRanges: response.headers.get('accept-ranges'),
+          etag: response.headers.get('etag'),
+          urlSample: signed.substring(0, 200) + '...'
+        };
+        console.log('Debug headers:', JSON.stringify(debugInfo, null, 2));
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          url: signed, 
+          kind: "signed", 
+          debug: debugInfo 
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (debugError) {
+        console.error('Debug HEAD request failed:', debugError);
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          url: signed, 
+          kind: "signed", 
+          debugError: String(debugError) 
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
     
     return new Response(JSON.stringify({ ok: true, url: signed, kind: "signed" }), {
       status: 200,
