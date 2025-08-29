@@ -4,8 +4,10 @@ import { uploadToR2, BUCKET_PUBLIC, PUBLIC_BASE } from '../_shared/r2.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'x-client-info, apikey, authorization, content-type, x-requested-with',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin',
 }
 
 interface ImageUploadRequest {

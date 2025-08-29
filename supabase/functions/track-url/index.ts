@@ -5,8 +5,9 @@ import { getPrivateSignedUrl } from "../_shared/r2.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://wovenmusic.app',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'apikey, authorization, content-type',
+  'Access-Control-Allow-Headers': 'x-client-info, apikey, authorization, content-type, x-requested-with',
   'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin',
 };
 
 serve(async (req) => {
