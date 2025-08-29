@@ -5,6 +5,7 @@ import { uploadToR2, BUCKET_PUBLIC, PUBLIC_BASE } from '../_shared/r2.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 interface ImageUploadRequest {
@@ -67,7 +68,9 @@ serve(async (req) => {
     // Generate the storage key
     const fileExtension = file.name.split('.').pop() || 'jpg'
     const timestamp = Date.now()
-    const key = `images/${entityType}s/${entityId || user.id}_${timestamp}.${fileExtension}`
+    const uniqueId = entityId || user.id
+    const folderName = entityType === 'profile' ? 'avatars' : 'playlists'
+    const key = `images/${folderName}/${uniqueId}_${timestamp}.${fileExtension}`
 
     // Convert file to Uint8Array
     const fileData = new Uint8Array(await file.arrayBuffer())
@@ -127,7 +130,10 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        ok: true,
         success: true,
+        image_key: key,
+        image_url: fullUrl,
         key,
         url: fullUrl
       }),
@@ -139,9 +145,21 @@ serve(async (req) => {
     
   } catch (error) {
     console.error('Image upload error:', error)
+    
+    // Log detailed error information for debugging
+    const errorDetails = {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      timestamp: new Date().toISOString()
+    }
+    console.error('Detailed error:', errorDetails)
+    
     return new Response(
       JSON.stringify({
-        error: error.message || 'Internal server error'
+        ok: false,
+        error: error.message || 'Internal server error',
+        details: errorDetails
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

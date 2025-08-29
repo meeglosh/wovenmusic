@@ -243,7 +243,7 @@ export const useUploadPlaylistImage = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch('https://woakvdhlpludrttjixxq.supabase.co/functions/v1/image-upload', {
+      const response = await fetch('https://woakvdhlpludrttjixxq.functions.supabase.co/image-upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
