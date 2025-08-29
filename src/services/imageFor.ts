@@ -1,9 +1,10 @@
 import { resolveImageUrl } from "@/services/cdn";
 
-type WithImage = { image_key?: string | null; image_url?: string | null; };
+type HasImg = { image_key?: string | null; image_url?: string | null };
+type HasAvatar = { avatar_key?: string | null; avatar_url?: string | null };
 
-export function playlistImageSrc(p: WithImage) {
-  // Prefer key (clean path); fall back to legacy URL through resolver
-  if (p?.image_key) return resolveImageUrl(null, p.image_key);
-  return resolveImageUrl(p?.image_url || "");
-}
+export const playlistImageSrc = (p: HasImg) =>
+  resolveImageUrl(p?.image_url ?? null, p?.image_key ?? null);
+
+export const profileAvatarSrc = (p: HasAvatar) =>
+  resolveImageUrl(p?.avatar_url ?? null, p?.avatar_key ?? null);

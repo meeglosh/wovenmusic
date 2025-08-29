@@ -12,6 +12,7 @@ export function SafeImg({ fallback = "/fallbacks/playlist.svg", ...props }: Safe
       {...props}
       src={src || fallback}
       onError={() => setSrc(fallback)}
+      data-debug-src={src || fallback}
     />
   );
 }
