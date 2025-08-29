@@ -1,9 +1,10 @@
+
 // supabase/functions/_shared/r2.ts
 import { S3Client, GetObjectCommand, PutObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "npm:@aws-sdk/client-s3";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
 
 const accountId = Deno.env.get("CLOUDFLARE_R2_ACCOUNT_ID")!;
-const endpoint  = Deno.env.get("CLOUDFLARE_R2_ENDPOINT") || `https://${accountId}.r2.cloudflarestorage.com`;
+const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
 const accessKey = Deno.env.get("CLOUDFLARE_R2_ACCESS_KEY_ID")!;
 const secretKey = Deno.env.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY")!;
 export const BUCKET_PUBLIC  = Deno.env.get("R2_BUCKET_PUBLIC")!;
@@ -14,6 +15,7 @@ export const r2 = new S3Client({
   region: "auto",
   endpoint,
   credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+  forcePathStyle: true, // This ensures bucket name goes in path, not subdomain
 });
 
 export async function getPrivateSignedUrl(key: string, ttlSeconds = 3600) {

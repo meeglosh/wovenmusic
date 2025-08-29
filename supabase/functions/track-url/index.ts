@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getPrivateSignedUrl } from "../_shared/r2.ts";
@@ -42,6 +43,7 @@ serve(async (req) => {
       .single();
 
     if (error || !t) {
+      console.error(`Track not found: ${id}`, error);
       return new Response(JSON.stringify({ ok: false, error: "not found" }), { 
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -49,28 +51,35 @@ serve(async (req) => {
     }
 
     if (t.is_public && t.storage_url) {
+      console.log(`Returning public URL for track ${id}: ${t.storage_url}`);
       return new Response(JSON.stringify({ ok: true, url: t.storage_url, kind: "public" }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Ensure signed URLs support range requests for audio playback
+    if (!t.storage_key) {
+      console.error(`Track ${id} has no storage_key`);
+      return new Response(JSON.stringify({ ok: false, error: "no storage key" }), { 
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Generate signed URL using the exact storage_key from DB
+    console.log(`Generating signed URL for track ${id}, storage_key: "${t.storage_key}"`);
     const signed = await getPrivateSignedUrl(t.storage_key, 3600);
-    
-    // Log the URL generation for debugging
-    console.log(`Generated signed URL for track ${id}, storage_key: ${t.storage_key}`);
+    console.log(`Generated signed URL: ${signed}`);
     
     return new Response(JSON.stringify({ ok: true, url: signed, kind: "signed" }), {
       status: 200,
       headers: { 
         ...corsHeaders, 
-        'Content-Type': 'application/json',
-        // Ensure response supports range requests
-        'Accept-Ranges': 'bytes'
+        'Content-Type': 'application/json'
       }
     });
   } catch (e) {
+    console.error('Track URL generation error:', e);
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { 
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
