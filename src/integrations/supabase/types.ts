@@ -525,6 +525,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_content_type_for_extension: {
+        Args: { file_extension: string }
+        Returns: string
+      }
       has_any_band_members: {
         Args: Record<PropertyKey, never>
         Returns: boolean
