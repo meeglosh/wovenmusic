@@ -1,11 +1,10 @@
-
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, MoreHorizontal, Clock, Trash2, X, ChevronDown, ChevronUp, Plus, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Lock, Globe, Settings, Box } from "lucide-react";
-import { Track, PendingTrack, getFileName, getCleanFileName, getCleanTitle } from "@/types/music";
+import { Track, PendingTrack } from "@/types/music";
 import { OfflineDownloadButton } from "@/components/OfflineDownloadButton";
 import { DropboxSyncAccordion } from "./DropboxSyncAccordion";
 import { DropboxSyncDrawer } from "./DropboxSyncDrawer";
@@ -58,7 +57,18 @@ interface MusicLibraryProps {
 type SortField = 'title' | 'artist' | 'duration' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
 
-const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm, onTitleChange, showDropboxAccordion, pendingTracks = [], onRetryPendingTrack, onPendingTracksChange }: MusicLibraryProps) => {
+const MusicLibrary = ({
+  tracks,
+  onPlayTrack,
+  currentTrack,
+  isPlaying,
+  searchTerm,
+  onTitleChange,
+  showDropboxAccordion,
+  pendingTracks = [],
+  onRetryPendingTrack,
+  onPendingTracksChange
+}: MusicLibraryProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -121,7 +131,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return libraryTitles[randomIndex];
   }, [libraryTitles]);
 
-  // Notify parent component when title changes
   useEffect(() => {
     onTitleChange?.(randomLibraryTitle.title);
   }, [randomLibraryTitle.title, onTitleChange]);
@@ -147,10 +156,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
   const { toast } = useToast();
   const { canDeleteTrack } = usePermissions();
 
-  // Sort tracks based on current sort settings
+  // Sort tracks
   const sortedTracks = [...tracks].sort((a, b) => {
     let comparison = 0;
-    
     switch (sortField) {
       case 'title':
         comparison = a.title.localeCompare(b.title);
@@ -159,12 +167,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         comparison = a.artist.localeCompare(b.artist);
         break;
       case 'duration':
-        // Handle duration sorting (put --:-- at the end)
         if (a.duration === '--:--' && b.duration !== '--:--') return 1;
         if (b.duration === '--:--' && a.duration !== '--:--') return -1;
         if (a.duration === '--:--' && b.duration === '--:--') return 0;
-        
-        // Convert duration to seconds for comparison
         const aDuration = a.duration.split(':').reduce((acc, time) => (60 * acc) + +time, 0);
         const bDuration = b.duration.split(':').reduce((acc, time) => (60 * acc) + +time, 0);
         comparison = aDuration - bDuration;
@@ -173,11 +178,10 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         comparison = a.addedAt.getTime() - b.addedAt.getTime();
         break;
     }
-    
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
-  // Pagination calculations
+  // Pagination
   const totalPages = Math.ceil(sortedTracks.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -208,7 +212,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
   };
 
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedTrackIds(new Set(paginatedTracks.map(track => track.id)));
@@ -219,30 +222,24 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
 
   const handleSelectTrack = (trackId: string, checked: boolean) => {
     const newSelection = new Set(selectedTrackIds);
-    if (checked) {
-      newSelection.add(trackId);
-    } else {
-      newSelection.delete(trackId);
-    }
+    if (checked) newSelection.add(trackId);
+    else newSelection.delete(trackId);
     setSelectedTrackIds(newSelection);
   };
 
-  const handleClearSelection = () => {
-    setSelectedTrackIds(new Set());
-  };
+  const handleClearSelection = () => setSelectedTrackIds(new Set());
 
   const handleDeleteTrack = async (track: Track) => {
     try {
       const result = await deleteTrackMutation.mutateAsync(track.id);
       const isStoredFile = result.isStoredFile;
-      
       toast({
         title: "Track removed",
         description: isStoredFile 
           ? `"${track.title}" has been permanently deleted.`
           : `"${track.title}" has been removed from your library. The file remains in your Dropbox.`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove track from library.",
@@ -265,8 +262,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
     try {
       const result = await bulkDeleteMutation.mutateAsync(deletableIds);
       setSelectedTrackIds(new Set());
-      
-      // Create appropriate message based on what was deleted
       let description = "";
       if (result.storedCount > 0 && result.dropboxCount > 0) {
         description = `${result.storedCount} stored file(s) permanently deleted, ${result.dropboxCount} Dropbox file(s) removed from library.`;
@@ -275,12 +270,8 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
       } else {
         description = `${result.dropboxCount} file(s) removed from library. The files remain in your Dropbox.`;
       }
-      
-      toast({
-        title: "Tracks removed",
-        description,
-      });
-    } catch (error) {
+      toast({ title: "Tracks removed", description });
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove tracks from library.",
@@ -288,6 +279,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
       });
     }
   };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -317,9 +309,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         <Card className="overflow-hidden hidden lg:block">
           <div 
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-            onClick={() => {
-              setIsDropboxSyncExpanded(!isDropboxSyncExpanded);
-            }}
+            onClick={() => setIsDropboxSyncExpanded(!isDropboxSyncExpanded)}
           >
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 border-2 border-primary rounded-lg flex items-center justify-center">
@@ -333,11 +323,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
               </div>
             </div>
             <Button variant="ghost" size="sm">
-              {isDropboxSyncExpanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
+              {isDropboxSyncExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
           </div>
           
@@ -366,9 +352,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
               </div>
               <div>
                 <h3 className="font-medium text-primary">Dropbox Sync</h3>
-                <p className="text-sm text-muted-foreground">
-                  Browse and import music from Dropbox
-                </p>
+                <p className="text-sm text-muted-foreground">Browse and import music from Dropbox</p>
               </div>
             </div>
             <Button variant="ghost" size="sm">
@@ -385,7 +369,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         onPendingTracksChange={onPendingTracksChange}
       />
 
-      {/* Selection Actions - appears after Dropbox sync */}
+      {/* Selection Actions */}
       {isSelectionMode && (
         <div className="flex items-center justify-center px-4">
           <div className="w-full max-w-md bg-muted/50 rounded-lg p-4 border">
@@ -419,13 +403,13 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove selected tracks?</AlertDialogTitle>
-                         <AlertDialogDescription>
-                           Are you sure you want to remove {deletableSelectedTracks.length} track{deletableSelectedTracks.length !== 1 ? 's' : ''} from your library?
-                           {selectedTrackIds.size > deletableSelectedTracks.length && 
-                             ` (${selectedTrackIds.size - deletableSelectedTracks.length} track${selectedTrackIds.size - deletableSelectedTracks.length !== 1 ? 's' : ''} will be skipped due to permissions)`
-                           }
-                           Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
-                         </AlertDialogDescription>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove {deletableSelectedTracks.length} track{deletableSelectedTracks.length !== 1 ? 's' : ''} from your library?
+                          {selectedTrackIds.size > deletableSelectedTracks.length && 
+                            ` (${selectedTrackIds.size - deletableSelectedTracks.length} track${selectedTrackIds.size - deletableSelectedTracks.length !== 1 ? 's' : ''} will be skipped due to permissions)`
+                          }
+                          Uploaded files will be permanently deleted, while Dropbox files will remain in your Dropbox.
+                        </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -453,8 +437,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
           </div>
         </div>
       )}
-
-      {/* Dropbox Sync Section */}
 
       {tracks.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -530,9 +512,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem]
                   sm:grid-cols-[2rem,1.25rem,minmax(0,1fr),3.5rem,1.75rem,1.75rem,1.75rem]
                   md:grid-cols-[auto,auto,1fr,auto,auto,auto,auto] md:gap-4
-                  min-h-[3.5rem] sm:min-h-0 ${
-                  selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''
-                }`}
+                  min-h-[3.5rem] sm:min-h-0 ${selectedTrackIds.has(track.id) ? 'bg-muted/50' : ''}`}
               >
                 {/* Checkbox */}
                 <div className="w-8 justify-self-center">
@@ -544,10 +524,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
 
                 {/* Play/Pause Button */}
                 <div className="w-10 h-10 justify-self-center flex items-center justify-center">
-                  {track.duration === 'Transcoding...' ? (
-                    // Show nothing during transcoding
-                    null
-                  ) : currentTrack?.id === track.id && isPlaying ? (
+                  {track.duration === 'Transcoding...' ? null : currentTrack?.id === track.id && isPlaying ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -565,9 +542,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       size="sm"
                       className={`w-10 h-10 p-0 transition-all hover:bg-accent hover:text-foreground active:bg-accent active:text-background rounded-full ${
                         track.duration === 'Failed' ? 'cursor-not-allowed opacity-50' : ''
-                      } ${
-                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      }`}
+                      } ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                       onClick={() => onPlayTrack(track)}
                       disabled={track.duration === 'Failed'}
                       title={track.duration === 'Failed' ? 'Transcoding failed' : 'Play track'}
@@ -575,9 +550,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <Play className="w-4 h-4 fill-current" />
                     </Button>
                   )}
-                  <span className={`text-muted-foreground text-sm transition-opacity absolute ${
-                    isMobile ? 'opacity-0' : 'group-hover:opacity-0'
-                  }`}>
+                  <span className={`text-muted-foreground text-sm transition-opacity absolute ${isMobile ? 'opacity-0' : 'group-hover:opacity-0'}`}>
                     {startIndex + index + 1}
                   </span>
                 </div>
@@ -598,9 +571,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <button 
                     className={`text-left font-medium hover:text-primary transition-colors cursor-pointer 
                       line-clamp-2 whitespace-normal break-words hyphens-auto
-                      sm:truncate sm:whitespace-nowrap sm:overflow-hidden sm:line-clamp-1 ${
-                      track.duration === 'Transcoding...' ? 'opacity-50' : ''
-                    }`}
+                      sm:truncate sm:whitespace-nowrap sm:overflow-hidden sm:line-clamp-1 ${track.duration === 'Transcoding...' ? 'opacity-50' : ''}`}
                     onClick={() => navigate(`/track/${track.id}`)}
                     title="Open track view with comments"
                   >
@@ -640,9 +611,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     track={track}
                     variant="ghost"
                     size="icon"
-                    className={`w-7 h-7 transition-opacity ${
-                      isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}
+                    className={`w-7 h-7 transition-opacity ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                   />
                 </div>
 
@@ -653,9 +622,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`w-7 h-7 p-0 transition-opacity ${
-                          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                        }`}
+                        className={`w-7 h-7 p-0 transition-opacity ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
@@ -674,7 +641,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                               <AlertDialogTitle>Remove track from library?</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Are you sure you want to remove "{track.title}" from your library?
-                                {track.fileUrl ? 'This will permanently delete the uploaded file.' : 'The file will remain in your Dropbox.'}
+                                {track.storage_key
+                                  ? " This will permanently delete the uploaded file."
+                                  : " The file will remain in your Dropbox."}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -699,25 +668,21 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </div>
               </div>
             ))}
-            
-            {/* Render pending tracks only on first page */}
+
+            {/* Pending tracks (first page only) */}
             {currentPage === 1 && pendingTracks.map((pendingTrack) => (
               <div
                 key={pendingTrack.id}
                 className="grid grid-cols-[auto,auto,1fr,auto,auto,auto,auto] gap-4 p-4 bg-muted/20 transition-colors"
               >
-                <div className="w-8 flex items-center">
-                  {/* No checkbox for pending tracks */}
-                </div>
+                <div className="w-8 flex items-center" />
                 <div className="w-12 flex items-center">
                   {pendingTrack.status === 'processing' ? (
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   ) : (
                     <div className="w-4 h-4 rounded-full bg-destructive" />
                   )}
-                  <span className="text-muted-foreground text-sm opacity-50">
-                    --
-                  </span>
+                  <span className="text-muted-foreground text-sm opacity-50">--</span>
                 </div>
 
                 <div className="flex items-center space-x-3">
@@ -735,7 +700,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   <div className="flex items-center space-x-2">
                     <div>
                       <div className="text-left font-medium text-muted-foreground">
-                        {pendingTrack.title.replace(/\.[^/.]+$/, '')} {/* Remove file extension */}
+                        {pendingTrack.title.replace(/\.[^/.]+$/, '')}
                       </div>
                       <div className="text-sm text-muted-foreground opacity-75 flex items-center space-x-2">
                         {pendingTrack.artist}
@@ -769,17 +734,11 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                   )}
                 </div>
 
-                <div className="flex items-center text-sm text-muted-foreground opacity-50">
-                  --
-                </div>
-
+                <div className="flex items-center text-sm text-muted-foreground opacity-50">--</div>
                 <div className="w-8 flex items-center justify-center">
                   <Lock className="h-3 w-3 text-muted-foreground opacity-50" />
                 </div>
-
-                <div className="w-12 flex items-center">
-                  {/* No actions for pending tracks */}
-                </div>
+                <div className="w-12 flex items-center" />
               </div>
             ))}
           </div>
@@ -798,14 +757,13 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     e.preventDefault();
                     if (currentPage > 1) {
                       setCurrentPage(currentPage - 1);
-                      setSelectedTrackIds(new Set()); // Clear selection when changing pages
+                      setSelectedTrackIds(new Set());
                     }
                   }}
                   className={`${currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} text-xs sm:text-sm`}
                 />
               </PaginationItem>
               
-              {/* First page */}
               {currentPage > 3 && (
                 <>
                   <PaginationItem>
@@ -829,11 +787,9 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 </>
               )}
               
-              {/* Pages around current page - show fewer on mobile */}
               {Array.from({ length: Math.min(isMobile ? 3 : 5, totalPages) }, (_, i) => {
                 const pageNumber = Math.max(1, Math.min(totalPages - (isMobile ? 2 : 4), currentPage - (isMobile ? 1 : 2))) + i;
                 if (pageNumber > totalPages) return null;
-                
                 return (
                   <PaginationItem key={pageNumber}>
                     <PaginationLink
@@ -852,7 +808,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                 );
               })}
               
-              {/* Last page */}
               {currentPage < totalPages - 2 && (
                 <>
                   {currentPage < totalPages - 3 && (
@@ -883,7 +838,7 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
                     e.preventDefault();
                     if (currentPage < totalPages) {
                       setCurrentPage(currentPage + 1);
-                      setSelectedTrackIds(new Set()); // Clear selection when changing pages
+                      setSelectedTrackIds(new Set());
                     }
                   }}
                   className={`${currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} text-xs sm:text-sm`}
@@ -894,7 +849,6 @@ const MusicLibrary = ({ tracks, onPlayTrack, currentTrack, isPlaying, searchTerm
         </div>
       )}
 
-      {/* Bulk Add to Playlist Modal */}
       <BulkAddToPlaylistModal
         open={isBulkAddModalOpen}
         onOpenChange={setIsBulkAddModalOpen}

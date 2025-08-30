@@ -1,4 +1,3 @@
-
 interface PWAUpdateAvailableEvent {
   type: 'UPDATE_AVAILABLE';
   registration: ServiceWorkerRegistration;
@@ -19,6 +18,7 @@ class PWAService {
   private updateAvailable = false;
   private listeners: Array<(event: PWAEvent) => void> = [];
 
+  // Initialize and register the service worker
   async init(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
       console.log('Service Workers not supported');
@@ -26,40 +26,31 @@ class PWAService {
     }
 
     try {
-      this.registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
-      });
-
+      this.registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('Service Worker registered successfully');
 
-      // Listen for updates
+      // Listen for update found and state changes
       this.registration.addEventListener('updatefound', () => {
         const newWorker = this.registration?.installing;
         if (!newWorker) return;
 
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New update available
             this.updateAvailable = true;
             this.notifyListeners({
               type: 'UPDATE_AVAILABLE',
-              registration: this.registration!
+              registration: this.registration!,
             });
           } else if (newWorker.state === 'installed') {
-            // First install
-            this.notifyListeners({
-              type: 'INSTALLED'
-            });
+            this.notifyListeners({ type: 'INSTALLED' });
           }
         });
       });
 
-      // Listen for messages from the service worker
+      // Listen for messages from the service worker (e.g., SW_ACTIVATED)
       navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data.type === 'SW_ACTIVATED') {
-          this.notifyListeners({
-            type: 'OFFLINE_READY'
-          });
+        if (event.data?.type === 'SW_ACTIVATED') {
+          this.notifyListeners({ type: 'OFFLINE_READY' });
         }
       });
 
@@ -68,7 +59,7 @@ class PWAService {
         this.updateAvailable = true;
         this.notifyListeners({
           type: 'UPDATE_AVAILABLE',
-          registration: this.registration
+          registration: this.registration,
         });
       }
 
@@ -77,24 +68,25 @@ class PWAService {
     }
   }
 
+  // Activate the update (skip waiting and reload)
   activateUpdate(): void {
-    if (!this.registration?.waiting) return;
-
-    // Tell the waiting service worker to skip waiting
-    this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-    // Reload the page to get the new version
-    window.location.reload();
+    if (this.registration?.waiting) {
+      this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    }
   }
 
+  // Check if an update is available
   isUpdateAvailable(): boolean {
     return this.updateAvailable;
   }
 
+  // Add an event listener for PWA events
   addEventListener(listener: (event: PWAEvent) => void): void {
     this.listeners.push(listener);
   }
 
+  // Remove an event listener for PWA events
   removeEventListener(listener: (event: PWAEvent) => void): void {
     const index = this.listeners.indexOf(listener);
     if (index > -1) {
@@ -102,8 +94,9 @@ class PWAService {
     }
   }
 
+  // Notify all listeners of a PWA event
   private notifyListeners(event: PWAEvent): void {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(event);
       } catch (error) {
@@ -112,12 +105,12 @@ class PWAService {
     });
   }
 
-  // Check if app can be installed
+  // Check if the app can be installed
   canInstall(): boolean {
     return 'beforeinstallprompt' in window;
   }
 
-  // Prompt for installation
+  // Prompt the user to install the PWA
   async promptInstall(deferredPrompt: any): Promise<boolean> {
     if (!deferredPrompt) return false;
 
@@ -131,10 +124,12 @@ export const pwaService = new PWAService();
 
 // Utility to check if we're running as a PWA
 export const isPWA = (): boolean => {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         window.matchMedia('(display-mode: fullscreen)').matches ||
-         // @ts-ignore
-         window.navigator.standalone === true;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    // @ts-ignore
+    window.navigator.standalone === true
+  );
 };
 
 // Utility to check online status

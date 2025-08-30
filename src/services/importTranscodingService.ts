@@ -1,100 +1,127 @@
-import { r2StorageService, R2UploadResult } from './r2StorageService';
+// src/services/importTranscodingService.ts
 
 export interface TranscodeResult {
-  publicUrl: string;
+  /** Ready-to-play URL (public or presigned if private bucket). */
+  url: string;
+  /** Always "r2" for new imports. */
+  storage_type: 'r2';
+  /** R2 bucket name. */
+  storage_bucket: string;
+  /** R2 object key, e.g. "tracks/<uuid>.mp3" */
+  storage_key: string;
+  /** MIME type, e.g. "audio/mpeg" | "audio/mp4" */
+  content_type: string;
+  /** Original filename (no extension). */
   originalFilename?: string;
-  r2Result?: R2UploadResult;
+  /** Whether a transcode actually happened on the backend. */
+  transcoded?: boolean;
+  /** Quality used: "standard" (MP3 320) or "high" (AAC 320). */
+  quality?: 'standard' | 'high';
+}
+
+const BASE =
+  (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
+  'https://transcode-server.onrender.com';
+
+const AUDIO_PROCESS_ENDPOINT = `${BASE}/api/process-audio`;
+
+async function handleResponse(res: Response): Promise<TranscodeResult> {
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`process-audio failed (${res.status}): ${txt}`);
+  }
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('process-audio returned non-JSON');
+  }
+  // Expected shape from backend:
+  // { ok: true, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
+  if (!data?.ok || !data?.url || !data?.storage_key || data.storage_type !== 'r2') {
+    throw new Error(
+      data?.error || 'Invalid response from process-audio (missing ok/url/storage_key or storage_type!==r2)'
+    );
+  }
+  return {
+    url: data.url,
+    storage_type: 'r2',
+    storage_bucket: data.storage_bucket,
+    storage_key: data.storage_key,
+    content_type: data.content_type,
+    originalFilename: data.originalFilename,
+    transcoded: data.transcoded,
+    quality: data.quality,
+  };
 }
 
 export class ImportTranscodingService {
-  async transcodeAndStore(
+  /**
+   * Import from a remote URL (e.g., Dropbox temp link) and store in R2.
+   * WAV/AIFF are transcoded; MP3/AAC uploaded as-is.
+   * @param quality "standard" -> MP3 320, "high" -> AAC 320
+   */
+  async importFromUrl(
     audioUrl: string,
     fileName: string,
-    outputFormat: 'mp3' | 'aac' | 'alac' = 'mp3',
-    retries = 3,
-    isPublic = false,
-    trackId?: string
+    quality: 'standard' | 'high' = 'standard',
+    retries = 3
   ): Promise<TranscodeResult> {
-    let lastError: Error | null = null;
-
+    let lastErr: Error | null = null;
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`Starting server-side ${outputFormat.toUpperCase()} transcoding for: ${fileName} (attempt ${attempt}/${retries})`);
-
-        let bitrate = '320k';
-        if (outputFormat !== 'alac') {
-          try {
-            const response = await fetch(audioUrl);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioContext = new AudioContext();
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            const duration = audioBuffer.duration;
-
-            const estimated320kbpsSize = duration * 320000 / 8;
-
-            if (estimated320kbpsSize > 10 * 1024 * 1024) {
-              bitrate = '256k';
-              console.log(`Large file detected (${duration.toFixed(1)}s), using 256kbps`);
-            } else {
-              console.log(`Standard file (${duration.toFixed(1)}s), using 320kbps`);
-            }
-
-            audioContext.close();
-          } catch (analysisError) {
-            console.warn('Could not analyze audio, using default bitrate:', analysisError);
-          }
-        }
-
-        const res = await fetch('https://transcode-server.onrender.com/api/transcode', {
+        const res = await fetch(AUDIO_PROCESS_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            audioUrl,
-            fileName,
-            outputFormat,
-            bitrate,
-          }),
+          credentials: 'include',
+          body: JSON.stringify({ audioUrl, fileName, quality }),
         });
-
-        if (!res.ok) throw new Error(`Transcoding server error ${res.status}`);
-        const data = await res.json();
-
-        if (!data?.publicUrl) throw new Error('No public URL returned');
-
-        // Also upload to R2 if trackId provided
-        let r2Result;
-        if (trackId) {
-          try {
-            // Download transcoded file and upload to R2
-            const fileResponse = await fetch(data.publicUrl);
-            const blob = await fileResponse.blob();
-            const file = new File([blob], fileName, { type: `audio/${outputFormat}` });
-            
-            r2Result = await r2StorageService.uploadFile(file, fileName, isPublic, trackId);
-          } catch (r2Error) {
-            console.warn('R2 upload failed, falling back to transcoding server:', r2Error);
-          }
-        }
-
-        return {
-          publicUrl: data.publicUrl,
-          originalFilename: data.originalFilename,
-          r2Result,
-        };
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
+        return await handleResponse(res);
+      } catch (e) {
+        lastErr = e instanceof Error ? e : new Error(String(e));
         if (attempt < retries) {
-          const delay = Math.pow(2, attempt - 1) * 1000;
-          await new Promise(r => setTimeout(r, delay));
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
         }
       }
     }
-
-    throw lastError || new Error('All transcoding attempts failed');
+    throw lastErr || new Error('All import attempts failed');
   }
 
+  /**
+   * Upload a local File (user upload) and store in R2.
+   * WAV/AIFF are transcoded; MP3/AAC uploaded as-is.
+   * @param quality "standard" -> MP3 320, "high" -> AAC 320
+   */
+  async uploadFile(
+    file: File,
+    quality: 'standard' | 'high' = 'standard',
+    retries = 3
+  ): Promise<TranscodeResult> {
+    let lastErr: Error | null = null;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const form = new FormData();
+        form.append('audio', file, file.name);
+        form.append('quality', quality);
+        const res = await fetch(AUDIO_PROCESS_ENDPOINT, {
+          method: 'POST',
+          body: form,
+          credentials: 'include',
+        });
+        return await handleResponse(res);
+      } catch (e) {
+        lastErr = e instanceof Error ? e : new Error(String(e));
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
+        }
+      }
+    }
+    throw lastErr || new Error('All upload attempts failed');
+  }
+
+  /** Frontend-side helper for gating transcode UI. */
   needsTranscoding(filePath: string): boolean {
-    const ext = filePath.toLowerCase().split('.').pop();
+    const ext = (filePath || '').toLowerCase().split('.').pop();
     return ext === 'wav' || ext === 'aif' || ext === 'aiff';
   }
 }

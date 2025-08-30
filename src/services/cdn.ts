@@ -2,25 +2,33 @@ const CDN_BASE =
   import.meta.env.VITE_CDN_BASE ||
   "https://wovenmusic-public.16e03ea92574afdd207c0db88357f095.r2.cloudflarestorage.com";
 
-function stripLeadingSlash(s: string) {
+// Utility to strip leading slashes from paths
+function stripLeadingSlash(s: string): string {
   return s.startsWith("/") ? s.slice(1) : s;
 }
 
-export function resolveImageUrl(legacyUrlOrNull?: string | null, keyOrNull?: string | null) {
+// Function to resolve image URL, either from legacy or current key
+export function resolveImageUrl(legacyUrlOrNull?: string, keyOrNull?: string): string {
   // Preferred: key from DB (e.g. "images/playlists/<uuid>.jpg")
   if (keyOrNull) return `${CDN_BASE}/${stripLeadingSlash(keyOrNull)}`;
 
-  // Legacy: turn ".../images%2Fplaylists%2F<id>.jpg" or ".../images/playlists/<id>.jpg"
-  // into "images/playlists/<id>.jpg", then prefix CDN_BASE
+  // Legacy URL format handling (either encoded or not)
   if (legacyUrlOrNull) {
     try {
+      // Try to decode the legacy URL
       const decoded = decodeURIComponent(legacyUrlOrNull);
-      const m = decoded.match(/images\/[a-zA-Z0-9/_\-.]+$/);
-      if (m) return `${CDN_BASE}/${m[0]}`;
-    } catch { /* fall through */ }
-    const m = (legacyUrlOrNull).match(/images\/[a-zA-Z0-9/_\-.]+$/);
-    if (m) return `${CDN_BASE}/${m[0]}`;
+      // Match and return the URL for images
+      const match = decoded.match(/images\/[a-zA-Z0-9/_\-.]+$/);
+      if (match) return `${CDN_BASE}/${match[0]}`;
+    } catch (e) {
+      // In case decoding fails, log it for debugging (optional)
+      console.error("Failed to decode legacy URL:", legacyUrlOrNull, e);
+    }
+
+    // If decoding failed, fallback to matching the URL directly
+    const match = legacyUrlOrNull.match(/images\/[a-zA-Z0-9/_\-.]+$/);
+    if (match) return `${CDN_BASE}/${match[0]}`;
   }
 
-  return ""; // explicit empty (SafeImg will show placeholder)
+  return ""; // Return empty string if no valid image URL can be determined
 }

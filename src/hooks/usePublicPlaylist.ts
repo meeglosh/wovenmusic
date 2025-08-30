@@ -2,190 +2,179 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@supabase/supabase-js";
 import { playlistImageSrc } from "@/services/imageFor";
 
-// Create a separate Supabase client without auth for public access
-const publicSupabase = createClient(
-  "https://woakvdhlpludrttjixxq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg",
-  {
-    auth: {
-      persistSession: false
-    }
-  }
-);
+// Prefer env, fall back to current hardcoded values for public, non-auth access
+const PUBLIC_SUPABASE_URL =
+  (import.meta as any)?.env?.VITE_PUBLIC_SUPABASE_URL ||
+  "https://woakvdhlpludrttjixxq.supabase.co";
+
+const PUBLIC_SUPABASE_ANON_KEY =
+  (import.meta as any)?.env?.VITE_PUBLIC_SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg";
+
+// Separate Supabase client without auth for public access
+const publicSupabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+  auth: { persistSession: false },
+});
+
+const mapTracksInPlaylistOrder = (
+  playlistTracks: Array<{ track_id: string; position: number }>,
+  tracks: Array<{
+    id: string;
+    title: string;
+    artist: string;
+    duration: string;
+    file_url: string | null;
+    storage_url: string | null;
+  }>
+) => {
+  const byId = new Map(tracks.map((t) => [t.id, t]));
+  return playlistTracks
+    .map((pt) => {
+      const t = byId.get(pt.track_id);
+      if (!t) return null;
+      return {
+        id: t.id,
+        title: t.title,
+        artist: t.artist,
+        duration: t.duration,
+        // Prefer modern storage_url, fallback to legacy file_url
+        fileUrl: t.storage_url || t.file_url || "",
+        addedAt: new Date(), // public view—no per-user addedAt
+        is_public: true,
+      };
+    })
+    .filter(Boolean) as any[];
+};
 
 export const usePublicPlaylist = (playlistId: string) => {
   return useQuery({
     queryKey: ["publicPlaylist", playlistId],
+    enabled: !!playlistId,
+    retry: 1,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
     queryFn: async () => {
-      console.log("Fetching public playlist:", playlistId);
+      // 1) Fetch the public playlist
+      const { data: playlist, error: playlistError } = await publicSupabase
+        .from("playlists")
+        .select("id, name, image_url, created_at, updated_at, is_public")
+        .eq("id", playlistId)
+        .eq("is_public", true)
+        .single();
 
-      try {
-        // First check if playlist is public
-        // Note: share_token is intentionally excluded for security
-        const { data: playlist, error: playlistError } = await publicSupabase
-          .from("playlists")
-          .select("id, name, image_url, created_at, updated_at, is_public")
-          .eq("id", playlistId)
-          .eq("is_public", true)
-          .single();
-        
-        if (playlistError || !playlist) {
-          console.error("Playlist error:", playlistError);
-          throw new Error("Playlist not found or not public");
-        }
+      if (playlistError || !playlist) {
+        throw new Error("Playlist not found or not public");
+      }
 
-        console.log("Found playlist:", playlist.name);
+      // 2) Fetch playlist track ids in order
+      const { data: playlistTracks, error: tracksError } = await publicSupabase
+        .from("playlist_tracks")
+        .select("track_id, position")
+        .eq("playlist_id", playlistId)
+        .order("position", { ascending: true });
 
-        // Get all tracks in this playlist (simplified query)
-        const { data: playlistTracks, error: tracksError } = await publicSupabase
-          .from("playlist_tracks")
-          .select("track_id, position")
-          .eq("playlist_id", playlistId)
-          .order("position");
-
-        if (tracksError) {
-          console.warn("Playlist tracks error:", tracksError);
-        }
-
-        // Get track details for public tracks only
-        let publicTracks: any[] = [];
-        if (playlistTracks && playlistTracks.length > 0) {
-          const trackIds = playlistTracks.map(pt => pt.track_id);
-          
-          const { data: tracks, error: trackDetailsError } = await publicSupabase
-            .from("tracks")
-            .select("id, title, artist, duration, file_url")
-            .in("id", trackIds)
-            .eq("is_public", true);
-
-          if (trackDetailsError) {
-            console.warn("Track details error:", trackDetailsError);
-          } else if (tracks) {
-            // Match tracks with playlist order
-            publicTracks = playlistTracks
-              .map(pt => {
-                const track = tracks.find(t => t.id === pt.track_id);
-                return track ? {
-                  id: track.id,
-                  title: track.title,
-                  artist: track.artist,
-                  duration: track.duration,
-                  fileUrl: track.file_url,
-                  addedAt: new Date(),
-                  is_public: true
-                } : null;
-              })
-              .filter(Boolean);
-          }
-        }
-
-        console.log("Returning playlist with", publicTracks.length, "public tracks");
-        
+      if (tracksError) {
+        // Soft-fail: return an empty tracklist but still show playlist metadata
         return {
           id: playlist.id,
           name: playlist.name,
           imageUrl: playlistImageSrc(playlist),
-          tracks: publicTracks,
+          tracks: [] as any[],
           isPublic: playlist.is_public,
-          // Note: share_token intentionally omitted for security
-          createdAt: new Date(playlist.created_at)
+          createdAt: new Date(playlist.created_at),
         };
-      } catch (error) {
-        console.error("Public playlist fetch error:", error);
-        throw error;
       }
+
+      let publicTracks: any[] = [];
+      if (playlistTracks && playlistTracks.length > 0) {
+        const trackIds = playlistTracks.map((pt) => pt.track_id);
+
+        // 3) Fetch only public tracks and include storage_url + file_url
+        const { data: tracks } = await publicSupabase
+          .from("tracks")
+          .select("id, title, artist, duration, file_url, storage_url")
+          .in("id", trackIds)
+          .eq("is_public", true);
+
+        if (tracks && tracks.length > 0) {
+          publicTracks = mapTracksInPlaylistOrder(playlistTracks, tracks);
+        }
+      }
+
+      return {
+        id: playlist.id,
+        name: playlist.name,
+        imageUrl: playlistImageSrc(playlist),
+        tracks: publicTracks,
+        isPublic: playlist.is_public,
+        createdAt: new Date(playlist.created_at),
+      };
     },
-    enabled: !!playlistId,
-    retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 };
 
 export const usePublicPlaylistByToken = (shareToken: string) => {
   return useQuery({
     queryKey: ["publicPlaylistByToken", shareToken],
+    enabled: !!shareToken,
+    retry: 1,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
     queryFn: async () => {
-      console.log("Fetching public playlist by token:", shareToken);
+      // 1) Fetch the public playlist by share token
+      const { data: playlist, error: playlistError } = await publicSupabase
+        .from("playlists")
+        .select("id, name, image_url, created_at, updated_at, is_public")
+        .eq("share_token", shareToken)
+        .eq("is_public", true)
+        .single();
 
-      try {
-        // Access playlist via share token (this is allowed by the new RLS policy)
-        const { data: playlist, error: playlistError } = await publicSupabase
-          .from("playlists")
-          .select("id, name, image_url, created_at, updated_at, is_public")
-          .eq("share_token", shareToken)
-          .eq("is_public", true)
-          .single();
-        
-        if (playlistError || !playlist) {
-          console.error("Playlist by token error:", playlistError);
-          throw new Error("Playlist not found or not public");
+      if (playlistError || !playlist) {
+        throw new Error("Playlist not found or not public");
         }
 
-        console.log("Found playlist by token:", playlist.name);
+      // 2) Fetch playlist track ids in order
+      const { data: playlistTracks, error: tracksError } = await publicSupabase
+        .from("playlist_tracks")
+        .select("track_id, position")
+        .eq("playlist_id", playlist.id)
+        .order("position", { ascending: true });
 
-        // Get all tracks in this playlist
-        const { data: playlistTracks, error: tracksError } = await publicSupabase
-          .from("playlist_tracks")
-          .select("track_id, position")
-          .eq("playlist_id", playlist.id)
-          .order("position");
-
-        if (tracksError) {
-          console.warn("Playlist tracks by token error:", tracksError);
-        }
-
-        // Get track details for public tracks only
-        let publicTracks: any[] = [];
-        if (playlistTracks && playlistTracks.length > 0) {
-          const trackIds = playlistTracks.map(pt => pt.track_id);
-          
-          const { data: tracks, error: trackDetailsError } = await publicSupabase
-            .from("tracks")
-            .select("id, title, artist, duration, file_url")
-            .in("id", trackIds)
-            .eq("is_public", true);
-
-          if (trackDetailsError) {
-            console.warn("Track details by token error:", trackDetailsError);
-          } else if (tracks) {
-            // Match tracks with playlist order
-            publicTracks = playlistTracks
-              .map(pt => {
-                const track = tracks.find(t => t.id === pt.track_id);
-                return track ? {
-                  id: track.id,
-                  title: track.title,
-                  artist: track.artist,
-                  duration: track.duration,
-                  fileUrl: track.file_url,
-                  addedAt: new Date(),
-                  is_public: true
-                } : null;
-              })
-              .filter(Boolean);
-          }
-        }
-
-        console.log("Returning playlist by token with", publicTracks.length, "public tracks");
-        
+      if (tracksError) {
         return {
           id: playlist.id,
           name: playlist.name,
           imageUrl: playlistImageSrc(playlist),
-          tracks: publicTracks,
+          tracks: [] as any[],
           isPublic: playlist.is_public,
-          // Note: share_token intentionally omitted for security
-          createdAt: new Date(playlist.created_at)
+          createdAt: new Date(playlist.created_at),
         };
-      } catch (error) {
-        console.error("Public playlist by token fetch error:", error);
-        throw error;
       }
+
+      let publicTracks: any[] = [];
+      if (playlistTracks && playlistTracks.length > 0) {
+        const trackIds = playlistTracks.map((pt) => pt.track_id);
+
+        // 3) Only public tracks; include storage_url + file_url
+        const { data: tracks } = await publicSupabase
+          .from("tracks")
+          .select("id, title, artist, duration, file_url, storage_url")
+          .in("id", trackIds)
+          .eq("is_public", true);
+
+        if (tracks && tracks.length > 0) {
+          publicTracks = mapTracksInPlaylistOrder(playlistTracks, tracks);
+        }
+      }
+
+      return {
+        id: playlist.id,
+        name: playlist.name,
+        imageUrl: playlistImageSrc(playlist),
+        tracks: publicTracks,
+        isPublic: playlist.is_public,
+        createdAt: new Date(playlist.created_at),
+      };
     },
-    enabled: !!shareToken,
-    retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000 // 5 minutes
   });
 };

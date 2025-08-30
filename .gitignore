@@ -7,10 +7,23 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+
+# Local env files (keep .env.example if you have one)
 *.local
+.env
+.env.*
+
+# Supabase temp artifacts
+supabase/.temp/
+
+# Migration artifacts
+migrate.log
 
 # Editor directories and files
 .vscode/*

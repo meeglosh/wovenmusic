@@ -4,17 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { audioMetadataService } from "@/services/audioMetadataService";
 import { 
-  Cloud, 
   Download, 
   RefreshCw, 
   Folder, 
   ArrowLeft, 
-  Check,
   Music,
   Loader2,
   X,
   CheckCircle2,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
   Link,
@@ -25,7 +22,6 @@ import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { importTranscodingService } from "@/services/importTranscodingService";
 import { FileImportStatus, ImportProgress } from "@/types/fileImport";
 import {
@@ -33,8 +29,13 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
 } from "@/components/ui/drawer";
+
+/** Prefer app API base, else fall back to transcode-server */
+const APP_API_BASE =
+  (import.meta as any)?.env?.VITE_APP_API_BASE ||
+  (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
+  "https://transcode-server.onrender.com";
 
 interface DropboxFile {
   name: string;
@@ -70,7 +71,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const queryClient = useQueryClient();
 
   const formatDuration = (seconds: number): string => {
-    if (seconds === 0) return '--:--';
+    if (!seconds || isNaN(seconds)) return '--:--';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -79,32 +80,16 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const getDurationFromUrl = (url: string): Promise<number> => {
     return new Promise((resolve) => {
       const audio = new Audio();
-      let resolved = false;
-      
-      const cleanup = (duration?: number) => {
-        if (!resolved) {
-          resolved = true;
-          resolve(duration || 180); // Default 3 minutes if can't extract
-        }
+      let settled = false;
+      const done = (val?: number) => {
+        if (settled) return;
+        settled = true;
+        resolve(val && !isNaN(val) && val > 0 ? val : 180);
       };
-      
-      audio.addEventListener('loadedmetadata', () => {
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        } else {
-          cleanup();
-        }
-      });
-      
-      audio.addEventListener('error', () => cleanup());
-      audio.addEventListener('canplaythrough', () => {
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        }
-      });
-      
-      setTimeout(() => cleanup(), 15000);
-      
+      audio.addEventListener('loadedmetadata', () => done(audio.duration));
+      audio.addEventListener('canplaythrough', () => done(audio.duration));
+      audio.addEventListener('error', () => done());
+      setTimeout(() => done(), 15000);
       audio.preload = 'metadata';
       audio.src = url;
     });
@@ -113,64 +98,26 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const getDurationFromDropboxFile = async (file: DropboxFile): Promise<string> => {
     try {
       const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-      
-      return new Promise((resolve) => {
-        const audio = new Audio();
-        let resolved = false;
-        
-        const cleanup = (duration?: number) => {
-          if (!resolved) {
-            resolved = true;
-            if (duration && !isNaN(duration) && duration > 0) {
-              const minutes = Math.floor(duration / 60);
-              const seconds = Math.floor(duration % 60);
-              const result = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-              resolve(result);
-            } else {
-              const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
-              resolve(`~${estimatedMinutes}:00`);
-            }
-          }
-        };
-        
-        audio.addEventListener('loadedmetadata', () => cleanup(audio.duration));
-        audio.addEventListener('error', () => cleanup());
-        audio.addEventListener('canplaythrough', () => {
-          if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-            cleanup(audio.duration);
-          }
-        });
-        
-        setTimeout(() => cleanup(), 15000);
-        
-        audio.preload = 'metadata';
-        audio.src = tempUrl;
-      });
-    } catch (error) {
-      console.error('Error getting duration for', file.name, ':', error);
-      const estimatedMinutes = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
-      return `~${estimatedMinutes}:00`;
+      const secs = await getDurationFromUrl(tempUrl);
+      return formatDuration(secs);
+    } catch {
+      // very rough size-based fallback (~0.5 MB ≈ 1 minute)
+      const estMin = Math.max(1, Math.floor(file.size / (1024 * 1024 * 0.5)));
+      return `~${estMin}:00`;
     }
   };
 
   const loadFileDuration = async (file: DropboxFile) => {
     if (file.duration) return;
-    
     setLoadingDurations(prev => new Set(prev).add(file.path_lower));
     const duration = await getDurationFromDropboxFile(file);
-    
-    setFiles(prevFiles => 
-      prevFiles.map(f => 
-        f.path_lower === file.path_lower 
-          ? { ...f, duration }
-          : f
-      )
+    setFiles(prev =>
+      prev.map(f => f.path_lower === file.path_lower ? { ...f, duration } : f)
     );
-    
     setLoadingDurations(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(file.path_lower);
-      return newSet;
+      const s = new Set(prev);
+      s.delete(file.path_lower);
+      return s;
     });
   };
 
@@ -178,50 +125,33 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
     setIsLoading(true);
     try {
       const allItems = await dropboxService.listFiles(path);
-      
-      const folderItems = allItems.filter(item => item[".tag"] === "folder");
-      const musicFiles = allItems.filter(item => {
-        if (item[".tag"] !== "file") return false;
-        
-        const fileName = item.name.toLowerCase();
-        const supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'];
-        return supportedExtensions.some(ext => fileName.endsWith(ext));
+      const folderItems = allItems.filter((i: any) => i[".tag"] === "folder");
+      const musicFiles = allItems.filter((i: any) => {
+        if (i[".tag"] !== "file") return false;
+        const n = i.name.toLowerCase();
+        return ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'].some(ext => n.endsWith(ext));
       });
-       
       setFolders(folderItems);
       setFiles(musicFiles);
       setCurrentPath(path);
       setSelectedFiles(new Set());
-      
-      // Load durations for all music files
-      musicFiles.forEach(file => {
-        loadFileDuration(file);
-      });
-      
-    } catch (error) {
-      console.error('Error loading folders:', error);
-      
-      if (error.message === 'DROPBOX_TOKEN_EXPIRED' || error.message === 'DROPBOX_AUTH_REQUIRED' || error.message === 'Not authenticated with Dropbox') {
+      musicFiles.forEach(loadFileDuration);
+    } catch (error: any) {
+      if (
+        error?.message === 'DROPBOX_TOKEN_EXPIRED' ||
+        error?.message === 'DROPBOX_AUTH_REQUIRED' ||
+        error?.message === 'Not authenticated with Dropbox'
+      ) {
         const now = Date.now();
         if (now - lastAuthError > 5000) {
           setLastAuthError(now);
           window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
         }
-        
-        setFiles([]);
-        setFolders([]);
-        setCurrentPath("");
-        setSelectedFiles(new Set());
-        setFolderHistory([]);
-        setIsConnected(false);
+        setFiles([]); setFolders([]); setCurrentPath("");
+        setSelectedFiles(new Set()); setFolderHistory([]); setIsConnected(false);
         return;
       }
-      
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load folders from Dropbox.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error?.message || "Failed to load folders from Dropbox.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -231,485 +161,282 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
     setFolderHistory([...folderHistory, currentPath]);
     loadFolders(folderPath);
   };
-
   const navigateBack = () => {
     if (folderHistory.length > 0) {
-      const previousPath = folderHistory[folderHistory.length - 1];
+      const prev = folderHistory[folderHistory.length - 1];
       setFolderHistory(folderHistory.slice(0, -1));
-      loadFolders(previousPath);
+      loadFolders(prev);
     }
   };
 
   const handleFileToggle = (filePath: string) => {
-    const newSelected = new Set(selectedFiles);
-    if (newSelected.has(filePath)) {
-      newSelected.delete(filePath);
-    } else {
-      newSelected.add(filePath);
-    }
-    setSelectedFiles(newSelected);
+    const ns = new Set(selectedFiles);
+    ns.has(filePath) ? ns.delete(filePath) : ns.add(filePath);
+    setSelectedFiles(ns);
   };
-
   const handleSelectAll = () => {
-    if (selectedFiles.size === files.length) {
-      setSelectedFiles(new Set());
-    } else {
-      setSelectedFiles(new Set(files.map(file => file.path_lower)));
-    }
+    if (selectedFiles.size === files.length) setSelectedFiles(new Set());
+    else setSelectedFiles(new Set(files.map(f => f.path_lower)));
   };
 
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-  };
-
-  const sortedFolders = [...folders].sort((a, b) => {
-    const comparison = a.name.localeCompare(b.name);
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-
-  const sortedFiles = [...files].sort((a, b) => {
-    const comparison = a.name.localeCompare(b.name);
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
+  const toggleSortOrder = () => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  const sortedFolders = [...folders].sort((a, b) => (sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+  const sortedFiles = [...files].sort((a, b) => (sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
 
   const checkConnection = async () => {
     try {
       const connected = await dropboxService.isAuthenticated();
       setIsConnected(connected);
       return connected;
-    } catch (error) {
+    } catch {
       setIsConnected(false);
       return false;
     }
   };
 
   useEffect(() => {
-    if (isOpen) {
-      checkConnection();
-    }
+    if (isOpen) checkConnection();
   }, [isOpen]);
 
   useEffect(() => {
-    if (isConnected && isOpen) {
-      loadFolders();
-    }
+    if (isConnected && isOpen) loadFolders();
   }, [isConnected, isOpen]);
 
-  const getCurrentPathName = () => {
-    if (!currentPath) return "Dropbox";
-    const parts = currentPath.split("/").filter(Boolean);
-    return parts[parts.length - 1] || "Dropbox";
+  /** server-side pipeline for non-transcode inputs (mp3/aac/...) */
+  const serverProcessAudio = async (audioUrl: string, fileName: string) => {
+    const quality = (localStorage.getItem('conversionQuality') === 'aac-320') ? 'high' : 'standard';
+    const res = await fetch(`${APP_API_BASE}/api/process-audio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ audioUrl, fileName, quality })
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`process-audio failed ${res.status}: ${txt}`);
+    }
+    // { ok, url, storage_type:'r2', storage_key, originalFilename, transcoded, quality }
+    return res.json();
   };
 
   const processFile = async (file: DropboxFile, fileIndex: number, totalFiles: number): Promise<boolean> => {
     const updateProgress = (status: FileImportStatus['status'], error?: string, progress?: number) => {
       setImportProgress(prev => ({
         ...prev,
-        [file.path_lower]: {
-          path: file.path_lower,
-          name: file.name,
-          status,
-          error,
-          progress
-        }
+        [file.path_lower]: { path: file.path_lower, name: file.name, status, error, progress }
       }));
     };
-    
-    updateProgress('processing', undefined, 0);
-    
-    const createTrackWithRetry = async (trackData: any, retries = 3): Promise<boolean> => {
-      let lastError: Error | null = null;
-      
+
+    updateProgress('processing', undefined, 10);
+
+    const createTrackWithRetry = async (trackData: any, retries = 3): Promise<void> => {
+      let lastErr: Error | null = null;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          console.log(`Creating track attempt ${attempt}/${retries} for:`, { 
-            title: trackData.title, 
-            fileUrl: trackData.fileUrl?.substring(0, 50) + '...',
-            attempt 
-          });
-          
           await addTrackMutation.mutateAsync(trackData);
-          console.log(`Successfully created track for ${file.name} on attempt ${attempt}`);
-          return true;
-          
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          console.error(`Track creation attempt ${attempt}/${retries} failed for ${file.name}:`, lastError.message);
-          
-          if (attempt < retries) {
-            const delayMs = Math.pow(2, attempt - 1) * 500; // 500ms, 1s, 2s
-            console.log(`Retrying track creation in ${delayMs}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-          }
+          return;
+        } catch (e: any) {
+          lastErr = e instanceof Error ? e : new Error(String(e));
+          if (attempt < retries) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
         }
       }
-      
-      console.error(`All ${retries} track creation attempts failed for ${file.name}`);
-      throw lastError || new Error('Track creation failed after all retry attempts');
+      throw lastErr || new Error("Track creation failed");
     };
 
     try {
-      console.log(`[${fileIndex}/${totalFiles}] Processing ${file.name}...`);
-      
-      // Check if this is a file that needs transcoding
       const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
-      
-      updateProgress('processing', undefined, 20);
+      const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
 
-      let finalUrl: string;
-      let formattedDuration: string;
-      let title: string;
-      let artist: string;
+      // read some tags first
+      const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
+      const baseName = file.name.replace(/\.[^/.]+$/, "");
+
+      let result: any;
+      updateProgress('processing', undefined, 35);
 
       if (needsTranscoding) {
-        // For files that need transcoding (WAV, AIF)
-        console.log(`Transcoding file: ${file.name}`);
-        updateProgress('processing', undefined, 30);
-        
-        // Get temporary URL for download
-        const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-        updateProgress('processing', undefined, 40);
-        
-        // Extract metadata from the original file before transcoding
-        const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-        console.log(`Extracted metadata for ${file.name}:`, metadata);
-        updateProgress('processing', undefined, 50);
-        
-        // Get conversion quality setting from localStorage
-        const conversionQuality = localStorage.getItem('conversionQuality') || 'mp3-320';
-        const outputFormat = conversionQuality === 'aac-320' ? 'aac' : 'mp3';
-        
-        // Transcode with retry logic built into the service
-        const transcodeResult = await importTranscodingService.transcodeAndStore(tempUrl, file.name, outputFormat);
-        finalUrl = transcodeResult.publicUrl;
-        updateProgress('processing', undefined, 70);
-        
-        // Get duration with extended timeout for large files
-        const duration = metadata.duration || await getDurationFromUrl(finalUrl);
-        formattedDuration = formatDuration(duration);
-        
-        // Sanitize and prepare title with proper fallbacks
-        title = transcodeResult.originalFilename?.replace(/\.[^/.]+$/, "") || 
-               metadata.title || 
-               file.name.replace(/\.[^/.]+$/, "");
-        title = title.trim() || "Unknown Track";
-        artist = metadata.artist || "Unknown Artist";
-        
-        console.log(`Successfully transcoded ${file.name} to MP3`);
-        
+        const conv = localStorage.getItem('conversionQuality') || 'mp3-320';
+        const outFmt = conv === 'aac-320' ? 'aac' : 'mp3';
+        result = await importTranscodingService.transcodeAndStore(tempUrl, file.name, outFmt);
       } else {
-        // For other formats, download and store directly
-        console.log(`Direct download for: ${file.name}`);
-        updateProgress('processing', undefined, 30);
-        
-        const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
-        updateProgress('processing', undefined, 40);
-        
-        // Extract metadata from filename for non-transcoded files
-        const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-        console.log(`Extracted metadata for ${file.name}:`, metadata);
-        updateProgress('processing', undefined, 50);
-        
-        const response = await fetch(tempUrl);
-        const blob = await response.blob();
-        updateProgress('processing', undefined, 60);
-        
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        
-        // Upload to Supabase storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('audio-files')
-          .upload(fileName, blob, {
-            contentType: blob.type || 'audio/mpeg',
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('audio-files')
-          .getPublicUrl(fileName);
-
-        finalUrl = urlData.publicUrl;
-        updateProgress('processing', undefined, 70);
-
-        // Get duration with extended timeout for large files
-        const duration = metadata.duration || await getDurationFromUrl(finalUrl);
-        formattedDuration = formatDuration(duration);
-        
-        title = metadata.title || file.name.replace(/\.[^/.]+$/, "");
-        artist = metadata.artist || "Unknown Artist";
+        result = await serverProcessAudio(tempUrl, file.name);
       }
-      
-      updateProgress('processing', undefined, 80);
 
-      // Create track data
+      updateProgress('processing', undefined, 65);
+
+      const url: string = result.url || result.publicUrl; // handle both helpers
+      const storage_key: string = result.storage_key || result.storageKey || result.key;
+
+      const secs = await getDurationFromUrl(url);
+      const duration = formatDuration(secs);
+
+      const title =
+        (result.originalFilename?.replace(/\.[^/.]+$/, "") || "").trim() ||
+        (metadata.title || "").trim() ||
+        baseName ||
+        "Unknown Track";
+
+      const artist = (metadata.artist || "Unknown Artist").trim();
+
+      // R2-first track row. Don't persist a public URL.
       const trackData = {
-        title: title,
-        artist: artist,
-        duration: formattedDuration,
-        fileUrl: finalUrl,
-        dropbox_path: null, // No longer needed since file is permanently stored
+        title,
+        artist,
+        duration,
+        storage_type: 'r2',
+        storage_key,
+        storage_url: null,
+        fileUrl: null,
+        dropbox_path: null,
         is_public: false,
       };
 
-      console.log("Creating track with:", { 
-        title: trackData.title, 
-        publicUrl: finalUrl?.substring(0, 50) + '...',
-        trackData 
-      });
-      
-      updateProgress('processing', undefined, 90);
-      
-      // Create track with retry logic
+      updateProgress('processing', undefined, 85);
       await createTrackWithRetry(trackData);
-      
+
       updateProgress('success', undefined, 100);
-      console.log(`[${fileIndex}/${totalFiles}] Successfully stored ${file.name}`);
       return true;
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`Failed to process ${file.name}:`, errorMessage);
-      updateProgress('error', errorMessage);
+    } catch (err: any) {
+      updateProgress('error', err?.message || 'Unknown error');
       return false;
     }
   };
 
-
   const handleConnect = async () => {
     setIsConnecting(true);
-    
-    // Detect mobile Safari
     const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-    
     try {
-      // Set up message listener BEFORE starting auth
       const handleAuthMessage = (event: MessageEvent) => {
         if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
-          console.log('Received auth success message, refreshing auth state...');
           window.removeEventListener('message', handleAuthMessage);
-          
-          // Refresh the dropbox service auth state
-          dropboxService.refreshAuthState();
           setIsConnecting(false);
-          
-          // Check connection and load folders
           setTimeout(() => {
             checkConnection().then(connected => {
               if (connected) {
                 setIsConnected(true);
                 loadFolders();
-                toast({
-                  title: "Connected",
-                  description: "Successfully connected to Dropbox.",
-                });
+                toast({ title: "Connected", description: "Successfully connected to Dropbox." });
               }
             });
-          }, 1000);
+          }, 800);
         } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
-          console.error('Auth failed:', event.data.error);
           window.removeEventListener('message', handleAuthMessage);
           setIsConnecting(false);
-          toast({
-            title: "Connection failed",
-            description: "Failed to connect to Dropbox. Please try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
         }
       };
-      
       window.addEventListener('message', handleAuthMessage);
-      
-      // For mobile Safari, use redirect-based OAuth instead of popup
+
       if (isMobileSafari) {
-        console.log('Mobile Safari detected, using redirect-based OAuth');
-        
-        // Get Dropbox config and redirect to OAuth
-        const { data } = await supabase.functions.invoke('get-dropbox-config');
-        if (data?.dropbox_app_key) {
-          const state = Math.random().toString(36).substring(2, 15);
-          localStorage.setItem('dropbox_auth_state', state);
-          localStorage.setItem('dropbox_auth_return_url', window.location.href);
-          
-          const redirectUri = `${window.location.origin}/dropbox-callback`;
-          const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${data.dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
-          
-          // Redirect to Dropbox OAuth page
-          window.location.href = authUrl;
-          return;
-        } else {
-          throw new Error('Failed to get Dropbox configuration');
-        }
+        // redirect OAuth for mobile Safari
+        const state = Math.random().toString(36).slice(2);
+        localStorage.setItem('dropbox_auth_state', state);
+        localStorage.setItem('dropbox_auth_return_url', window.location.href);
+        const redirectUri = `${window.location.origin}/dropbox-callback`;
+        const { dropbox_app_key } = (await (await fetch("/functions/v1/get-dropbox-config", { method: "POST" })).json()) || {};
+        if (!dropbox_app_key) throw new Error("Missing Dropbox app key");
+        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+        window.location.href = authUrl;
+        return;
       }
-      
-      // For desktop and other browsers, use popup
-      const timeoutId = setTimeout(() => {
+
+      const timeout = setTimeout(() => {
         window.removeEventListener('message', handleAuthMessage);
         setIsConnecting(false);
-        
-        // Check if connection was actually successful despite timeout
         setTimeout(() => {
           checkConnection().then(connected => {
             if (connected) {
               setIsConnected(true);
               loadFolders();
-              toast({
-                title: "Connected",
-                description: "Successfully connected to Dropbox.",
-              });
+              toast({ title: "Connected", description: "Successfully connected to Dropbox." });
             } else {
-              toast({
-                title: "Connection failed",
-                description: "Failed to connect to Dropbox. Please try again.",
-                variant: "destructive",
-              });
+              toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
             }
           });
-        }, 500);
-      }, 20000); // 20 second timeout
-      
+        }, 400);
+      }, 20000);
+
       await dropboxService.authenticate();
-      
-      // Clean up timeout if auth completes normally
-      clearTimeout(timeoutId);
+      clearTimeout(timeout);
     } catch (error) {
-      console.error('Connection failed:', error);
       setIsConnecting(false);
-      
-      // Double-check connection state before showing error
       setTimeout(() => {
         checkConnection().then(connected => {
           if (connected) {
             setIsConnected(true);
             loadFolders();
-            toast({
-              title: "Connected",
-              description: "Successfully connected to Dropbox.",
-            });
+            toast({ title: "Connected", description: "Successfully connected to Dropbox." });
           } else {
-            toast({
-              title: "Connection failed",
-              description: "Failed to connect to Dropbox. Please try again.",
-              variant: "destructive",
-            });
+            toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
           }
         });
-      }, 1000);
+      }, 800);
     }
   };
 
   const handleDisconnect = async () => {
     try {
-      // Clear auth state
       localStorage.removeItem('dropbox_access_token');
       setIsConnected(false);
-      setFolders([]);
-      setFiles([]);
-      setSelectedFiles(new Set());
-      toast({
-        title: "Disconnected",
-        description: "Successfully disconnected from Dropbox.",
-      });
-    } catch (error) {
-      console.error('Disconnect failed:', error);
-      toast({
-        title: "Disconnect failed",
-        description: "Failed to disconnect from Dropbox.",
-        variant: "destructive",
-      });
+      setFolders([]); setFiles([]); setSelectedFiles(new Set());
+      toast({ title: "Disconnected", description: "Successfully disconnected from Dropbox." });
+    } catch {
+      toast({ title: "Disconnect failed", description: "Failed to disconnect from Dropbox.", variant: "destructive" });
     }
   };
 
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
-      toast({
-        title: "No files selected",
-        description: "Please select files to sync.",
-        variant: "destructive",
-      });
+      toast({ title: "No files selected", description: "Please select files to sync.", variant: "destructive" });
       return;
     }
-
     setIsSyncing(true);
     let syncedCount = 0;
-    const totalFiles = selectedFiles.size;
-    
-    // Get all selected files
-    const selectedFileObjects = files.filter(file => selectedFiles.has(file.path_lower));
-    
-    // Initialize progress for all selected files
-    const initialProgress: ImportProgress = {};
-    selectedFileObjects.forEach(file => {
-      initialProgress[file.path_lower] = {
-        path: file.path_lower,
-        name: file.name,
-        status: 'pending'
-      };
-    });
-    setImportProgress(initialProgress);
+    const chosen = files.filter(f => selectedFiles.has(f.path_lower));
 
-    // Immediately show all tracks as pending in the library
-    const pendingTracks = selectedFileObjects.map(file => ({
-      id: `pending-${file.path_lower}`,
-      title: file.name,
-      artist: 'Processing...',
-      duration: file.duration || '0:00',
-      status: 'processing' as const,
-      progress: 0
-    }));
-    
-    if (onPendingTracksChange) {
-      onPendingTracksChange(pendingTracks);
-    }
+    // Seed progress + pending list
+    const init: ImportProgress = {};
+    chosen.forEach(f => { init[f.path_lower] = { path: f.path_lower, name: f.name, status: 'pending' }; });
+    setImportProgress(init);
+
+    onPendingTracksChange?.(
+      chosen.map(f => ({
+        id: `pending-${f.path_lower}`,
+        title: f.name,
+        artist: 'Processing...',
+        duration: f.duration || '0:00',
+        status: 'processing' as const,
+        progress: 0
+      }))
+    );
 
     try {
-      // Process files sequentially to avoid overwhelming the system
-      for (let i = 0; i < selectedFileObjects.length; i++) {
-        const file = selectedFileObjects[i];
-        const fileIndex = i + 1;
-        
-        const success = await processFile(file, fileIndex, totalFiles);
-        if (success) {
-          syncedCount++;
-        }
-        
-        // Update overall progress toast
+      for (let i = 0; i < chosen.length; i++) {
+        const ok = await processFile(chosen[i], i + 1, chosen.length);
+        if (ok) syncedCount++;
         toast({
-          title: `Import Progress: ${fileIndex}/${totalFiles}`,
-          description: `Completed: ${syncedCount}, Failed: ${fileIndex - syncedCount}`,
+          title: `Import Progress: ${i + 1}/${chosen.length}`,
+          description: `Completed: ${syncedCount}, Failed: ${i + 1 - syncedCount}`,
         });
       }
 
-      // Refresh the tracks list
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
-      
-      const failedCount = totalFiles - syncedCount;
-      
+
+      const failed = chosen.length - syncedCount;
       toast({
         title: "Import Complete",
-        description: failedCount > 0 
-          ? `Successfully imported ${syncedCount} of ${totalFiles} files. ${failedCount} failed - check status below.`
-          : `Successfully imported all ${syncedCount} files to your library.`,
-        variant: failedCount > 0 ? "destructive" : "default"
+        description: failed > 0
+          ? `Successfully imported ${syncedCount} of ${chosen.length}. ${failed} failed.`
+          : `Successfully imported all ${syncedCount} file${syncedCount === 1 ? '' : 's'}.`,
+        variant: failed > 0 ? "destructive" : "default"
       });
-      
-      if (failedCount === 0) {
+
+      if (failed === 0) {
         setSelectedFiles(new Set());
         setImportProgress({});
       }
-      
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync files. Please try again.",
-        variant: "destructive",
-      });
+    } catch (e) {
+      toast({ title: "Sync Failed", description: "Failed to sync files. Please try again.", variant: "destructive" });
     } finally {
       setIsSyncing(false);
     }
@@ -730,15 +457,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
             {isConnected && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={toggleSortOrder}
                   className="p-2 text-primary hover:bg-muted rounded-md transition-colors"
                   title="Toggle sort order"
                 >
-                  {sortOrder === 'asc' ? (
-                    <ArrowUp className="h-4 w-4" />
-                  ) : (
-                    <ArrowDown className="h-4 w-4" />
-                  )}
+                  {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
                 </button>
                 <button
                   onClick={() => loadFolders(currentPath)}
@@ -770,30 +493,12 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               )}
             </div>
             {isConnected ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-                className="text-primary hover:text-primary/80"
-              >
+              <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-primary hover:text-primary/80">
                 Disconnect
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleConnect}
-                disabled={isConnecting}
-                className="flex items-center gap-2 text-primary hover:text-primary/80"
-              >
-                {isConnecting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  'Connect to Dropbox'
-                )}
+              <Button variant="outline" size="sm" onClick={handleConnect} disabled={isConnecting} className="flex items-center gap-2 text-primary hover:text-primary/80">
+                {isConnecting ? (<><RefreshCw className="h-4 w-4 animate-spin" />Connecting...</>) : ('Connect to Dropbox')}
               </Button>
             )}
           </div>
@@ -816,19 +521,14 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
                   <Folder className="w-4 h-4" />
                   <span>{currentPath}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={navigateBack}
-                    className="ml-auto"
-                  >
-                    <ArrowLeft className="w-4 w-4 mr-1" />
+                  <Button variant="ghost" size="sm" onClick={navigateBack} className="ml-auto">
+                    <ArrowLeft className="w-4 h-4 mr-1" />
                     Back
                   </Button>
                 </div>
               )}
 
-              {/* Select all checkbox */}
+              {/* Select all */}
               {files.length > 0 && (
                 <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
                   <div className="flex items-center space-x-3">
@@ -872,9 +572,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                 return (
                   <div
                     key={file.path_lower}
-                    className={`flex items-center p-3 rounded-lg border bg-card ${
-                      isSelected ? 'ring-2 ring-primary' : ''
-                    }`}
+                    className={`flex items-center p-3 rounded-lg border bg-card ${isSelected ? 'ring-2 ring-primary' : ''}`}
                   >
                     <Checkbox
                       checked={isSelected}
@@ -886,18 +584,16 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                     <div className="flex items-center flex-1 min-w-0">
                       <Music className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate text-primary">{file.name.replace(/\.[^/.]+$/, "")}</div>
+                        <div className="font-medium truncate text-primary">
+                          {file.name.replace(/\.[^/.]+$/, "")}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {isLoadingDuration ? (
                             <span className="flex items-center">
                               <Loader2 className="w-3 h-3 animate-spin mr-1" />
                               Loading...
                             </span>
-                          ) : file.duration ? (
-                            file.duration
-                          ) : (
-                            '--:--'
-                          )}
+                          ) : file.duration ? file.duration : '--:--'}
                         </div>
                       </div>
                     </div>
@@ -936,11 +632,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         {/* Footer with action buttons */}
         {isConnected && selectedFiles.size > 0 && (
           <div className="border-t p-4">
-            <Button
-              onClick={syncSelectedFiles}
-              className="w-full"
-              disabled={isSyncing}
-            >
+            <Button onClick={syncSelectedFiles} className="w-full" disabled={isSyncing}>
               {isSyncing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

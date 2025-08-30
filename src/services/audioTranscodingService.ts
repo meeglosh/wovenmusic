@@ -21,8 +21,9 @@ class AudioTranscodingService {
       const blob = await response.blob();
       const formData = new FormData();
       formData.append('audio', blob, this.extractFilename(audioUrl));
-
-      const renderResponse = await fetch(`https://transcode-server.onrender.com/transcode?format=${outputFormat}`, {
+      
+      // Send to your backend (updated index.js)
+      const renderResponse = await fetch(`https://transcode-server.onrender.com/api/transcode`, {
         method: 'POST',
         body: formData,
       });
@@ -32,14 +33,21 @@ class AudioTranscodingService {
       }
 
       const json = await renderResponse.json();
-      const transcodedUrl = json.publicUrl;
+      if (!json?.url || !json?.storage_type || !json?.storage_key) {
+        throw new Error("Missing required fields in transcoding response");
+      }
 
+      const transcodedUrl = json.url;  // URL of the transcoded file from backend (R2 or Supabase)
       this.cache[cacheKey] = transcodedUrl;
+
       console.log('=== TRANSCODING SUCCESS ===', transcodedUrl);
+
+      // Return the URL from the backend (R2 presigned or Supabase public URL)
       return transcodedUrl;
+
     } catch (error) {
       console.error('=== TRANSCODING FAILED ===', error);
-      return audioUrl; // Fallback to original URL
+      return audioUrl; // Fallback to original URL if transcoding fails
     }
   }
 

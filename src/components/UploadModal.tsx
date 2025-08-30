@@ -1,11 +1,10 @@
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, X, AlertTriangle, CheckCircle, Music, FileX } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useToast } from "@/hooks/use-toast";
 import { importTranscodingService } from "@/services/importTranscodingService";
@@ -20,10 +19,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+/** Prefer app API base, else fall back to transcode server URL */
+const APP_API_BASE =
+  (import.meta as any)?.env?.VITE_APP_API_BASE ||
+  (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
+  "https://transcode-server.onrender.com";
+
 interface UploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  audioQuality: string;
+  audioQuality: string; // 'mp3-320' | 'aac-320' (etc.)
 }
 
 interface UploadFile {
@@ -59,43 +64,33 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     return UNSUPPORTED_FORMATS.includes(extension);
   };
 
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
+  const handleFileSelect = () => fileInputRef.current?.click();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     processFiles(files);
-
-    // Clear the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const processFiles = (files: File[]) => {
     if (files.length === 0) return;
 
-    const supportedFiles: File[] = [];
-    const unsupportedFiles: File[] = [];
+    const supported: File[] = [];
+    const unsupported: File[] = [];
 
     files.forEach(file => {
-      if (isUnsupportedFormat(file)) {
-        unsupportedFiles.push(file);
-      } else if (validateFileType(file)) {
-        supportedFiles.push(file);
-      } else {
-        unsupportedFiles.push(file);
-      }
+      if (isUnsupportedFormat(file)) unsupported.push(file);
+      else if (validateFileType(file)) supported.push(file);
+      else unsupported.push(file);
     });
 
-    if (unsupportedFiles.length > 0) {
-      setUnsupportedFiles(unsupportedFiles);
+    if (unsupported.length > 0) {
+      setUnsupportedFiles(unsupported);
       setShowUnsupportedDialog(true);
     }
 
-    if (supportedFiles.length > 0) {
-      const newUploadFiles: UploadFile[] = supportedFiles.map(file => ({
+    if (supported.length > 0) {
+      const newUploadFiles: UploadFile[] = supported.map(file => ({
         file,
         status: 'pending',
         progress: 0
@@ -104,272 +99,142 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); };
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-
+    e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     processFiles(files);
   };
 
-  const removeFile = (index: number) => {
-    setUploadFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const getDurationFromFile = (file: File): Promise<number> => {
-    console.log(`Getting duration for file: ${file.name}, type: ${file.type}, size: ${file.size}`);
-    
-    return new Promise((resolve) => {
-      const audio = new Audio();
-      const url = URL.createObjectURL(file);
-      let resolved = false;
-      
-      const cleanup = (duration?: number) => {
-        if (!resolved) {
-          resolved = true;
-          URL.revokeObjectURL(url);
-          console.log(`Duration extracted for ${file.name}: ${duration || 'fallback to 180'}`);
-          resolve(duration || 180); // Default 3 minutes if can't extract
-        }
-      };
-      
-      audio.addEventListener('loadedmetadata', () => {
-        console.log(`Loadedmetadata for ${file.name}: duration = ${audio.duration}`);
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        } else {
-          console.log(`Invalid duration for ${file.name}, using fallback`);
-          cleanup(); // Use default if duration is invalid
-        }
-      });
-      
-      audio.addEventListener('error', (e) => {
-        console.log(`Audio error for ${file.name}:`, e);
-        cleanup();
-      });
-      
-      audio.addEventListener('canplaythrough', () => {
-        console.log(`Canplaythrough for ${file.name}: duration = ${audio.duration}`);
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        }
-      });
-      
-      // Set timeout for larger files or slow networks
-      setTimeout(() => {
-        console.log(`Timeout reached for ${file.name}`);
-        cleanup();
-      }, 10000);
-      
-      audio.preload = 'metadata';
-      audio.src = url;
-    });
-  };
+  const removeFile = (index: number) => setUploadFiles(prev => prev.filter((_, i) => i !== index));
 
   const getDurationFromUrl = (url: string): Promise<number> => {
-    console.log(`Getting duration from URL: ${url.substring(0, 50)}...`);
-    
     return new Promise((resolve) => {
       const audio = new Audio();
-      let resolved = false;
-      
-      const cleanup = (duration?: number) => {
-        if (!resolved) {
-          resolved = true;
-          console.log(`Duration extracted from URL: ${duration || 'fallback to 180'}`);
-          resolve(duration || 180); // Default 3 minutes if can't extract
-        }
+      let settled = false;
+      const done = (val?: number) => {
+        if (settled) return;
+        settled = true;
+        resolve(val && !isNaN(val) && val > 0 ? val : 180); // fallback 3:00
       };
-      
-      audio.addEventListener('loadedmetadata', () => {
-        console.log(`Loadedmetadata from URL: duration = ${audio.duration}`);
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        } else {
-          console.log(`Invalid duration from URL, using fallback`);
-          cleanup(); // Use default if duration is invalid
-        }
-      });
-      
-      audio.addEventListener('error', (e) => {
-        console.log(`Audio error from URL:`, e);
-        cleanup();
-      });
-      
-      audio.addEventListener('canplaythrough', () => {
-        console.log(`Canplaythrough from URL: duration = ${audio.duration}`);
-        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-          cleanup(audio.duration);
-        }
-      });
-      
-      // Set timeout for larger files or slow networks
-      setTimeout(() => {
-        console.log(`Timeout reached for URL`);
-        cleanup();
-      }, 15000);
-      
+      audio.addEventListener('loadedmetadata', () => done(audio.duration));
+      audio.addEventListener('canplaythrough', () => done(audio.duration));
+      audio.addEventListener('error', () => done());
+      setTimeout(() => done(), 15000);
       audio.preload = 'metadata';
       audio.src = url;
     });
   };
 
   const formatDuration = (seconds: number): string => {
-    if (seconds === 0) return '--:--';
+    if (!seconds || isNaN(seconds)) return '--:--';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const extractMetadata = (filename: string) => {
-    // Remove file extension
     const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-    
-    // Try to extract artist and title from filename
-    // Common patterns: "Artist - Title", "Title - Artist", or just "Title"
     const parts = nameWithoutExt.split(' - ');
-    
     if (parts.length >= 2) {
-      return {
-        artist: parts[0].trim(),
-        title: parts[1].trim()
+      return { artist: parts[0].trim(), title: parts[1].trim() };
+    }
+    return { artist: 'Unknown Artist', title: nameWithoutExt.trim() };
+  };
+
+  /** Server-side pipeline for *local* uploads (handles transcode-if-needed + store to R2). */
+  const serverProcessUpload = async (file: File, desiredQuality: string) => {
+    const form = new FormData();
+    form.append("audio", file);
+    form.append("fileName", file.name);
+    form.append("quality", desiredQuality); // e.g., 'mp3-320' | 'aac-320'
+    const res = await fetch(`${APP_API_BASE}/api/process-upload`, {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`process-upload failed ${res.status}: ${text}`);
+    }
+    // Expected: { ok, url, storage_type:'r2', storage_key, originalFilename, transcoded, quality }
+    return res.json();
+  };
+
+  const uploadFile = async (uploadFile: UploadFile, index: number) => {
+    const { file } = uploadFile;
+    const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
+    const desiredQuality = audioQuality || 'mp3-320';
+
+    try {
+      setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'uploading', progress: 10 }) : f));
+
+      // Let the server handle everything (including transcoding if needed).
+      if (needsTranscoding) {
+        setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
+      }
+
+      const result = await serverProcessUpload(file, desiredQuality);
+      // result.url is a temporary URL good for sniffing duration; storage_key is the persistent handle
+      setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'importing', progress: 80 }) : f));
+
+      const secs = await getDurationFromUrl(result.url);
+      const formattedDuration = formatDuration(secs);
+      const { artist, title } = extractMetadata(file.name);
+
+      // Create track referencing R2 object (no fileUrl persisted)
+      const trackData = {
+        title,
+        artist,
+        duration: formattedDuration,
+        storage_type: 'r2',
+        storage_key: result.storage_key,
+        storage_url: null,
+        fileUrl: null,
+        source_folder: 'Direct Upload',
+        is_public: false,
       };
-    } else {
-      return {
-        artist: 'Unknown Artist',
-        title: nameWithoutExt.trim()
-      };
+
+      const created = await addTrackMutation.mutateAsync(trackData);
+
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, status: 'success', progress: 100, trackId: created.id } : f
+      ));
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setUploadFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
+      ));
     }
   };
 
-const uploadFile = async (uploadFile: UploadFile, index: number) => {
-  const { file } = uploadFile;
-  const fileName = file.name.replace(/\s+/g, '_');
-  const needsTranscoding = importTranscodingService.needsTranscoding(fileName);
-  const outputFormat = audioQuality === 'aac-320' ? 'aac' : 'mp3';
+  const startUpload = async () => {
+    if (uploadFiles.length === 0) return;
+    setIsUploading(true);
 
-  try {
-    setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'uploading', progress: 10 } : f
-    ));
-
-    let finalUrl = '';
-    let duration = 0;
-
-    if (needsTranscoding) {
-      setUploadFiles(prev => prev.map((f, i) =>
-        i === index ? { ...f, progress: 30 } : f
-      ));
-
-      const formData = new FormData();
-      formData.append('audio', file);
-      formData.append('fileName', fileName);
-      formData.append('outputFormat', outputFormat);
-      formData.append('bitrate', '320k');
-
-      setUploadFiles(prev => prev.map((f, i) =>
-        i === index ? { ...f, status: 'transcoding', progress: 50 } : f
-      ));
-
-      const res = await fetch('https://transcode-server.onrender.com/api/transcode', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!res.ok) throw new Error(`Transcoding failed with status ${res.status}`);
-      const data = await res.json();
-      finalUrl = data.publicUrl;
-    } else {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('audio-files')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('audio-files')
-        .getPublicUrl(fileName);
-
-      finalUrl = urlData.publicUrl;
-    }
-
-    setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'importing', progress: 80 } : f
-    ));
-
-    duration = await getDurationFromUrl(finalUrl);
-    const formattedDuration = formatDuration(duration);
-    const { artist, title } = extractMetadata(file.name);
-
-    const trackData = {
-      title,
-      artist,
-      duration: formattedDuration,
-      fileUrl: finalUrl,
-      source_folder: 'Direct Upload'
-    };
-
-    const result = await addTrackMutation.mutateAsync(trackData);
-
-    setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'success', progress: 100, trackId: result.id } : f
-    ));
-
-  } catch (error: any) {
-    console.error('Upload error:', error);
-    setUploadFiles(prev => prev.map((f, i) =>
-      i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
-    ));
-  }
-};
-
-const startUpload = async () => {
-  if (uploadFiles.length === 0) return;
-  setIsUploading(true);
-
-  let successCount = 0;
-
-  try {
-    for (let i = 0; i < uploadFiles.length; i++) {
-      if (uploadFiles[i].status === 'pending') {
-        await uploadFile(uploadFiles[i], i);
-
-        // Check the most recent status after upload completes
-        const updatedFile = uploadFiles[i];
-        if (updatedFile.status === 'success') {
-          successCount++;
+    try {
+      for (let i = 0; i < uploadFiles.length; i++) {
+        if (uploadFiles[i].status === 'pending') {
+          await uploadFile(uploadFiles[i], i);
         }
       }
+
+      const successCount = uploadFiles.filter(f => f.status === 'success').length;
+      toast({
+        title: "Upload complete",
+        description: `Finished processing selected audio file(s).`,
+      });
+    } catch {
+      toast({
+        title: "Upload failed",
+        description: "Some files failed to upload. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
-
-    toast({
-      title: "Upload complete",
-      description: `Successfully imported ${successCount}/${uploadFiles.length} audio file(s).`,
-    });
-
-  } catch (error) {
-    toast({
-      title: "Upload failed",
-      description: "Some files failed to upload. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsUploading(false);
-  }
-};
+  };
 
   const getStatusIcon = (status: UploadFile['status']) => {
     switch (status) {
@@ -378,8 +243,7 @@ const startUpload = async () => {
       case 'uploading':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'transcoding':
-        // Remove the left spinner during transcoding to avoid duplicate spinners
-        return null;
+        return null; // center spinner shown in text line
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'error':
@@ -390,16 +254,16 @@ const startUpload = async () => {
   };
 
   const getStatusText = (uploadFile: UploadFile) => {
-  switch (uploadFile.status) {
-    case 'pending': return 'Ready to upload';
-    case 'uploading': return 'Uploading file...';
-    case 'transcoding': return 'Transcoding audio...';
-    case 'importing': return 'Finalizing import...';
-    case 'success': return 'Upload complete';
-    case 'error': return uploadFile.error || 'Upload failed';
-    default: return '';
-  }
-};
+    switch (uploadFile.status) {
+      case 'pending': return 'Ready to upload';
+      case 'uploading': return 'Uploading file...';
+      case 'transcoding': return 'Transcoding audio...';
+      case 'importing': return 'Finalizing import...';
+      case 'success': return 'Upload complete';
+      case 'error': return uploadFile.error || 'Upload failed';
+      default: return '';
+    }
+  };
 
   const allComplete = uploadFiles.length > 0 && uploadFiles.every(f => f.status === 'success' || f.status === 'error');
   const hasSuccessful = uploadFiles.some(f => f.status === 'success');
@@ -414,12 +278,8 @@ const startUpload = async () => {
 
           <div className="space-y-6">
             {/* Upload Area */}
-            <Card 
-              className={`border-2 border-dashed transition-colors ${
-                isDragOver 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-muted-foreground/25 hover:border-primary/50'
-              }`}
+            <Card
+              className={`border-2 border-dashed transition-colors ${isDragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -453,7 +313,7 @@ const startUpload = async () => {
                     </Button>
                   )}
                 </div>
-                
+
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {uploadFiles.map((uploadFile, index) => (
                     <Card key={index} className="p-3">
@@ -462,12 +322,12 @@ const startUpload = async () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{uploadFile.file.name}</p>
                           <p className="text-xs text-muted-foreground flex items-center gap-2">
-  							{getStatusText(uploadFile)}
-  							{uploadFile.status === 'transcoding' && (
-    						<div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-  							)}
-  							• {(uploadFile.file.size / 1024 / 1024).toFixed(1)} MB
-						  </p>
+                            {getStatusText(uploadFile)}
+                            {uploadFile.status === 'transcoding' && (
+                              <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                            )}
+                            • {(uploadFile.file.size / 1024 / 1024).toFixed(1)} MB
+                          </p>
 
                           {(uploadFile.status === 'uploading' || uploadFile.status === 'transcoding') && (
                             <Progress value={uploadFile.progress} className="h-1 mt-1" />
@@ -529,7 +389,6 @@ const startUpload = async () => {
             </AlertDialogTitle>
             <AlertDialogDescription>
               The following files are not supported and cannot be uploaded:
-              
               <div className="mt-3 space-y-2">
                 {unsupportedFiles.map((file, index) => (
                   <div key={index} className="flex items-center space-x-2 p-2 bg-muted rounded">
@@ -538,7 +397,6 @@ const startUpload = async () => {
                   </div>
                 ))}
               </div>
-
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,14 +4,14 @@ import { useUpdateTrack } from "@/hooks/useTracks";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineStorage } from "@/hooks/useOfflineStorage";
 
-// Import the existing DropboxService singleton
+// Dropbox + offline + URL helpers
 import { dropboxService } from "@/services/dropboxService";
 import { offlineStorageService, isOnline } from "@/services/offlineStorageService";
 import { generateMediaSessionArtwork } from "@/lib/utils";
 import { resolveTrackUrl } from "@/services/trackUrls";
 
-// Shuffle function using Fisher-Yates algorithm
-const shuffleArray = <T>(array: T[]): T[] => {
+// Fisher–Yates shuffle
+const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -20,13 +20,12 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
-// Helper function to format time
+// mm:ss
 const formatTime = (time: number): string => {
   if (!time || isNaN(time)) return "0:00";
-  
   const minutes = Math.floor(time / 60);
   const seconds = Math.floor(time % 60);
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
 export const useAudioPlayer = () => {
@@ -37,20 +36,19 @@ export const useAudioPlayer = () => {
   const [volume, setVolume] = useState(0.75);
   const [recentlyReauthed, setRecentlyReauthed] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Add mutation for updating track duration
+
   const updateTrackMutation = useUpdateTrack();
   const { toast } = useToast();
   const { isTrackDownloaded } = useOfflineStorage();
 
-  // Playlist functionality
+  // Playlist state
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isShuffleMode, setIsShuffleMode] = useState(false);
   const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
   const [isRepeatMode, setIsRepeatMode] = useState(false);
-  
-  // Current playlist context for Media Session
+
+  // Playlist context for Media Session
   const [currentPlaylistContext, setCurrentPlaylistContext] = useState<{
     id?: string;
     name?: string;
@@ -58,489 +56,325 @@ export const useAudioPlayer = () => {
     artistName?: string;
   } | null>(null);
 
-  // Create or get the audio element with mobile optimizations
+  // Create audio element (mobile-friendly)
   useEffect(() => {
     if (!audioRef.current) {
-      const audio = document.createElement('audio');
-      
-      // Mobile-specific audio optimizations
-      audio.setAttribute('playsinline', 'true'); // Prevent fullscreen on iOS
-      audio.setAttribute('webkit-playsinline', 'true'); // Legacy iOS support
-      audio.preload = 'metadata'; // Load metadata but not full audio initially
-      
+      const audio = document.createElement("audio");
+      audio.setAttribute("playsinline", "true");
+      audio.setAttribute("webkit-playsinline", "true");
+      audio.preload = "metadata";
       audioRef.current = audio;
-      console.log('Audio element created with mobile optimizations');
-      console.log('Audio attributes:', {
-        playsinline: audio.getAttribute('playsinline'),
-        preload: audio.preload
-      });
     }
   }, []);
 
-  // Track loading and metadata
+  // Load the selected track into the <audio> element
   useEffect(() => {
-    
-    if (!currentTrack || !audioRef.current) {
-      return;
-    }
+    if (!currentTrack || !audioRef.current) return;
 
     const audio = audioRef.current;
 
     const loadTrack = async () => {
-      // Check if we have either a fileUrl or a dropbox_path to work with
-      if ((!currentTrack?.fileUrl || currentTrack.fileUrl === "#" || currentTrack.fileUrl === "") && !currentTrack?.dropbox_path) {
-        console.log('No valid file URL or Dropbox path for track:', currentTrack?.title);
+      // Must have at least one source: storage_url/fileUrl OR a Dropbox path
+      if (
+        (!currentTrack.fileUrl || currentTrack.fileUrl === "#" || currentTrack.fileUrl === "") &&
+        !currentTrack.dropbox_path &&
+        !currentTrack.storage_url &&
+        !currentTrack.storage_key
+      ) {
+        console.log("No valid URL or Dropbox path for track:", currentTrack?.title);
         return;
       }
 
       try {
-        console.log('=== ATTEMPTING TO LOAD TRACK ===');
-        console.log('Track file URL:', currentTrack.fileUrl);
-        console.log('Track dropbox path:', currentTrack.dropbox_path);
-        
-        // First check if track is available offline
+        // 1) Prefer offline cache if present
         let audioUrl = await offlineStorageService.getOfflineTrackUrl(currentTrack.id);
-        
         if (audioUrl) {
-          console.log('Using offline cached track');
+          // Good—use offline URL
         } else {
-		// Handle R2 storage vs legacy storage (safe)
-		const hasR2Public = currentTrack.is_public && !!currentTrack.storage_url;
-		const hasR2Private = !!currentTrack.storage_key;
-		
-		if (currentTrack.storage_type === "r2" && (hasR2Public || hasR2Private)) {
-		  console.log("Track uses R2 storage (verified)");
-		
-		  if (hasR2Public) {
-		    // Public R2 → direct URL
-		    audioUrl = currentTrack.storage_url!;
-		    console.log("Using public R2 URL:", audioUrl);
-		  } else {
-		    // Private R2 → signed URL via Edge Function
-		    console.log("Getting signed URL via Edge Function for R2 track");
-		    try {
-		      audioUrl = await resolveTrackUrl(currentTrack.id);
-		      console.log("Got signed R2 URL:", audioUrl);
-		    } catch (error) {
-		      console.error("Failed to get signed URL from Edge Function:", error);
-		      throw new Error("Failed to get track URL from R2");
-		    }
-		  }
-		} else {
-		  // Legacy / not-yet-migrated → use the existing Supabase fileUrl
-		  console.log("Track uses legacy Supabase storage (or not fully migrated); falling back");
-		  audioUrl = currentTrack.fileUrl;
-		}
-          
-          // Show helpful message if offline and track not downloaded
+          // 2) Otherwise, resolve storage-backed URLs first (R2 -> public/signed)
+          const hasR2Public = currentTrack.storage_type === "r2" && !!currentTrack.storage_url && currentTrack.is_public;
+          const hasR2Private = currentTrack.storage_type === "r2" && !!currentTrack.storage_key;
+
+          if (hasR2Public) {
+            audioUrl = currentTrack.storage_url!;
+          } else if (hasR2Private) {
+            // Signed edge URL for private R2
+            try {
+              audioUrl = await resolveTrackUrl(currentTrack.id);
+            } catch (err) {
+              console.error("Failed to resolve signed R2 URL:", err);
+              throw new Error("FAILED_TO_RESOLVE_R2");
+            }
+          } else {
+            // 3) Legacy / Supabase storage fallback
+            audioUrl = currentTrack.fileUrl;
+          }
+
+          // If we're offline and no cached copy, bail early with UX
           if (!isOnline()) {
-            console.warn('User is offline and track is not downloaded');
-            throw new Error('TRACK_NOT_AVAILABLE_OFFLINE');
+            throw new Error("TRACK_NOT_AVAILABLE_OFFLINE");
           }
         }
-        
-        // If no valid fileUrl, but we have dropbox_path, get fresh URL from Dropbox
+
+        // 4) Dropbox fallbacks & refresh logic (for legacy Dropbox-backed tracks)
         if ((!audioUrl || audioUrl === "#" || audioUrl === "") && currentTrack.dropbox_path) {
-          console.log('No fileUrl, using dropbox_path to get fresh URL:', currentTrack.dropbox_path);
-          
-          if (!dropboxService.isAuthenticated()) {
-            console.error('Dropbox not authenticated - cannot get temporary link');
-            throw new Error('DROPBOX_AUTH_REQUIRED');
-          }
-          
+          if (!dropboxService.isAuthenticated()) throw new Error("DROPBOX_AUTH_REQUIRED");
           try {
             audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
-            console.log('SUCCESS! Got fresh temporary URL from dropbox_path');
-          } catch (error) {
-            console.error('Dropbox path failed:', error.message);
-            if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-              throw new Error('DROPBOX_TOKEN_EXPIRED');
-            }
-            throw new Error('DROPBOX_CONNECTION_ERROR');
+          } catch (e: any) {
+            if (e?.message === "DROPBOX_TOKEN_EXPIRED") throw new Error("DROPBOX_TOKEN_EXPIRED");
+            throw new Error("DROPBOX_CONNECTION_ERROR");
           }
-        }
-        // Check if this is a Dropbox temporary URL that might have expired
-        else if (audioUrl && audioUrl.includes('dropboxusercontent.com')) {
-          console.log('Detected Dropbox temporary URL, checking if it needs refresh...');
-          
-          // First check if we have a stored dropbox_path for this track
+        } else if (audioUrl && audioUrl.includes("dropboxusercontent.com")) {
+          // Temporary links expire—refresh if we have a stored path
           if (currentTrack.dropbox_path) {
-            console.log('Using stored dropbox_path to get fresh URL:', currentTrack.dropbox_path);
-            try {
-              // Check if Dropbox is authenticated before trying to get temp link
-              if (!dropboxService.isAuthenticated()) {
-                console.error('Dropbox not authenticated - cannot refresh URL');
-                throw new Error('DROPBOX_AUTH_REQUIRED');
-              }
-              audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
-              console.log('SUCCESS! Got fresh temporary URL from stored path');
-            } catch (error) {
-              console.error('Stored path failed:', error.message);
-              if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-                throw new Error('DROPBOX_TOKEN_EXPIRED');
-              }
-              throw new Error('DROPBOX_CONNECTION_ERROR');
-            }
-          } else {
-            console.log('No stored dropbox_path available, will try fallback methods');
-            throw new Error('No stored Dropbox path available for this track');
-          }
-        }
-        // Handle direct paths that need temporary link generation
-        else if (audioUrl.startsWith('/')) {
-          console.log('Getting fresh Dropbox temporary link...');
-          
-          // Check if Dropbox is authenticated
-          if (!dropboxService.isAuthenticated()) {
-            console.error('Dropbox not authenticated - cannot get temporary link');
-            throw new Error('DROPBOX_AUTH_REQUIRED');
-          }
-          
-          // First check if we have a stored dropbox_path for this track
-          if (currentTrack.dropbox_path) {
-            console.log('Using stored dropbox_path:', currentTrack.dropbox_path);
+            if (!dropboxService.isAuthenticated()) throw new Error("DROPBOX_AUTH_REQUIRED");
             try {
               audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
-              console.log('SUCCESS! Got fresh temporary URL from stored path');
-            } catch (error) {
-              console.error('Stored path failed:', error.message);
-              if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-                throw new Error('DROPBOX_TOKEN_EXPIRED');
-              }
-              throw new Error('DROPBOX_CONNECTION_ERROR');
+            } catch (e: any) {
+              if (e?.message === "DROPBOX_TOKEN_EXPIRED") throw new Error("DROPBOX_TOKEN_EXPIRED");
+              throw new Error("DROPBOX_CONNECTION_ERROR");
             }
           } else {
-            // Fallback: search in the source folder with multiple extensions
-            const sourceFolder = currentTrack.source_folder || '/woven - sketches 24';
+            throw new Error("NO_DROPBOX_PATH");
+          }
+        } else if (audioUrl && audioUrl.startsWith("/")) {
+          // A raw path likely needs a fresh temp link
+          if (!dropboxService.isAuthenticated()) throw new Error("DROPBOX_AUTH_REQUIRED");
+
+          if (currentTrack.dropbox_path) {
+            try {
+              audioUrl = await dropboxService.getTemporaryLink(currentTrack.dropbox_path);
+            } catch (e: any) {
+              if (e?.message === "DROPBOX_TOKEN_EXPIRED") throw new Error("DROPBOX_TOKEN_EXPIRED");
+              throw new Error("DROPBOX_CONNECTION_ERROR");
+            }
+          } else {
+            // Last-ditch search in a source folder using common extensions
+            const sourceFolder = currentTrack.source_folder || "/woven - sketches 24";
             const fileName = `${currentTrack.title} - ${currentTrack.artist}`;
-            const possiblePaths = [
+            const possible = [
               `${sourceFolder}/${fileName}.aif`,
               `${sourceFolder}/${fileName}.mp3`,
               `${sourceFolder}/${fileName}.wav`,
               `${sourceFolder}/${currentTrack.title}.aif`,
               `${sourceFolder}/${currentTrack.title}.mp3`,
-              `${sourceFolder}/${currentTrack.title}.wav`
+              `${sourceFolder}/${currentTrack.title}.wav`,
             ];
-            
-            console.log('Searching in source folder:', sourceFolder);
-            let foundWorking = false;
-            for (const path of possiblePaths) {
+
+            let found = "";
+            for (const p of possible) {
               try {
-                console.log('Trying Dropbox path:', path);
-                audioUrl = await dropboxService.getTemporaryLink(path);
-                console.log('SUCCESS! Got fresh temporary URL:', audioUrl);
-                
-                // Store the working path for future use
-                console.log('Storing working path for future use:', path);
-                foundWorking = true;
+                const link = await dropboxService.getTemporaryLink(p);
+                found = link;
                 break;
-              } catch (error) {
-                console.log(`Path ${path} failed:`, error.message);
-                continue;
+              } catch {
+                // keep trying
               }
             }
-            
-            if (!foundWorking) {
-              console.error('Could not find any working path for track:', currentTrack.title);
-              throw new Error(`Cannot find audio file for "${currentTrack.title}" in folder ${sourceFolder}`);
-            }
+            if (!found) throw new Error(`MISSING_DROPBOX_FILE`);
+            audioUrl = found;
           }
         }
 
-        console.log('Final audio URL ready for playback:', audioUrl);
-        
-        // Set the audio source and load it
-        audio.src = audioUrl;
+        // Load into <audio>
+        audio.src = audioUrl!;
         audio.load();
-        
-        // Wait for the audio to be ready
-        const canPlayPromise = new Promise((resolve, reject) => {
-          const handleCanPlay = () => {
-            console.log('Audio can play - track loaded successfully');
-            audio.removeEventListener('canplaythrough', handleCanPlay);
-            audio.removeEventListener('error', handleError);
-            resolve(true);
+
+        // Wait until playable
+        await new Promise<void>((resolve, reject) => {
+          const onReady = () => {
+            audio.removeEventListener("canplaythrough", onReady);
+            audio.removeEventListener("error", onErr);
+            resolve();
           };
-          
-          const handleError = (e) => {
-            console.error('Audio load error details:', {
-              type: e.type,
-              target: e.target,
-              error: e.target?.error,
-              networkState: e.target?.networkState,
-              readyState: e.target?.readyState,
-              src: e.target?.src,
-              currentSrc: e.target?.currentSrc
-            });
-            if (e.target?.error) {
-              console.error('Audio error code:', e.target.error.code);
-              console.error('Audio error message:', e.target.error.message);
-            }
-            audio.removeEventListener('canplaythrough', handleCanPlay);
-            audio.removeEventListener('error', handleError);
+          const onErr = (e: Event) => {
+            audio.removeEventListener("canplaythrough", onReady);
+            audio.removeEventListener("error", onErr);
             reject(e);
           };
-          
-          audio.addEventListener('canplaythrough', handleCanPlay);
-          audio.addEventListener('error', handleError);
-          
-          // Also try to play immediately if it's already loaded
-          if (audio.readyState >= 3) {
-            handleCanPlay();
+          if (audio.readyState >= 3) resolve();
+          else {
+            audio.addEventListener("canplaythrough", onReady);
+            audio.addEventListener("error", onErr);
           }
         });
-        
-        console.log('Starting audio load...');
-        await canPlayPromise;
-        console.log('Audio loaded successfully!');
-        
-        // Auto-start playback if isPlaying state is true (from playPlaylist)
+
+        // Autoplay if requested
         if (isPlaying) {
-          console.log('Auto-starting playback as requested...');
           try {
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-              await playPromise;
-              console.log('Auto-play successful');
-            }
-          } catch (error) {
-            console.error('Auto-play failed:', error);
+            await audio.play();
+          } catch (e) {
+            console.error("Autoplay failed:", e);
             setIsPlaying(false);
           }
-        } else {
-          console.log('Audio loaded, ready for playback when user interacts');
         }
-        
-        } catch (error) {
-        console.error('Failed to load track:', error);
-        
-        // Clean up any audio source on error to prevent hanging
+      } catch (e: any) {
+        // Clear broken src on error
         if (audio.src) {
-          audio.removeAttribute('src');
+          audio.removeAttribute("src");
           audio.load();
         }
-        
-        // Only dispatch auth events if we haven't recently re-authenticated
-        // This prevents loops after successful re-auth
+
         if (!recentlyReauthed) {
-          // Handle specific error types with user-friendly messages
-          if (error.message === 'DROPBOX_TOKEN_EXPIRED') {
-            console.error('Dropbox token expired - user needs to re-authenticate');
-            // Emit a custom event for the app to handle gracefully
-            window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
-          } else if (error.message === 'DROPBOX_AUTH_REQUIRED') {
-            console.error('Dropbox authentication required');
-            window.dispatchEvent(new CustomEvent('dropboxAuthRequired'));
-          } else if (error.message === 'DROPBOX_CONNECTION_ERROR') {
-            console.error('Dropbox connection error');
-            // Could add a toast or other UI feedback here
-          } else if (error.message === 'TRACK_NOT_AVAILABLE_OFFLINE') {
-            console.error('Track not available offline');
-            toast({
-              title: "Track not available offline",
-              description: `"${currentTrack.title}" is not downloaded and you're offline`,
-              variant: "destructive"
-            });
-            
-            // Try to find next downloadable track if in a playlist
-            if (playlist.length > 1 && isPlaying) {
-              console.log('Attempting to skip to next downloadable track...');
-              playNext({ wrap: true });
-              return;
-            }
+          const msg = e?.message || String(e);
+          switch (msg) {
+            case "DROPBOX_TOKEN_EXPIRED":
+              window.dispatchEvent(new CustomEvent("dropboxTokenExpired"));
+              break;
+            case "DROPBOX_AUTH_REQUIRED":
+              window.dispatchEvent(new CustomEvent("dropboxAuthRequired"));
+              break;
+            case "TRACK_NOT_AVAILABLE_OFFLINE":
+              toast({
+                title: "Track not available offline",
+                description: `"${currentTrack.title}" isn’t downloaded and you’re offline.`,
+                variant: "destructive",
+              });
+              if (playlist.length > 1 && isPlaying) {
+                await playNext({ wrap: true });
+                return;
+              }
+              break;
+            default:
+              // Silent for other network errors
+              break;
           }
-        } else {
-          console.log('Skipping auth event dispatch - recently re-authenticated');
         }
-        
-        // Stop playback on error to prevent hanging
+
         setIsPlaying(false);
       }
     };
-    
-    loadTrack();
-  }, [currentTrack, recentlyReauthed]); // Include recentlyReauthed in dependencies
 
-  // Listen for auth refresh events
+    loadTrack();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack, recentlyReauthed]); // re-run after reauth
+
+  // React to re-auth events
   useEffect(() => {
     const handleAuthRefresh = () => {
-      console.log('Auth refreshed in useAudioPlayer, setting reauth flag and reloading track');
       setRecentlyReauthed(true);
-      
-      // Clear the flag after a delay to allow normal error handling later
-      setTimeout(() => {
-        setRecentlyReauthed(false);
-      }, 10000); // 10 second cooldown period
-      
-      // If we have a current track, try to reload it with fresh auth
-      if (currentTrack) {
-        console.log('Reloading current track with fresh auth...');
-        // Trigger a reload by updating the currentTrack dependency
-        setCurrentTrack(prev => prev ? { ...prev } : null);
-      }
+      setTimeout(() => setRecentlyReauthed(false), 10_000);
+      if (currentTrack) setCurrentTrack((prev) => (prev ? { ...prev } : null));
     };
-
-    window.addEventListener('dropboxAuthRefreshed', handleAuthRefresh);
-    return () => {
-      window.removeEventListener('dropboxAuthRefreshed', handleAuthRefresh);
-    };
+    window.addEventListener("dropboxAuthRefreshed", handleAuthRefresh);
+    return () => window.removeEventListener("dropboxAuthRefreshed", handleAuthRefresh);
   }, [currentTrack]);
 
-  // Time and duration updates
+  // Bind audio events
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => {
-      const audioDuration = audio.duration || 0;
-      setDuration(audioDuration);
-      
-      // Update track duration in database if it's currently 0:00 and we have a valid duration
-      if (currentTrack && audioDuration > 0 && (currentTrack.duration === '0:00' || currentTrack.duration === '00:00')) {
-        const formattedDuration = formatTime(audioDuration);
-        console.log(`Updating track duration from ${currentTrack.duration} to ${formattedDuration}`);
-        updateTrackMutation.mutate({
-          id: currentTrack.id,
-          updates: { duration: formattedDuration }
-        });
+    const onTime = () => setCurrentTime(audio.currentTime);
+    const onMeta = () => {
+      const d = audio.duration || 0;
+      setDuration(d);
+      if (currentTrack && d > 0 && (currentTrack.duration === "0:00" || currentTrack.duration === "00:00")) {
+        const formatted = formatTime(d);
+        updateTrackMutation.mutate({ id: currentTrack.id, updates: { duration: formatted } });
       }
     };
-    const handleEnded = async () => {
-      console.log('Track ended');
-      
+    const onEnded = async () => {
       try {
-        // Check if we should loop or stop at end of playlist
-        const nextIndex = getNextTrackIndex();
-        const isLastTrack = isShuffleMode 
-          ? (getCurrentIndex() + 1) >= shuffledOrder.length
-          : (currentTrackIndex + 1) >= playlist.length;
-          
-        if (isRepeatMode || !isLastTrack) {
-          console.log('Auto-advancing to next track...');
-          const success = await playNext({ wrap: true });
-          if (!success) {
-            console.log('Failed to advance to next track, stopping playback');
+        const isLast = isShuffleMode
+          ? getCurrentIndex() + 1 >= shuffledOrder.length
+          : currentTrackIndex + 1 >= playlist.length;
+
+        if (isRepeatMode || !isLast) {
+          const ok = await playNext({ wrap: true });
+          if (!ok) {
             setIsPlaying(false);
             setCurrentTime(0);
           }
         } else {
-          console.log('End of playlist reached, stopping playback');
           setIsPlaying(false);
           setCurrentTime(0);
         }
-      } catch (error) {
-        console.error('Error in handleEnded:', error);
+      } catch {
         setIsPlaying(false);
       }
     };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
 
-    // Keep isPlaying state in sync with actual audio state
-    const handlePlay = () => {
-      console.log('Audio play event - syncing state');
-      setIsPlaying(true);
-    };
-
-    const handlePause = () => {
-      console.log('Audio pause event - syncing state');
-      setIsPlaying(false);
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
 
     return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
     };
-  }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode, currentTrack, updateTrackMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playlist, currentTrackIndex, isShuffleMode, shuffledOrder, isRepeatMode, currentTrack]);
 
-  // Volume control
+  // Volume
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.volume = volume;
-    }
+    if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
-  // Generate shuffled order when shuffle mode is enabled
+  // Build shuffled order when enabled
   useEffect(() => {
     if (isShuffleMode && playlist.length > 0) {
-      const indices = Array.from({ length: playlist.length }, (_, i) => i);
-      const shuffled = shuffleArray(indices);
-      setShuffledOrder(shuffled);
+      const idx = Array.from({ length: playlist.length }, (_, i) => i);
+      setShuffledOrder(shuffleArray(idx));
     }
   }, [isShuffleMode, playlist]);
 
   const getCurrentIndex = () => {
     if (isShuffleMode && shuffledOrder.length > 0) {
-      return shuffledOrder.findIndex(index => index === currentTrackIndex);
+      return shuffledOrder.findIndex((i) => i === currentTrackIndex);
     }
     return currentTrackIndex;
   };
 
   const getNextTrackIndex = (shouldWrap = false, fromIndex?: number): number => {
     if (playlist.length === 0) return -1;
-    
-    const startIndex = fromIndex !== undefined ? fromIndex : currentTrackIndex;
-    
+
+    const start = fromIndex ?? currentTrackIndex;
     if (isShuffleMode) {
-      const currentShuffleIndex = fromIndex !== undefined 
-        ? shuffledOrder.indexOf(fromIndex)
-        : getCurrentIndex();
-      const nextShuffleIndex = currentShuffleIndex + 1;
-      
-      if (nextShuffleIndex >= shuffledOrder.length) {
-        return shouldWrap ? shuffledOrder[0] : -1;
-      }
-      return shuffledOrder[nextShuffleIndex];
+      const curShuffleIdx = fromIndex !== undefined ? shuffledOrder.indexOf(fromIndex) : getCurrentIndex();
+      const nextShuffleIdx = curShuffleIdx + 1;
+      if (nextShuffleIdx >= shuffledOrder.length) return shouldWrap ? shuffledOrder[0] : -1;
+      return shuffledOrder[nextShuffleIdx];
     } else {
-      const nextIndex = startIndex + 1;
-      if (nextIndex >= playlist.length) {
-        return shouldWrap ? 0 : -1;
-      }
-      return nextIndex;
+      const next = start + 1;
+      if (next >= playlist.length) return shouldWrap ? 0 : -1;
+      return next;
     }
   };
 
   const getPreviousTrackIndex = () => {
-    const currentIndex = getCurrentIndex();
-    const playlistLength = playlist.length;
-    
-    if (playlistLength === 0) return -1;
-    
+    if (playlist.length === 0) return -1;
     if (isShuffleMode) {
-      const prevShuffleIndex = currentIndex === 0 ? shuffledOrder.length - 1 : currentIndex - 1;
-      return shuffledOrder[prevShuffleIndex];
-    } else {
-      const prevIndex = currentTrackIndex === 0 ? playlistLength - 1 : currentTrackIndex - 1;
-      return prevIndex;
+      const cur = getCurrentIndex();
+      const prevShuffleIdx = cur === 0 ? shuffledOrder.length - 1 : cur - 1;
+      return shuffledOrder[prevShuffleIdx];
     }
+    return currentTrackIndex === 0 ? playlist.length - 1 : currentTrackIndex - 1;
   };
 
   const playTrack = (track: Track, newPlaylist?: Track[]) => {
-    console.log('=== PLAY TRACK ===');
-    console.log('Track object:', track);
-    console.log('Track title:', track.title);
-    console.log('Track fileUrl:', track.fileUrl);
-    console.log('Track dropbox_path:', track.dropbox_path);
-    console.log('Has valid source?', !!(track.fileUrl && track.fileUrl !== "#" && track.fileUrl !== "") || !!track.dropbox_path);
+    // Require at least some playable source (storage_url/fileUrl) or a Dropbox path
+    const hasUrl =
+      (!!track.storage_url && track.storage_url !== "#") ||
+      (!!track.fileUrl && track.fileUrl !== "#") ||
+      !!track.storage_key ||
+      !!track.dropbox_path;
 
-    // Check if we have either a fileUrl or dropbox_path
-    if ((!track.fileUrl || track.fileUrl === "#" || track.fileUrl === "") && !track.dropbox_path) {
-      console.error('Track has no valid fileUrl or dropbox_path');
+    if (!hasUrl) {
+      toast({ title: "Missing audio source", variant: "destructive" });
       return;
     }
 
-    // Check if offline and track not downloaded
-    if (!navigator.onLine && !isTrackDownloaded(track.id)) {
-      console.log('User is offline and track not downloaded - preventing playback');
+    // Respect offline state
+    if (!isOnline() && !isTrackDownloaded(track.id)) {
       toast({
         title: "No pulse here - connect to the grid to awaken this sound.",
         variant: "destructive",
@@ -549,226 +383,156 @@ export const useAudioPlayer = () => {
     }
 
     setCurrentTrack(track);
-    
+
     if (newPlaylist) {
       setPlaylist(newPlaylist);
-      const trackIndex = newPlaylist.findIndex(t => t.id === track.id);
-      setCurrentTrackIndex(trackIndex !== -1 ? trackIndex : 0);
+      const idx = newPlaylist.findIndex((t) => t.id === track.id);
+      setCurrentTrackIndex(idx !== -1 ? idx : 0);
     } else if (playlist.length > 0) {
-      const trackIndex = playlist.findIndex(t => t.id === track.id);
-      if (trackIndex !== -1) {
-        setCurrentTrackIndex(trackIndex);
-      }
+      const idx = playlist.findIndex((t) => t.id === track.id);
+      if (idx !== -1) setCurrentTrackIndex(idx);
     }
   };
 
-  const playPlaylist = (tracks: Track[], startIndex: number = 0, playlistContext?: { id?: string; name?: string; imageUrl?: string }) => {
-    console.log('=== PLAY PLAYLIST ===');
-    console.log('Tracks count:', tracks.length);
-    console.log('Start index:', startIndex);
-    console.log('First track details:', tracks[0]);
-    console.log('Playlist context:', playlistContext);
-    console.log('Dropbox authenticated:', dropboxService.isAuthenticated());
-    
+  const playPlaylist = (
+    tracks: Track[],
+    startIndex = 0,
+    playlistContext?: { id?: string; name?: string; imageUrl?: string; artistName?: string }
+  ) => {
     if (tracks.length === 0) return;
-    
+
     setPlaylist(tracks);
     setCurrentTrackIndex(startIndex);
     setCurrentPlaylistContext(playlistContext || null);
-    const trackToPlay = tracks[startIndex];
-    console.log('Setting current track:', trackToPlay);
-    
-    // Force a new object reference to ensure React sees the change
-    setCurrentTrack({ ...trackToPlay });
-    
-    // Auto-start playback when a new track is selected
+
+    // Force new ref for effect to pick up
+    setCurrentTrack({ ...tracks[startIndex] });
+
+    // Request autoplay
     setIsPlaying(true);
-    
-    console.log('Track set with auto-play enabled, waiting for useEffect to load...');
   };
 
   const togglePlayPause = async () => {
     const audio = audioRef.current;
-    if (!audio) {
-      console.error('Audio element not available');
-      return;
-    }
-
-    console.log('Toggle play/pause - current state:', {
-      paused: audio.paused,
-      readyState: audio.readyState,
-      networkState: audio.networkState,
-      src: !!audio.src
-    });
+    if (!audio) return;
 
     try {
       if (audio.paused) {
-        console.log('Starting playback...');
-        
-        // Ensure audio is ready before playing
+        // Ensure readiness
         if (audio.readyState < 2 && audio.src) {
-          console.log('Audio not ready, forcing load...');
           audio.load();
-          
-          // Wait for audio to be ready
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Audio load timeout'));
-            }, 3000);
-            
-            const onCanPlay = () => {
-              clearTimeout(timeout);
-              audio.removeEventListener('canplay', onCanPlay);
-              audio.removeEventListener('error', onError);
-              resolve(null);
+          await new Promise<void>((resolve, reject) => {
+            const to = setTimeout(() => reject(new Error("Audio load timeout")), 3000);
+            const onReady = () => {
+              clearTimeout(to);
+              audio.removeEventListener("canplay", onReady);
+              audio.removeEventListener("error", onErr);
+              resolve();
             };
-            
-            const onError = () => {
-              clearTimeout(timeout);
-              audio.removeEventListener('canplay', onCanPlay);
-              audio.removeEventListener('error', onError);
-              reject(new Error('Audio load failed'));
+            const onErr = () => {
+              clearTimeout(to);
+              audio.removeEventListener("canplay", onReady);
+              audio.removeEventListener("error", onErr);
+              reject(new Error("Audio load failed"));
             };
-            
-            if (audio.readyState >= 2) {
-              onCanPlay();
-            } else {
-              audio.addEventListener('canplay', onCanPlay);
-              audio.addEventListener('error', onError);
+            if (audio.readyState >= 2) onReady();
+            else {
+              audio.addEventListener("canplay", onReady);
+              audio.addEventListener("error", onErr);
             }
           });
         }
-        
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-          console.log('Audio play successful');
-        }
+        await audio.play();
       } else {
-        console.log('Pausing playback...');
         audio.pause();
-        console.log('Audio paused');
       }
-    } catch (error) {
-      console.error('Toggle play/pause failed:', error);
+    } catch (e) {
+      console.error("togglePlayPause failed:", e);
       setIsPlaying(false);
     }
   };
 
   const playNext = async (options: { wrap?: boolean } = {}): Promise<boolean> => {
-    console.log('=== PLAY NEXT DEBUG ===');
-    console.log('Current track index:', currentTrackIndex);
-    console.log('Playlist length:', playlist.length);
-    console.log('Is repeat mode:', isRepeatMode);
-    console.log('Is shuffle mode:', isShuffleMode);
-    console.log('Current playing state:', isPlaying);
-    console.log('Wrap option:', options.wrap);
-    
     try {
-      const nextIndex = getNextTrackIndex(options.wrap);
-      console.log('Next index calculated:', nextIndex);
-      
-      if (nextIndex !== -1 && playlist[nextIndex]) {
-        const nextTrack = playlist[nextIndex];
-        console.log(`Moving to next track: ${nextIndex} (${nextTrack.title})`);
-        
-        // Check if the next track is available offline when we're offline
+      const nextIdx = getNextTrackIndex(options.wrap);
+      if (nextIdx !== -1 && playlist[nextIdx]) {
+        const nextTrack = playlist[nextIdx];
+
+        // If offline, ensure next track is cached
         if (!isOnline()) {
-          const isDownloaded = await offlineStorageService.isTrackDownloaded(nextTrack.id);
-          if (!isDownloaded) {
-            console.log('Track not available offline, trying to find next downloadable track');
+          const cached = await offlineStorageService.isTrackDownloaded(nextTrack.id);
+          if (!cached) {
             toast({
               title: "Track not downloaded",
               description: `"${nextTrack.title}" is not available offline`,
-              variant: "destructive"
+              variant: "destructive",
             });
-            
-            // Try to find next downloadable track
-            let foundDownloadedTrack = false;
-            let searchIndex = nextIndex;
-            
-            for (let attempts = 0; attempts < playlist.length; attempts++) {
-              // Move to next index manually since we need to search from a specific starting point
-              searchIndex = searchIndex + 1;
-              if (searchIndex >= playlist.length) {
-                searchIndex = options.wrap ? 0 : -1;
-              }
-              if (searchIndex === -1) break;
-              
-              const candidateTrack = playlist[searchIndex];
-              const candidateDownloaded = await offlineStorageService.isTrackDownloaded(candidateTrack.id);
-              
-              if (candidateDownloaded) {
-                console.log(`Found downloaded track at index ${searchIndex}: ${candidateTrack.title}`);
-                setCurrentTrackIndex(searchIndex);
-                setCurrentTrack({ ...candidateTrack });
-                foundDownloadedTrack = true;
-                return true;
+
+            // Search ahead for the next cached track
+            let foundIndex = -1;
+            let scan = nextIdx;
+            for (let i = 0; i < playlist.length; i++) {
+              scan = scan + 1;
+              if (scan >= playlist.length) scan = options.wrap ? 0 : -1;
+              if (scan === -1) break;
+              if (await offlineStorageService.isTrackDownloaded(playlist[scan].id)) {
+                foundIndex = scan;
+                break;
               }
             }
-            
-            if (!foundDownloadedTrack) {
-              console.log('No more downloaded tracks available');
+
+            if (foundIndex === -1) {
               setIsPlaying(false);
               setCurrentTime(0);
               return false;
             }
+
+            setCurrentTrackIndex(foundIndex);
+            setCurrentTrack({ ...playlist[foundIndex] });
+            return true;
           }
         }
-        
-        setCurrentTrackIndex(nextIndex);
-        // Force a new object reference to trigger track loading
+
+        setCurrentTrackIndex(nextIdx);
         setCurrentTrack({ ...nextTrack });
-        
-        // Keep playing state - the track loading effect will handle auto-play
-        console.log('Next track set, keeping isPlaying state for auto-continue');
         return true;
       } else {
-        console.log('No next track available, stopping playback');
         setIsPlaying(false);
         setCurrentTime(0);
         return false;
       }
-    } catch (error) {
-      console.error('Error in playNext:', error);
+    } catch (e) {
+      console.error("playNext error:", e);
       setIsPlaying(false);
       return false;
     }
   };
 
   const playPrevious = () => {
-    const prevIndex = getPreviousTrackIndex();
-    if (prevIndex !== -1 && playlist[prevIndex]) {
-      setCurrentTrackIndex(prevIndex);
-      setCurrentTrack(playlist[prevIndex]);
-      
-      // Play previous track if user was already playing
+    const prevIdx = getPreviousTrackIndex();
+    if (prevIdx !== -1 && playlist[prevIdx]) {
+      setCurrentTrackIndex(prevIdx);
+      setCurrentTrack({ ...playlist[prevIdx] });
+
       if (isPlaying) {
         setTimeout(async () => {
           const audio = audioRef.current;
-          if (audio) {
-            try {
-              await audio.play();
-              setIsPlaying(true);
-            } catch (error) {
-              console.error('Error playing previous track:', error);
-              setIsPlaying(false);
-            }
+          if (!audio) return;
+          try {
+            await audio.play();
+            setIsPlaying(true);
+          } catch (e) {
+            setIsPlaying(false);
           }
-        }, 500);
+        }, 300);
       } else {
         setIsPlaying(false);
       }
     }
   };
 
-  const toggleShuffle = () => {
-    setIsShuffleMode(prev => !prev);
-  };
-
-  const toggleRepeat = () => {
-    setIsRepeatMode(prev => !prev);
-  };
+  const toggleShuffle = () => setIsShuffleMode((p) => !p);
+  const toggleRepeat = () => setIsRepeatMode((p) => !p);
 
   const seekTo = (time: number) => {
     const audio = audioRef.current;
@@ -778,124 +542,98 @@ export const useAudioPlayer = () => {
     }
   };
 
-  const setVolumeLevel = (newVolume: number) => {
-    setVolume(Math.max(0, Math.min(1, newVolume)));
-  };
+  const setVolumeLevel = (v: number) => setVolume(Math.max(0, Math.min(1, v)));
 
-  // Media Session API integration
+  // Media Session metadata
   useEffect(() => {
-    // Check if Media Session API is supported
-    if (!('mediaSession' in navigator)) {
-      return;
-    }
+    if (!("mediaSession" in navigator)) return;
 
-    // Update metadata when track changes
     if (currentTrack) {
       const { title, artist } = currentTrack;
-      
-      // Determine artwork - prefer playlist image, then fallback to app icons
       let artwork = [
-        { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
+        { src: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+        { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
       ];
-      
-      // If playing from a playlist with an image, generate JPEG variants for car compatibility
+
       if (currentPlaylistContext?.imageUrl) {
         const jpegArtwork = generateMediaSessionArtwork(currentPlaylistContext.imageUrl);
-        if (jpegArtwork.length > 0) {
-          artwork = [
-            ...jpegArtwork,
-            ...artwork // Fallback to app icons
-          ];
+        if (jpegArtwork.length) {
+          artwork = [...jpegArtwork, ...artwork];
         }
       }
-      
-      // Determine album name - use playlist name if playing from playlist, otherwise default
-      const album = currentPlaylistContext?.name || 'Woven Music';
-      
+
+      const album = currentPlaylistContext?.name || "Woven Music";
+
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: title || 'Unknown Title',
-        artist: currentPlaylistContext?.artistName || artist || 'Unknown Artist',
-        album: album,
-        artwork: artwork
+        title: title || "Unknown Title",
+        artist: currentPlaylistContext?.artistName || artist || "Unknown Artist",
+        album,
+        artwork,
       });
     } else {
       navigator.mediaSession.metadata = null;
     }
   }, [currentTrack, currentPlaylistContext]);
 
-  // Update playback state for Media Session
+  // Media Session playback state
   useEffect(() => {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
     }
   }, [isPlaying]);
 
-  // Update position state for Media Session
+  // Media Session position state
   useEffect(() => {
-    if ('mediaSession' in navigator && currentTrack && duration > 0) {
+    if ("mediaSession" in navigator && currentTrack && duration > 0) {
       navigator.mediaSession.setPositionState({
-        duration: duration,
+        duration,
         position: currentTime,
-        playbackRate: 1.0
+        playbackRate: 1.0,
       });
     }
   }, [currentTime, duration, currentTrack]);
 
-  // Register Media Session action handlers
+  // Media Session action handlers
   useEffect(() => {
-    if (!('mediaSession' in navigator)) {
-      return;
-    }
+    if (!("mediaSession" in navigator)) return;
 
-    const actionHandlers = {
+    const handlers: Partial<Record<MediaSessionAction, MediaSessionActionHandler>> = {
       play: () => {
-        if (!isPlaying) {
-          togglePlayPause();
-        }
+        if (!isPlaying) togglePlayPause();
       },
       pause: () => {
-        if (isPlaying) {
-          togglePlayPause();
-        }
+        if (isPlaying) togglePlayPause();
       },
       previoustrack: () => {
-        if (playlist.length > 1) {
-          playPrevious();
-        }
+        if (playlist.length > 1) playPrevious();
       },
       nexttrack: () => {
-        if (playlist.length > 1) {
-          playNext();
-        }
+        if (playlist.length > 1) playNext();
       },
-      seekto: (details) => {
-        if (details.seekTime != null) {
-          seekTo(details.seekTime);
-        }
-      }
+      seekto: (details: MediaSessionActionDetails) => {
+        if (details.seekTime != null) seekTo(details.seekTime);
+      },
     };
 
-    // Set action handlers
-    Object.entries(actionHandlers).forEach(([action, handler]) => {
+    (Object.keys(handlers) as MediaSessionAction[]).forEach((action) => {
       try {
-        navigator.mediaSession.setActionHandler(action as MediaSessionAction, handler);
-      } catch (error) {
-        console.warn(`The media session action "${action}" is not supported.`);
+        navigator.mediaSession.setActionHandler(action, handlers[action] || null);
+      } catch {
+        // ignore unsupported actions
       }
     });
 
-    // Cleanup function to remove handlers
     return () => {
-      Object.keys(actionHandlers).forEach((action) => {
+      (Object.keys(handlers) as MediaSessionAction[]).forEach((action) => {
         try {
-          navigator.mediaSession.setActionHandler(action as MediaSessionAction, null);
-        } catch (error) {
-          // Ignore cleanup errors
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          // ignore
         }
       });
     };
-  }, [isPlaying, playlist.length, togglePlayPause, playNext, playPrevious, seekTo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, playlist.length]);
 
   return {
     currentTrack,
@@ -917,6 +655,6 @@ export const useAudioPlayer = () => {
     toggleRepeat,
     seekTo,
     setVolume: setVolumeLevel,
-    formatTime
+    formatTime,
   };
 };

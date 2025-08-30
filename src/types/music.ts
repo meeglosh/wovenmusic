@@ -1,19 +1,49 @@
+// src/types/music.ts
 
 export interface Track {
   id: string;
   title: string;
   artist: string;
+  /** "mm:ss" or "hh:mm:ss" */
   duration: string;
-  fileUrl: string;
+
+  /**
+   * LEGACY ONLY – URL to Supabase public file.
+   * New code should ignore this and use resolveTrackUrl(track.id).
+   */
+  fileUrl?: string | null;
+
   addedAt: Date;
-  source_folder?: string;
-  dropbox_path?: string;
+
+  // Source/import hints
+  source_folder?: string | null;
+  dropbox_path?: string | null;
+
+  // Visibility/ownership
   is_public?: boolean;
   play_count?: number;
-  created_by?: string;
-  storage_type?: string;
-  storage_key?: string;
-  storage_url?: string;
+  created_by?: string | null;
+
+  /**
+   * Storage backend type for the audio blob.
+   * 'r2' for new files; legacy rows may have undefined and rely on fileUrl.
+   */
+  storage_type?: 'r2' | 'supabase' | null;
+
+  /** R2 object key, e.g. "tracks/<uuid>.mp3" (present when storage_type === 'r2') */
+  storage_key?: string | null;
+
+  /** R2 bucket name that holds the object (optional if you always use default) */
+  storage_bucket?: string | null;
+
+  /** MIME type saved at ingest time, e.g. "audio/mpeg" | "audio/mp4" */
+  content_type?: string | null;
+
+  /**
+   * Optional, if you cached a resolved URL temporarily.
+   * Do NOT persist; always prefer backend /api/track-url for fresh playback links.
+   */
+  storage_url?: string | null;
 }
 
 export interface PendingTrack {
@@ -26,33 +56,42 @@ export interface PendingTrack {
   progress?: number;
 }
 
-// Utility function to get the full filename from a track
+/** Try to produce a useful display filename from the best available source. */
 export const getFileName = (track: Track): string => {
-  // Try to get the filename from dropbox_path first, then fileUrl
-  const filePath = track.dropbox_path || track.fileUrl || '';
-  // Extract just the filename from the full path
-  const fileName = filePath.split('/').pop() || track.title;
-  return fileName;
+  // 1) Dropbox original (if present)
+  if (track.dropbox_path) {
+    const name = track.dropbox_path.split('/').pop();
+    if (name) return name;
+  }
+
+  // 2) R2 key (e.g., "tracks/uuid.mp3") → strip folder
+  if (track.storage_key) {
+    const name = track.storage_key.split('/').pop();
+    if (name) return name;
+  }
+
+  // 3) Legacy Supabase URL
+  if (track.fileUrl) {
+    const name = track.fileUrl.split('/').pop();
+    if (name) return name;
+  }
+
+  // 4) Fallback to title
+  return track.title || 'untitled';
 };
 
-// Utility function to get clean display filename by stripping timestamp prefix
+/** Remove a timestamp prefix like "1693412345_filename.mp3" → "filename.mp3" */
 export const getCleanFileName = (track: Track): string => {
   const fileName = getFileName(track);
-  // Strip timestamp prefix pattern (digits followed by underscore)
-  const cleanName = fileName.replace(/^\d+_/, '');
-  return cleanName;
+  return fileName.replace(/^\d+_/, '');
 };
 
-// Utility function to extract clean title from filename (without extension)
+/** Prefer explicit title; otherwise derive a title from the filename (sans extension). */
 export const getCleanTitle = (track: Track): string => {
-  // If we have a proper title from the database, use that
   if (track.title && track.title.trim() && !track.title.includes('gen_random_uuid')) {
     return track.title;
   }
-  
-  // Fallback to extracting from filename
   const cleanFileName = getCleanFileName(track);
-  // Remove file extension for title display
   return cleanFileName.replace(/\.[^/.]+$/, '');
 };
 
@@ -60,15 +99,19 @@ export interface Playlist {
   id: string;
   name: string;
   artistName?: string | null;
-  imageUrl?: string;
-  image_key?: string;
+  /** LEGACY: URL to Supabase image */
+  imageUrl?: string | null;
+  /** R2 key for image, e.g. "images/playlists/<uuid>.jpg" */
+  image_key?: string | null;
+
   trackIds: string[];
   createdAt: Date;
   sharedWith: string[];
   isPublic?: boolean;
   shareToken?: string;
-  created_by?: string;
-  createdByName?: string;
+
+  created_by?: string | null;
+  createdByName?: string | null;
 }
 
 export interface BandMember {
@@ -90,39 +133,29 @@ export interface Comment {
   userFullName?: string;
 }
 
-// Utility function to parse duration string (mm:ss or hh:mm:ss) to total seconds
+// ----------------------- time helpers -----------------------
+
+/** "mm:ss" or "hh:mm:ss" → total seconds */
 export const parseDurationToSeconds = (duration: string): number => {
   const parts = duration.split(':').map(Number);
-  if (parts.length === 2) {
-    // mm:ss format
-    return parts[0] * 60 + parts[1];
-  } else if (parts.length === 3) {
-    // hh:mm:ss format
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  }
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   return 0;
 };
 
-// Utility function to format seconds to duration string (mm:ss or hh:mm:ss)
+/** total seconds → "mm:ss" or "hh:mm:ss" */
 export const formatSecondsToDuration = (totalSeconds: number): string => {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  } else {
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-// Utility function to calculate total playlist duration
+/** Sum track durations and return a display string */
 export const calculatePlaylistDuration = (tracks: Track[]): string => {
-  if (tracks.length === 0) return "0:00";
-  
-  const totalSeconds = tracks.reduce((acc, track) => {
-    return acc + parseDurationToSeconds(track.duration);
-  }, 0);
-  
+  if (tracks.length === 0) return '0:00';
+  const totalSeconds = tracks.reduce((acc, t) => acc + parseDurationToSeconds(t.duration), 0);
   return formatSecondsToDuration(totalSeconds);
 };
