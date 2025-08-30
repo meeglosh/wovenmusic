@@ -350,6 +350,7 @@ export type Database = {
           created_by: string | null
           created_by_user: string | null
           id: string
+          image_key: string | null
           image_url: string | null
           is_public: boolean
           name: string
@@ -362,6 +363,7 @@ export type Database = {
           created_by?: string | null
           created_by_user?: string | null
           id?: string
+          image_key?: string | null
           image_url?: string | null
           is_public?: boolean
           name: string
@@ -374,6 +376,7 @@ export type Database = {
           created_by?: string | null
           created_by_user?: string | null
           id?: string
+          image_key?: string | null
           image_url?: string | null
           is_public?: boolean
           name?: string
@@ -384,6 +387,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_key: string | null
           avatar_url: string | null
           bio: string | null
           closed_beta_enabled: boolean | null
@@ -399,6 +403,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_key?: string | null
           avatar_url?: string | null
           bio?: string | null
           closed_beta_enabled?: boolean | null
@@ -414,6 +419,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_key?: string | null
           avatar_url?: string | null
           bio?: string | null
           closed_beta_enabled?: boolean | null
@@ -519,6 +525,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_content_type_for_extension: {
+        Args: { file_extension: string }
+        Returns: string
+      }
       has_any_band_members: {
         Args: Record<PropertyKey, never>
         Returns: boolean

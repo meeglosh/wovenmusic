@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PlaylistComments } from "@/components/PlaylistComments";
 import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
 import OptimizedImage from "@/components/OptimizedImage";
+import { playlistImageSrc } from "@/services/imageFor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -595,9 +596,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
 
       <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
-          {playlist.imageUrl ? (
+          {playlistImageSrc(playlist) ? (
             <OptimizedImage
-              src={playlist.imageUrl} 
+              src={playlistImageSrc(playlist)}
               alt={playlist.name} 
               className="w-full h-full"
               sizes="192px"
@@ -853,7 +854,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
                   playlist={playlistTracks}
-                  playlistImageUrl={playlist.imageUrl}
+                  playlistImageUrl={playlistImageSrc(playlist)}
                   canManagePlaylistTracks={canManagePlaylistTracks(playlist)}
                 />
               ))}
@@ -1007,16 +1008,16 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Label>Playlist image</Label>
               <div className="flex items-start gap-4">
                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                  {playlist.imageUrl ? (
-                    <OptimizedImage
-                      src={playlist.imageUrl} 
-                      alt={playlist.name} 
-                      className="w-full h-full"
-                      sizes="80px"
-                      objectFit="cover"
-                      loading="lazy"
-                    />
-                  ) : (
+                   {playlistImageSrc(playlist) ? (
+                     <OptimizedImage
+                       src={playlistImageSrc(playlist)} 
+                       alt={playlist.name} 
+                       className="w-full h-full"
+                       sizes="80px"
+                       objectFit="cover"
+                       loading="lazy"
+                     />
+                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
                       <div className="text-xl text-primary/60">♪</div>
                     </div>
@@ -1032,9 +1033,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     className="w-full justify-start"
                   >
                     <Image className="w-4 h-4 mr-2" />
-                    {playlist.imageUrl ? "Change image" : "Upload image"}
+                    {playlistImageSrc(playlist) ? "Change image" : "Upload image"}
                   </Button>
-                  {playlist.imageUrl && (
+                  {playlistImageSrc(playlist) && (
                     <Button
                       type="button"
                       variant="outline"

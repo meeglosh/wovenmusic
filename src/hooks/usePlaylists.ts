@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Playlist } from "@/types/music";
+import { playlistImageSrc } from "@/services/imageFor";
 
 export const usePlaylists = () => {
   return useQuery({
@@ -40,7 +41,7 @@ export const usePlaylists = () => {
         id: playlist.id,
         name: playlist.name,
         artistName: playlist.artist_name,
-        imageUrl: playlist.image_url,
+        imageUrl: playlistImageSrc(playlist),
         trackIds: playlist.playlist_tracks
           .sort((a, b) => a.position - b.position)
           .map(pt => pt.track_id),
@@ -233,70 +234,48 @@ export const useUploadPlaylistImage = () => {
   
   return useMutation({
     mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${playlistId}-${Date.now()}.${fileExt}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('playlist-images')
-        .upload(fileName, file);
-      
-      if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('playlist-images')
-        .getPublicUrl(fileName);
-      
-      // Update playlist with image URL
-      const { data, error } = await supabase
-        .from("playlists")
-        .update({ image_url: publicUrl })
-        .eq("id", playlistId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      // Use the new image-upload edge function
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('entityType', 'playlist');
+      formData.append('entityId', playlistId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch('https://woakvdhlpludrttjixxq.functions.supabase.co/image-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
-    }
+    },
   });
 };
-
 export const useDeletePlaylistImage = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (playlistId: string) => {
-      // First get the current playlist to get the image URL
-      const { data: playlist, error: fetchError } = await supabase
-        .from("playlists")
-        .select("image_url")
-        .eq("id", playlistId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      // If there's an image URL, extract the filename and delete it from storage
-      if (playlist.image_url) {
-        const url = new URL(playlist.image_url);
-        const pathParts = url.pathname.split('/');
-        const fileName = pathParts[pathParts.length - 1];
-        
-        const { error: deleteError } = await supabase.storage
-          .from('playlist-images')
-          .remove([fileName]);
-        
-        if (deleteError) {
-          console.error('Error deleting image from storage:', deleteError);
-          // Continue with updating the database even if storage deletion fails
-        }
-      }
-      
-      // Update playlist to remove image URL
+      // Update playlist to remove image_key and image_url
       const { data, error } = await supabase
         .from("playlists")
-        .update({ image_url: null })
+        .update({ 
+          image_key: null,
+          image_url: null 
+        })
         .eq("id", playlistId)
         .select()
         .single();

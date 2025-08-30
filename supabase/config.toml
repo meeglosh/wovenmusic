@@ -27,3 +27,6 @@ verify_jwt = true
 
 [functions.r2-transfer]
 verify_jwt = true
+
+[functions.fix-r2-metadata]
+verify_jwt = true

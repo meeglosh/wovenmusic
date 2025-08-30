@@ -1,139 +1,127 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { getPrivateSignedUrl } from "../_shared/r2.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  'Access-Control-Allow-Origin': 'https://wovenmusic.app',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'x-client-info, apikey, authorization, content-type, x-requested-with',
+  'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin',
+};
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-)
-
-async function generateSignedUrl(bucketName: string, key: string, expiresIn = 3600): Promise<string> {
-  // For now, return a placeholder - actual signed URL generation would need AWS SDK
-  // This will be updated with proper AWS SDK v3 implementation
-  const endpoint = Deno.env.get('CLOUDFLARE_R2_ENDPOINT') ?? ''
-  return `${endpoint}/${bucketName}/${key}?signed=true&expires=${Date.now() + expiresIn * 1000}`
-}
-
-async function checkBandMemberAccess(track: any, userId: string): Promise<boolean> {
-  try {
-    // Check if current user is a band member
-    const { data: currentUserProfile } = await supabase
-      .from('profiles')
-      .select('is_band_member')
-      .eq('id', userId)
-      .single()
-    
-    if (!currentUserProfile?.is_band_member) {
-      return false
-    }
-    
-    // Check if track creator is a band member
-    const { data: trackCreatorProfile } = await supabase
-      .from('profiles')
-      .select('is_band_member')
-      .eq('id', track.created_by)
-      .single()
-    
-    return trackCreatorProfile?.is_band_member || false
-  } catch (error) {
-    console.error('Error checking band member access:', error)
-    return false
-  }
-}
-
-serve(async (req: Request) => {
+serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
   }
 
   try {
-    const url = new URL(req.url)
-    const trackId = url.pathname.split('/').pop()
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    const debug = url.searchParams.get("debug") === "1";
     
-    if (!trackId) {
-      throw new Error('Track ID is required')
-    }
-    
-    // Validate user auth
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
-    }
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-    
-    if (authError || !user) {
-      throw new Error('Unauthorized')
+    if (!id) {
+      return new Response(JSON.stringify({ ok: false, error: "missing id" }), { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Get track details
-    const { data: track, error: trackError } = await supabase
-      .from('tracks')
-      .select('*')
-      .eq('id', trackId)
-      .single()
-    
-    if (trackError || !track) {
-      throw new Error('Track not found')
+    const supabase = createClient(
+      Deno.env.get("PROJECT_URL") || Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!
+    );
+
+    const { data: t, error } = await supabase
+      .from("tracks")
+      .select("id, storage_key, is_public, storage_url")
+      .eq("id", id)
+      .single();
+
+    if (error || !t) {
+      console.error(`Track not found: ${id}`, error);
+      return new Response(JSON.stringify({ ok: false, error: "not found" }), { 
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-    
-    // Check access permissions
-    const hasAccess = track.is_public || 
-                     track.created_by === user.id ||
-                     await checkBandMemberAccess(track, user.id)
-    
-    if (!hasAccess) {
-      throw new Error('Access denied')
-    }
-    
-    // Return appropriate URL
-    let fileUrl: string
-    
-    if (track.storage_type === 'r2') {
-      if (track.is_public && track.storage_url) {
-        // Public track - return direct URL
-        fileUrl = track.storage_url
-      } else if (track.storage_key) {
-        // Private track - generate signed URL
-        const bucketName = track.is_public ? 'wovenmusic-public' : 'wovenmusic-private'
-        fileUrl = await generateSignedUrl(bucketName, track.storage_key, 3600)
-      } else {
-        throw new Error('Invalid storage configuration')
-      }
-    } else {
-      // Legacy Supabase storage
-      fileUrl = track.file_url || ''
-    }
-    
-    return new Response(
-      JSON.stringify({
-        fileUrl,
-        expiresAt: track.storage_type === 'r2' && !track.is_public 
-          ? new Date(Date.now() + 3600 * 1000).toISOString()
-          : null
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+    if (t.is_public && t.storage_url) {
+      console.log(`Returning public URL for track ${id}: ${t.storage_url}`);
+      return new Response(JSON.stringify({ ok: true, url: t.storage_url, kind: "public" }), {
         status: 200,
-      }
-    )
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!t.storage_key) {
+      console.error(`Track ${id} has no storage_key`);
+      return new Response(JSON.stringify({ ok: false, error: "no storage key" }), { 
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Generate signed URL using the exact storage_key from DB
+    console.log(`Generating signed URL for track ${id}, storage_key: "${t.storage_key}"`);
+    const signed = await getPrivateSignedUrl(t.storage_key, 3600);
+    console.log(`Generated signed URL: ${signed}`);
     
-  } catch (error) {
-    console.error('Track URL error:', error)
-    return new Response(
-      JSON.stringify({
-        error: error.message || 'Internal server error'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+    // Debug mode: check actual R2 response headers
+    if (debug) {
+      try {
+        console.log(`Debug mode: checking headers for ${signed.substring(0, 200)}...`);
+        const response = await fetch(signed, { method: 'HEAD' });
+        const debugInfo = {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          contentLength: response.headers.get('content-length'),
+          acceptRanges: response.headers.get('accept-ranges'),
+          etag: response.headers.get('etag'),
+          urlSample: signed.substring(0, 200) + '...'
+        };
+        console.log('Debug headers:', JSON.stringify(debugInfo, null, 2));
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          url: signed, 
+          kind: "signed", 
+          debug: debugInfo 
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (debugError) {
+        console.error('Debug HEAD request failed:', debugError);
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          url: signed, 
+          kind: "signed", 
+          debugError: String(debugError) 
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-    )
+    }
+    
+    return new Response(JSON.stringify({ ok: true, url: signed, kind: "signed" }), {
+      status: 200,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (e) {
+    console.error('Track URL generation error:', e);
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { 
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
-})
+});
