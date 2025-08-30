@@ -149,14 +149,14 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     form.append("audio", file);
     form.append("fileName", file.name);
     form.append("quality", desiredQuality); // e.g., 'mp3-320' | 'aac-320'
-    const res = await fetch(`${APP_API_BASE}/api/process-upload`, {
+    const res = await fetch(`${APP_API_BASE}/api/process-audio`, {
       method: "POST",
       body: form,
       credentials: "include",
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`process-upload failed ${res.status}: ${text}`);
+      throw new Error(`process-audio failed ${res.status}: ${text}`);
     }
     // Expected: { ok, url, storage_type:'r2', storage_key, originalFilename, transcoded, quality }
     return res.json();
@@ -220,7 +220,6 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
         }
       }
 
-      const successCount = uploadFiles.filter(f => f.status === 'success').length;
       toast({
         title: "Upload complete",
         description: `Finished processing selected audio file(s).`,

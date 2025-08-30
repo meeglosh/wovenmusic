@@ -1,129 +1,103 @@
 // src/services/importTranscodingService.ts
+// Unifies upload + transcode via backend "process-audio" endpoint,
+// with an /api/* -> /* fallback so it works with either routing style.
 
-export interface TranscodeResult {
-  /** Ready-to-play URL (public or presigned if private bucket). */
-  url: string;
-  /** Always "r2" for new imports. */
-  storage_type: 'r2';
-  /** R2 bucket name. */
-  storage_bucket: string;
-  /** R2 object key, e.g. "tracks/<uuid>.mp3" */
-  storage_key: string;
-  /** MIME type, e.g. "audio/mpeg" | "audio/mp4" */
-  content_type: string;
-  /** Original filename (no extension). */
-  originalFilename?: string;
-  /** Whether a transcode actually happened on the backend. */
-  transcoded?: boolean;
-  /** Quality used: "standard" (MP3 320) or "high" (AAC 320). */
-  quality?: 'standard' | 'high';
-}
-
-const BASE =
+const RAW_BASE =
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
-  'https://transcode-server.onrender.com';
+  "https://transcode-server.onrender.com";
+const BASE = RAW_BASE.replace(/\/+$/, "");
 
-const AUDIO_PROCESS_ENDPOINT = `${BASE}/api/process-audio`;
+type ProcessAudioResponse = {
+  url?: string;               // public URL (if public bucket/object)
+  publicUrl?: string;         // sometimes returned as publicUrl
+  originalFilename?: string;
+  storage_key?: string;
+  storage_bucket?: string;
+  storage_url?: string;       // public url (duplicate of url in some backends)
+  error?: string;
+};
 
-async function handleResponse(res: Response): Promise<TranscodeResult> {
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(`process-audio failed (${res.status}): ${txt}`);
+async function postWithFallback(
+  endpoint: string,
+  body: FormData
+): Promise<ProcessAudioResponse> {
+  // Try /api/<endpoint> first, then fallback to /<endpoint>
+  const candidates = [`${BASE}/api/${endpoint}`, `${BASE}/${endpoint}`];
+
+  let lastText = "";
+  for (const url of candidates) {
+    const res = await fetch(url, { method: "POST", body, credentials: "include" });
+    if (res.ok) {
+      const data = (await res.json()) as ProcessAudioResponse;
+      return data;
+    }
+    lastText = await res.text().catch(() => "");
+    // try next candidate if any
   }
-  let data: any;
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error('process-audio returned non-JSON');
-  }
-  // Expected shape from backend:
-  // { ok: true, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
-  if (!data?.ok || !data?.url || !data?.storage_key || data.storage_type !== 'r2') {
-    throw new Error(
-      data?.error || 'Invalid response from process-audio (missing ok/url/storage_key or storage_type!==r2)'
-    );
-  }
-  return {
-    url: data.url,
-    storage_type: 'r2',
-    storage_bucket: data.storage_bucket,
-    storage_key: data.storage_key,
-    content_type: data.content_type,
-    originalFilename: data.originalFilename,
-    transcoded: data.transcoded,
-    quality: data.quality,
-  };
+  throw new Error(`${endpoint} failed: ${lastText || "unexpected error"}`);
 }
 
-export class ImportTranscodingService {
-  /**
-   * Import from a remote URL (e.g., Dropbox temp link) and store in R2.
-   * WAV/AIFF are transcoded; MP3/AAC uploaded as-is.
-   * @param quality "standard" -> MP3 320, "high" -> AAC 320
-   */
-  async importFromUrl(
-    audioUrl: string,
-    fileName: string,
-    quality: 'standard' | 'high' = 'standard',
-    retries = 3
-  ): Promise<TranscodeResult> {
-    let lastErr: Error | null = null;
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const res = await fetch(AUDIO_PROCESS_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ audioUrl, fileName, quality }),
-        });
-        return await handleResponse(res);
-      } catch (e) {
-        lastErr = e instanceof Error ? e : new Error(String(e));
-        if (attempt < retries) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
-        }
-      }
-    }
-    throw lastErr || new Error('All import attempts failed');
-  }
+const needsTxExt = new Set([".wav", ".aif", ".aiff"]);
+
+function extOf(name: string): string {
+  const m = /\.([a-z0-9]+)$/i.exec(name);
+  return m ? `.${m[1].toLowerCase()}` : "";
+}
+
+export const importTranscodingService = {
+  // Only uncompressed formats should trigger transcoding
+  needsTranscoding(filename: string): boolean {
+    return needsTxExt.has(extOf(filename));
+  },
 
   /**
-   * Upload a local File (user upload) and store in R2.
-   * WAV/AIFF are transcoded; MP3/AAC uploaded as-is.
-   * @param quality "standard" -> MP3 320, "high" -> AAC 320
+   * Send a FILE or a SOURCE URL to the backend for processing & storage in R2.
+   * The backend decides whether to transcode or just store as-is.
    */
-  async uploadFile(
+  async transcodeAndStore(
+    source: File | string,
+    originalName: string,
+    outputFormat: "mp3" | "aac" = "mp3"
+  ): Promise<{
+    publicUrl?: string;
+    storage_key?: string;
+    storage_bucket?: string;
+    storage_url?: string;
+    originalFilename?: string;
+  }> {
+    const form = new FormData();
+    form.append("fileName", originalName);
+    form.append("outputFormat", outputFormat);
+    // If you want fixed bitrate: form.append("bitrate", "320k");
+
+    if (typeof source === "string") {
+      // Let the backend fetch the remote file (used by Dropbox imports)
+      form.append("url", source);
+    } else {
+      // Direct file upload (used by Upload modal)
+      form.append("audio", source, originalName);
+    }
+
+    const data = await postWithFallback("process-audio", form);
+
+    return {
+      publicUrl: data.publicUrl || data.url || data.storage_url,
+      storage_key: data.storage_key,
+      storage_bucket: data.storage_bucket,
+      storage_url: data.storage_url || data.url,
+      originalFilename: data.originalFilename,
+    };
+  },
+
+  /**
+   * Alias for clarity when the caller knows it's a direct upload.
+   * Uses the same endpoint as transcodeAndStore.
+   */
+  async processUpload(
     file: File,
-    quality: 'standard' | 'high' = 'standard',
-    retries = 3
-  ): Promise<TranscodeResult> {
-    let lastErr: Error | null = null;
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const form = new FormData();
-        form.append('audio', file, file.name);
-        form.append('quality', quality);
-        const res = await fetch(AUDIO_PROCESS_ENDPOINT, {
-          method: 'POST',
-          body: form,
-          credentials: 'include',
-        });
-        return await handleResponse(res);
-      } catch (e) {
-        lastErr = e instanceof Error ? e : new Error(String(e));
-        if (attempt < retries) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
-        }
-      }
-    }
-    throw lastErr || new Error('All upload attempts failed');
-  }
-
-  /** Frontend-side helper for gating transcode UI. */
-  needsTranscoding(filePath: string): boolean {
-    const ext = (filePath || '').toLowerCase().split('.').pop();
-    return ext === 'wav' || ext === 'aif' || ext === 'aiff';
-  }
-}
-
-export const importTranscodingService = new ImportTranscodingService();
+    fileName: string,
+    outputFormat: "mp3" | "aac" = "mp3"
+  ) {
+    return this.transcodeAndStore(file, fileName, outputFormat);
+  },
+};
