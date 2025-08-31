@@ -1,76 +1,48 @@
 // functions/api/track-url.ts
 import { createClient } from "@supabase/supabase-js";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+// NOTE: This function does not touch AWS SDKs. It relies on:
+// - R2 bucket bindings (AUDIO_PUBLIC / AUDIO_PRIVATE) configured in Cloudflare Pages
+// - Optional CDN_BASE (your public R2 hostname) for public files
+// - A separate /api/track-stream function that reads from R2 and streams bytes
 
 type Env = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
 
-  // R2 config
-  R2_ACCOUNT_ID: string;
-  R2_ACCESS_KEY_ID: string;
-  R2_SECRET_ACCESS_KEY: string;
-  R2_PRIVATE_BUCKET: string;         // where private objects live
-  R2_PUBLIC_BUCKET?: string;         // optional if you only serve via CDN base
-  R2_PUBLIC_BASE?: string;           // e.g. https://<your-public-bucket>.r2.cloudflarestorage.com OR custom domain
+  // Optional public CDN base for your public R2 bucket
+  // e.g. "https://wovenmusic-public.16e03ea92574afdd207c0db88357f095.r2.cloudflarestorage.com"
+  CDN_BASE?: string;
+
+  // R2 bucket bindings (already configured in your Pages project)
+  AUDIO_PUBLIC: R2Bucket;
+  AUDIO_PRIVATE: R2Bucket;
 };
 
 type TrackRow = {
   id: string;
   is_public: boolean;
-  storage_type: string | null;   // 'r2' | 'supabase' | null
-  storage_key: string | null;    // R2 key when storage_type = 'r2'
-  storage_url: string | null;    // public R2 URL when appropriate
-  file_url: string | null;       // legacy supabase public URL (compat)
+  storage_type: string | null; // 'r2' | 'supabase' | null
+  storage_key: string | null;  // R2 key when storage_type = 'r2'
+  storage_url: string | null;  // legacy/public url (optional)
+  file_url: string | null;     // legacy supabase public url
   title?: string | null;
 };
 
-function json(data: any, status = 200) {
+function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json" },
   });
 }
 
-function buildPublicR2Url(env: Env, key: string) {
-  // Prefer explicit CDN/public base if provided
-  const base = (env.R2_PUBLIC_BASE || "").replace(/\/+$/, "");
-  if (base) {
-    // Keep path separators intact
-    const safeKey = key.split("/").map(encodeURIComponent).join("/");
-    return `${base}/${safeKey}`;
-  }
-  // Fallback to bucket canonical domain if desired (optional)
-  // If you want to construct bucket domain, uncomment and set R2_PUBLIC_BUCKET:
-  // if (env.R2_PUBLIC_BUCKET) {
-  //   const safeKey = key.split("/").map(encodeURIComponent).join("/");
-  //   return `https://${env.R2_PUBLIC_BUCKET}.${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${safeKey}`;
-  // }
-  return null;
-}
-
-async function signPrivateR2Url(env: Env, key: string, expiresInSeconds = 3600) {
-  const s3 = new S3Client({
-    region: "auto",
-    endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    },
-    forcePathStyle: true, // recommended for R2
-  });
-
-  const command = new GetObjectCommand({
-    Bucket: env.R2_PRIVATE_BUCKET,
-    Key: key,
-    // Optional: add inline content-disposition for nicer filename
-    // ResponseContentDisposition: `inline; filename="${key.split('/').pop() || 'audio'}"`,
-  });
-
-  const url = await getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
-  return { url, expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString() };
+function buildPublicR2Url(cdnBase: string | undefined, key: string): string | null {
+  if (!cdnBase) return null;
+  const base = cdnBase.replace(/\/+$/, "");
+  // Encode each path segment but keep slashes
+  const safeKey = key.split("/").map(encodeURIComponent).join("/");
+  return `${base}/${safeKey}`;
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
@@ -87,7 +59,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       auth: { persistSession: false },
     });
 
-    // 1) Fetch track info with service role (bypasses RLS safely on the server)
+    // 1) Fetch track info (service role: safe on server)
     const { data: track, error: tErr } = await supaService
       .from("tracks")
       .select("id,is_public,storage_type,storage_key,storage_url,file_url,title")
@@ -96,36 +68,42 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     if (tErr || !track) return new Response("Not found", { status: 404 });
 
-    // Helper to return public URL (no auth)
-    const returnPublic = () => {
-      // Prefer explicit storage_url if present
+    // Helper: return a browser-usable URL for PUBLIC items
+    const respondPublic = () => {
+      // Prefer R2 public key via CDN if available
       if (track.storage_type === "r2" && track.storage_key) {
-        const fromStorageUrl = track.storage_url && track.storage_url.trim().length > 0 ? track.storage_url : null;
-        const built = buildPublicR2Url(env, track.storage_key);
-        const url = fromStorageUrl || built;
-        if (url) return json({ url });
+        const cdnUrl =
+          buildPublicR2Url(env.CDN_BASE, track.storage_key) ||
+          null;
+
+        if (cdnUrl) return json({ url: cdnUrl });
+        // If no CDN base is configured, fall back to our proxy stream
+        const origin = `${url.protocol}//${url.host}`;
+        return json({ url: `${origin}/api/track-stream?id=${encodeURIComponent(trackId)}` });
       }
-      // Legacy fallback (Supabase public)
+
+      // Legacy Supabase public URL (if still present)
       if (track.file_url) return json({ url: track.file_url });
+
       return new Response("Not found", { status: 404 });
     };
 
-    // 2) If the track is PUBLIC → serve without requiring Authorization
+    // 2) PUBLIC track → no auth required
     if (track.is_public) {
-      return returnPublic();
+      return respondPublic();
     }
 
-    // 3) Track is PRIVATE → require auth and access check
-    // Try to read Bearer token; allow missing (we'll 401 below)
+    // 3) PRIVATE track → require Supabase bearer + access check
     const auth = request.headers.get("authorization") || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
     if (!token) return new Response("Unauthorized", { status: 401 });
 
     const { data: userRes, error: userErr } = await supaAnon.auth.getUser(token);
     if (userErr || !userRes?.user?.id) return new Response("Unauthorized", { status: 401 });
+
     const userId = userRes.user.id;
 
-    // 4) Check access with your RPC (service role)
+    // 4) Call your access-check RPC (service role)
     const { data: canAccess, error: rpcErr } = await supaService.rpc("has_track_access", {
       p_user: userId,
       p_track: trackId,
@@ -137,14 +115,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     }
     if (!canAccess) return new Response("Forbidden", { status: 403 });
 
-    // 5) Resolve PRIVATE URL (signed) or legacy fallback
+    // 5) For private items, return our proxy stream endpoint
+    //    (The /api/track-stream function will read from AUDIO_PRIVATE and stream bytes.)
     if (track.storage_type === "r2" && track.storage_key) {
-      const signed = await signPrivateR2Url(env, track.storage_key, 3600);
-      return json({ url: signed.url, expiresAt: signed.expiresAt });
+      const origin = `${url.protocol}//${url.host}`;
+      return json({ url: `${origin}/api/track-stream?id=${encodeURIComponent(trackId)}` });
     }
 
-    // Legacy fallback: if you still have file_url (public supabase) for a private track,
-    // you probably DON'T want to expose it publicly; but if it is required for legacy playback:
+    // Legacy private fallback (discouraged, but supported if you still have it)
     if (track.file_url) {
       return json({ url: track.file_url });
     }
