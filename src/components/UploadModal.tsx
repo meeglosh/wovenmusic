@@ -19,11 +19,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-/** Prefer app API base, else fall back to transcode server URL */
+/** Strictly use our app API base. No transcode-server fallback. */
 const APP_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
-  (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
-  "https://transcode-server.onrender.com";
+  "https://your-pages-domain.example.com"; // set VITE_APP_API_BASE in Cloudflare Pages
+
+/** Your public R2 base (e.g., https://bucket.hash.r2.cloudflarestorage.com) */
+const CDN_BASE = (import.meta as any)?.env?.VITE_R2_CDN_BASE || "";
 
 interface UploadModalProps {
   open: boolean;
@@ -42,13 +44,6 @@ interface UploadFile {
 const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.aif', '.aiff'];
 const UNSUPPORTED_FORMATS: string[] = [];
 
-/** Strict local extension check so MP3s never show 'Transcoding' */
-const ext = (name: string) => {
-  const dot = name.lastIndexOf(".");
-  return dot === -1 ? "" : name.slice(dot).toLowerCase();
-};
-const SHOULD_TRANSCODE = new Set(['.wav', '.aif', '.aiff', '.flac']); // never transcode mp3/m4a/aac
-
 export default function UploadModal({ open, onOpenChange, audioQuality }: UploadModalProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -60,13 +55,15 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
   const { toast } = useToast();
 
   const validateFileType = (file: File): boolean => {
-    const e = ext(file.name);
-    return SUPPORTED_FORMATS.includes(e);
+    const fileName = file.name.toLowerCase();
+    const extension = '.' + fileName.split('.').pop();
+    return SUPPORTED_FORMATS.includes(extension);
   };
 
   const isUnsupportedFormat = (file: File): boolean => {
-    const e = ext(file.name);
-    return UNSUPPORTED_FORMATS.includes(e);
+    const fileName = file.name.toLowerCase();
+    const extension = '.' + fileName.split('.').pop();
+    return UNSUPPORTED_FORMATS.includes(extension);
   };
 
   const handleFileSelect = () => fileInputRef.current?.click();
@@ -148,96 +145,83 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     return { artist: 'Unknown Artist', title: nameWithoutExt.trim() };
   };
 
-  /**
-   * Try the modern endpoint first, then legacy.
-   * Success == persistent R2 handle: storage_key (preferred) OR public R2 URL.
-   */
-  const processOnServer = async (file: File, desiredQuality: string) => {
-    const tryPost = async (path: string, body: FormData) => {
-      const url = `${APP_API_BASE}${path}`;
-      console.log(`[upload] POST ${url}`);
-      const res = await fetch(url, { method: "POST", body, credentials: "include" });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        const err = new Error(`${path.replace("/api/", "")} failed ${res.status}: ${text}`);
-        (err as any).status = res.status;
-        throw err;
-      }
-      return res.json();
-    };
-
-    // Build a flexible payload that works for both handlers
+  /** Call ONLY our backend. No external fallback. */
+  const serverProcessUpload = async (file: File, desiredQuality: string) => {
     const form = new FormData();
     form.append("audio", file);
     form.append("fileName", file.name);
-    // For modern handler:
-    form.append("quality", desiredQuality); // e.g., 'mp3-320'
-    // For legacy handler:
-    form.append("outputFormat", desiredQuality.startsWith("aac") ? "aac" : "mp3");
-    form.append("bitrate", "320k");
+    form.append("quality", desiredQuality); // e.g., 'mp3-320' | 'aac-320'
+    const endpoint = `${APP_API_BASE}/api/process-upload`;
+    console.debug("[upload] POST", endpoint);
 
-    // 1) Preferred modern route
-    try {
-      const data = await tryPost("/api/process-upload", form);
-      return { data, used: "process-upload" as const };
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
-      console.warn("[upload] /api/process-upload not found, falling back to /api/transcode");
+    const res = await fetch(endpoint, { method: "POST", body: form, credentials: "include" });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`process-upload failed ${res.status}: ${text}`);
     }
-
-    // 2) Legacy route that should still store into R2
-    const data = await tryPost("/api/transcode", form);
-    return { data, used: "transcode" as const };
+    const data = await res.json();
+    console.debug("[upload] server response", data);
+    return data as {
+      ok?: boolean;
+      url?: string;            // sniff/probe URL
+      publicUrl?: string;      // permanent public URL in OUR R2 (if bucket public)
+      storage_key?: string;    // permanent handle in OUR R2 (if bucket private)
+      storage_bucket?: string;
+      transcoded?: boolean;
+      quality?: string;
+    };
   };
 
   const uploadFile = async (uploadFile: UploadFile, index: number) => {
     const { file } = uploadFile;
-    const e = ext(file.name);
-    const shouldTranscode = SHOULD_TRANSCODE.has(e);
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const needsTranscode = importTranscodingService.needsTranscoding(file.name); // true for wav/aif
     const desiredQuality = audioQuality || 'mp3-320';
 
     try {
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'uploading', progress: 10 }) : f));
-
-      // Only show "Transcoding" for formats that truly need it
-      if (shouldTranscode) {
+      if (needsTranscode) {
+        // Only show "transcoding" for WAV/AIF etc., never for mp3/m4a/aac
         setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
+      } else {
+        // For MP3/AAC/M4A keep it as uploading/processing
+        setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'uploading', progress: 40 }) : f));
       }
 
-      const { data, used } = await processOnServer(file, desiredQuality);
-      console.log("[upload] server response from", used, data);
-
-      // Accept multiple possible shapes:
-      // - Modern: { storage_key, storage_bucket, url? }
-      // - Legacy: { storage_key?, storage_bucket?, publicUrl? or url? }
-      const storage_key = data.storage_key || data.storageKey;
-      const storage_bucket = data.storage_bucket || data.bucket || data.bucketName;
-      const returnedUrl = data.url || data.publicUrl;
-
-      // Require either a storage_key (preferred) or an R2 public URL.
-      if (!storage_key && !returnedUrl) {
-        throw new Error("Server did not return a persistent R2 handle (storage_key or public URL).");
-      }
+      // Our backend performs: if mp3 → store-as-is, else → transcode then store. Always writes to OUR R2.
+      const result = await serverProcessUpload(file, desiredQuality);
 
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'importing', progress: 80 }) : f));
 
-      // Use the (temporary or public) url to sniff duration for the track row
-      const sniffUrl = returnedUrl;
-      const secs = sniffUrl ? await getDurationFromUrl(sniffUrl) : 180;
+      // Validate destination belongs to OUR R2
+      const hasOurPublic = !!result.publicUrl && (!!CDN_BASE ? result.publicUrl!.startsWith(CDN_BASE) : true);
+      const hasOurKey = !!result.storage_key;
+
+      if (!hasOurPublic && !hasOurKey) {
+        throw new Error(
+          "Upload finished but backend did not return a persistent handle in your R2 (storage_key) " +
+          "or a publicUrl from your CDN base. Ensure /api/process-upload writes to your bucket."
+        );
+      }
+
+      // Prefer probe url for duration; fallback to publicUrl if needed
+      const probeUrl = result.url || result.publicUrl || "";
+      const secs = probeUrl ? await getDurationFromUrl(probeUrl) : 180;
       const formattedDuration = formatDuration(secs);
       const { artist, title } = extractMetadata(file.name);
 
-      // Build track data: new R2-first fields; do NOT save Supabase file_url
-      const trackData: any = {
+      const trackData = {
         title,
         artist,
         duration: formattedDuration,
-        storage_type: 'r2',
-        storage_key: storage_key ?? null,
-        storage_url: storage_key ? null : (returnedUrl ?? null), // if no key, fall back to public URL
+        // R2 pointers:
+        storage_type: 'r2' as const,
+        storage_key: hasOurKey ? result.storage_key! : null,
+        storage_url: hasOurPublic ? result.publicUrl! : null,
+        // legacy fields intentionally null
         fileUrl: null,
         source_folder: 'Direct Upload',
-        is_public: false,
+        is_public: hasOurPublic,
       };
 
       const created = await addTrackMutation.mutateAsync(trackData);
@@ -250,6 +234,11 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       setUploadFiles(prev => prev.map((f, i) =>
         i === index ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
       ));
+      toast({
+        title: "Upload failed",
+        description: error?.message ?? "See console for details.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -286,7 +275,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       case 'uploading':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'transcoding':
-        return null; // center spinner shown in text line
+        return null; // spinner appears inline in the text line
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'error':
@@ -317,8 +306,8 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-primary">Cast waveforms into the current</DialogTitle>
-            <DialogDescription className="sr-only">
-              Upload audio files to R2 storage. MP3/AAC files upload as-is; WAV/AIFF/FLAC are transcoded.
+            <DialogDescription>
+              Drop audio here to upload directly to your R2 bucket. MP3/AAC files are stored as-is; WAV/AIF are transcoded first.
             </DialogDescription>
           </DialogHeader>
 
