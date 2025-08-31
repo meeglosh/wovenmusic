@@ -35,3 +35,4 @@ migrate.log
 *.njsproj
 *.sln
 *.sw?
+.env
