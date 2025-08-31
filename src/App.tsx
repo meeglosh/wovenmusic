@@ -1,5 +1,4 @@
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,16 +25,42 @@ import NotFound from "@/pages/NotFound";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { pwaService } from "@/services/pwaService";
+import { supabase } from "@/integrations/supabase/client";
 import "./App.css";
 
 const queryClient = new QueryClient();
 
+/**
+ * Public root redirect:
+ * - If signed in -> /playlists
+ * - If signed out -> /auth
+ * (Prevents premature redirects to /profile-setup when simply landing on "/")
+ */
+function RootRedirect() {
+  const [ready, setReady] = useState(false);
+  const [to, setTo] = useState<string>("/auth");
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setTo(data.session ? "/playlists" : "/auth");
+      setReady(true);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!ready) return null; // or a tiny spinner
+  return <Navigate to={to} replace />;
+}
+
 function App() {
   useEffect(() => {
-    // REMOVE after verification
+    // TEMP debug
     console.log("CDN base:", import.meta.env.VITE_CDN_BASE);
-    
-    // Initialize PWA service
     pwaService.init().catch(console.error);
   }, []);
 
@@ -49,22 +74,20 @@ function App() {
                 <OfflineBanner />
                 <PWAInstallPrompt />
                 <Routes>
+                  {/* Public routes */}
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/verify" element={<AuthVerify />} />
+                  {/* Support both styles: /playlist/:shareToken and /playlist/shared?token=... */}
                   <Route path="/playlist/:shareToken" element={<PublicPlaylist />} />
+                  <Route path="/playlist/shared" element={<PublicPlaylist />} />
                   <Route path="/test-public-playlist" element={<TestPublicPlaylist />} />
                   <Route path="/dropbox-callback" element={<DropboxCallback />} />
                   <Route path="/dropbox/callback" element={<DropboxCallback />} />
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute>
-                        <ProfileProtectedRoute>
-                          <Navigate to="/playlists" replace />
-                        </ProfileProtectedRoute>
-                      </ProtectedRoute>
-                    }
-                  />
+
+                  {/* Public landing – decide based on session only */}
+                  <Route path="/" element={<RootRedirect />} />
+
+                  {/* Protected routes */}
                   <Route
                     path="/library"
                     element={
@@ -115,6 +138,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* Allow authenticated users without profile to reach setup */}
                   <Route
                     path="/profile-setup"
                     element={
@@ -133,6 +157,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ErrorBoundary>
