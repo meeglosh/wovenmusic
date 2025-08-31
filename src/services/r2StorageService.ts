@@ -3,7 +3,7 @@
 export interface R2UploadResult {
   storageKey: string;
   bucketName: string;
-  publicUrl?: string;
+  publicUrl?: string; // only for public bucket objects
 }
 
 export interface TrackUrlResult {
@@ -17,43 +17,60 @@ type BackendTrackUrlResponse = {
   error?: string;
 };
 
-const RAW_BASE =
-  (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
-  "https://transcode-server.onrender.com";
-const BASE = RAW_BASE.replace(/\/+$/, "");
+/**
+ * Resolve the API base:
+ * - If VITE_APP_API_BASE is "self" or empty -> use relative URLs ("/api/..."), which hit your Cloudflare Pages Functions.
+ * - Otherwise use the explicit base, trimming any trailing slashes.
+ */
+const RAW = (import.meta as any)?.env?.VITE_APP_API_BASE ?? "";
+const APP_BASE = typeof RAW === "string" ? RAW.trim() : "";
+const BASE = !APP_BASE || APP_BASE === "self" ? "" : APP_BASE.replace(/\/+$/, "");
 
-async function getJsonWithFallback(pathWithQuery: string): Promise<BackendTrackUrlResponse> {
-  const candidates = [`${BASE}/api/${pathWithQuery}`, `${BASE}/${pathWithQuery}`];
-
-  let lastText = "";
-  for (const url of candidates) {
-    const res = await fetch(url, { credentials: "include" });
-    if (res.ok) return (await res.json()) as BackendTrackUrlResponse;
-    lastText = await res.text().catch(() => "");
-  }
-  throw new Error(`track-url failed: ${lastText || "unexpected error"}`);
+/** Build a full URL for an API path (expects a leading slash). */
+function apiUrl(path: string) {
+  return `${BASE}${path}`;
 }
 
 /**
- * Service to interact with R2 via your backend.
- * - Playback URL resolution (+ migration helpers if you need them).
+ * Service to interact with your backend (Pages Functions) for:
+ * - Playback URL resolution
+ * - Optional migration of legacy files into R2 (uses your own API, not the old transcode server)
  */
 class R2StorageService {
+  /**
+   * Ask your Pages Function for a playable (possibly signed) URL for a track.
+   * Endpoint implemented in functions/api/track-url.ts
+   */
   async getTrackUrl(trackId: string): Promise<TrackUrlResult> {
-    const data = await getJsonWithFallback(`track-url?id=${encodeURIComponent(trackId)}`);
+    const url = apiUrl(`/api/track-url?id=${encodeURIComponent(trackId)}`);
+    const res = await fetch(url, { credentials: "include" });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Failed to get track URL (${res.status}): ${text || res.statusText}`);
+    }
+
+    const data = (await res.json()) as BackendTrackUrlResponse;
     if (!data?.url) {
       throw new Error(data?.error || "No URL returned for track");
     }
     return { fileUrl: data.url, expiresAt: data.expiresAt };
   }
 
+  /** Detect if a Supabase-stored legacy track needs migrating to R2. */
   needsMigration(track: any): boolean {
     return track?.storage_type !== "r2" && !!track?.file_url && !track?.storage_key;
   }
 
+  /**
+   * OPTIONAL: Migrate a legacy file (e.g., Supabase storage) to R2 via your Pages Function.
+   * This POSTs the blob to your backend, which stores it in R2 and returns a storage handle.
+   * Tries /api/process-upload first, then /api/process-audio (if you kept that name).
+   */
   async migrateTrack(track: any): Promise<R2UploadResult> {
     if (!track?.file_url) throw new Error("No file URL to migrate");
 
+    // Download the existing file
     const resp = await fetch(track.file_url);
     if (!resp.ok) {
       const txt = await resp.text().catch(() => "");
@@ -61,35 +78,50 @@ class R2StorageService {
     }
     const blob = await resp.blob();
 
-    const form = new FormData();
+    // Prepare form data for the backend
     const safeName =
-      (track?.title ? String(track.title) : "audio").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) ||
-      "audio";
+      (track?.title ? String(track.title) : "audio")
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .slice(0, 120) || "audio";
+
+    const form = new FormData();
     form.append("audio", new File([blob], `${safeName}.mp3`, { type: blob.type || "audio/mpeg" }));
     form.append("quality", "standard");
     form.append("migration", "true");
 
-    const candidates = [`${BASE}/api/process-audio`, `${BASE}/process-audio`];
+    // Prefer your /api/process-upload; fall back to /api/process-audio if present
+    const endpoints = [apiUrl("/api/process-upload"), apiUrl("/api/process-audio")];
+
     let lastText = "";
-    for (const url of candidates) {
-      const res = await fetch(url, { method: "POST", body: form, credentials: "include" });
-      if (res.ok) {
-        const data = (await res.json()) as {
-          storage_key?: string;
-          storage_bucket?: string;
-          url?: string;
-        };
-        if (!data?.storage_key || !data?.storage_bucket) {
-          throw new Error("Backend did not return R2 storage details");
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = (await res.json()) as {
+            storage_key?: string;
+            storage_bucket?: string;
+            url?: string;
+          };
+          if (!data?.storage_key || !data?.storage_bucket) {
+            throw new Error("Backend did not return R2 storage details");
+          }
+          return {
+            storageKey: data.storage_key,
+            bucketName: data.storage_bucket,
+            publicUrl: data.url,
+          };
+        } else {
+          lastText = await res.text().catch(() => "");
         }
-        return {
-          storageKey: data.storage_key,
-          bucketName: data.storage_bucket,
-          publicUrl: data.url,
-        };
+      } catch (e: any) {
+        lastText = String(e?.message || e) || lastText;
       }
-      lastText = await res.text().catch(() => "");
     }
+
     throw new Error(`Migration failed on backend: ${lastText || "unexpected error"}`);
   }
 }
