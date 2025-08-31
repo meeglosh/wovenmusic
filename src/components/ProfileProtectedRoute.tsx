@@ -1,99 +1,61 @@
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-interface ProfileProtectedRouteProps {
-  children: React.ReactNode;
-}
+type Props = { children: ReactNode };
 
-const ProfileProtectedRoute = ({ children }: ProfileProtectedRouteProps) => {
-  const { user, loading: authLoading } = useAuth();
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [hasCompleteProfile, setHasCompleteProfile] = useState(false);
+export default function ProfileProtectedRoute({ children }: Props) {
+  const [state, setState] = useState<
+    { status: "loading" } |
+    { status: "allow" } |
+    { status: "redirect" }
+  >({ status: "loading" });
 
   useEffect(() => {
-    const checkProfile = async () => {
-      if (!user) {
-        setProfileLoading(false);
-        return;
-      }
+    let cancelled = false;
 
-      // If offline, assume profile is complete to avoid breaking offline experience
-      if (!navigator.onLine) {
-        console.log('Offline mode detected - skipping profile completion check');
-        setHasCompleteProfile(true);
-        setProfileLoading(false);
-        return;
-      }
-
+    (async () => {
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id, full_name, role, is_band_member, profile_completed')
-          .eq('id', user.id)
-          .single();
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
+        if (!user) {
+          if (!cancelled) setState({ status: "redirect" });
+          return;
+        }
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-          // If we can't reach Supabase, assume profile is complete when offline
-          if (!navigator.onLine) {
-            console.log('Network error while offline - assuming complete profile');
-            setHasCompleteProfile(true);
-          } else {
-            setHasCompleteProfile(false);
-          }
-        } else if (!profile || !profile.full_name || !profile.role || !profile.profile_completed) {
-          // Profile doesn't exist, is incomplete, or hasn't completed onboarding
-          setHasCompleteProfile(false);
-        } else {
-          setHasCompleteProfile(true);
+        // Fetch only what we need; '*' is fine too if your schema is stable
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, profile_completed")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          // IMPORTANT: On API/DB error we DO NOT block the app;
+          // let the user through so you don't get stuck on /profile-setup.
+          console.error("ProfileProtectedRoute: profiles fetch error → allowing access", error);
+          if (!cancelled) setState({ status: "allow" });
+          return;
         }
-      } catch (error) {
-        console.error('Error checking profile:', error);
-        // If we can't reach Supabase, assume profile is complete when offline
-        if (!navigator.onLine) {
-          console.log('Network error while offline - assuming complete profile');
-          setHasCompleteProfile(true);
-        } else {
-          setHasCompleteProfile(false);
+
+        // No row yet, or not completed → go to setup
+        if (!data || data.profile_completed === false) {
+          if (!cancelled) setState({ status: "redirect" });
+          return;
         }
+
+        // Completed → allow
+        if (!cancelled) setState({ status: "allow" });
+      } catch (err) {
+        console.error("ProfileProtectedRoute: unexpected error → allowing access", err);
+        if (!cancelled) setState({ status: "allow" });
       }
+    })();
 
-      setProfileLoading(false);
-    };
+    return () => { cancelled = true; };
+  }, []);
 
-    if (!authLoading) {
-      checkProfile();
-    }
-  }, [user, authLoading]);
-
-  // Show loading while checking auth or profile
-  if (authLoading || profileLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-sm">W</span>
-          </div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect to auth if not logged in
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Redirect to profile setup if profile is incomplete
-  if (!hasCompleteProfile) {
-    return <Navigate to="/profile-setup" replace />;
-  }
-
-  // User is authenticated and has complete profile
+  if (state.status === "loading") return null; // or a spinner
+  if (state.status === "redirect") return <Navigate to="/profile-setup" replace />;
   return <>{children}</>;
-};
-
-export default ProfileProtectedRoute;
+}
