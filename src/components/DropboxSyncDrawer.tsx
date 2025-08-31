@@ -1,13 +1,14 @@
+// src/components/DropboxSyncDrawer.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { audioMetadataService } from "@/services/audioMetadataService";
-import { 
-  Download, 
-  RefreshCw, 
-  Folder, 
-  ArrowLeft, 
+import {
+  Download,
+  RefreshCw,
+  Folder,
+  ArrowLeft,
   Music,
   Loader2,
   X,
@@ -15,14 +16,13 @@ import {
   ArrowUp,
   ArrowDown,
   Link,
-  Unlink
+  Unlink,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
-import { importTranscodingService } from "@/services/importTranscodingService";
 import { FileImportStatus, ImportProgress } from "@/types/fileImport";
 import {
   Drawer,
@@ -30,12 +30,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { supabase } from "@/integrations/supabase/client";
 
-/** Prefer app API base, else fall back to transcode-server */
-const APP_API_BASE =
+/** Prefer app API base, else fall back to transcode-server (trim trailing /) */
+const RAW_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
   "https://transcode-server.onrender.com";
+const APP_API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 
 interface DropboxFile {
   name: string;
@@ -52,7 +54,32 @@ interface DropboxSyncDrawerProps {
   onPendingTracksChange?: (pendingTracks: import("@/types/music").PendingTrack[]) => void;
 }
 
-export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange }: DropboxSyncDrawerProps) => {
+/** Build Authorization header from Supabase session */
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** Parse "Artist - Title.ext" -> { artist, title }, splitting only on the first " - " */
+function parseArtistTitleFromFilename(fileName: string): { artist: string; title: string } {
+  const base = fileName.replace(/\.[^/.]+$/, "");
+  const parts = base.split(/\s*-\s*/);
+  const artistCandidate = parts[0]?.trim() || "";
+  const titleCandidate = parts.length > 1 ? parts.slice(1).join(" - ").trim() : "";
+  const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
+
+  if (artistCandidate && titleCandidate) {
+    return { artist: collapse(artistCandidate), title: collapse(titleCandidate) };
+  }
+  return { artist: "Unknown Artist", title: collapse(base) };
+}
+
+export const DropboxSyncDrawer = ({
+  isOpen,
+  onOpenChange,
+  onPendingTracksChange,
+}: DropboxSyncDrawerProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -65,16 +92,16 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
   const addTrackMutation = useAddTrack();
   const queryClient = useQueryClient();
 
   const formatDuration = (seconds: number): string => {
-    if (!seconds || isNaN(seconds)) return '--:--';
+    if (!seconds || isNaN(seconds)) return "--:--";
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   const getDurationFromUrl = (url: string): Promise<number> => {
@@ -86,11 +113,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         settled = true;
         resolve(val && !isNaN(val) && val > 0 ? val : 180);
       };
-      audio.addEventListener('loadedmetadata', () => done(audio.duration));
-      audio.addEventListener('canplaythrough', () => done(audio.duration));
-      audio.addEventListener('error', () => done());
+      audio.addEventListener("loadedmetadata", () => done(audio.duration));
+      audio.addEventListener("canplaythrough", () => done(audio.duration));
+      audio.addEventListener("error", () => done());
       setTimeout(() => done(), 15000);
-      audio.preload = 'metadata';
+      audio.preload = "metadata";
       audio.src = url;
     });
   };
@@ -109,12 +136,12 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
 
   const loadFileDuration = async (file: DropboxFile) => {
     if (file.duration) return;
-    setLoadingDurations(prev => new Set(prev).add(file.path_lower));
+    setLoadingDurations((prev) => new Set(prev).add(file.path_lower));
     const duration = await getDurationFromDropboxFile(file);
-    setFiles(prev =>
-      prev.map(f => f.path_lower === file.path_lower ? { ...f, duration } : f)
+    setFiles((prev) =>
+      prev.map((f) => (f.path_lower === file.path_lower ? { ...f, duration } : f))
     );
-    setLoadingDurations(prev => {
+    setLoadingDurations((prev) => {
       const s = new Set(prev);
       s.delete(file.path_lower);
       return s;
@@ -129,7 +156,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       const musicFiles = allItems.filter((i: any) => {
         if (i[".tag"] !== "file") return false;
         const n = i.name.toLowerCase();
-        return ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'].some(ext => n.endsWith(ext));
+        return [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".wma", ".aif", ".aiff"].some(
+          (ext) => n.endsWith(ext)
+        );
       });
       setFolders(folderItems);
       setFiles(musicFiles);
@@ -138,20 +167,28 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       musicFiles.forEach(loadFileDuration);
     } catch (error: any) {
       if (
-        error?.message === 'DROPBOX_TOKEN_EXPIRED' ||
-        error?.message === 'DROPBOX_AUTH_REQUIRED' ||
-        error?.message === 'Not authenticated with Dropbox'
+        error?.message === "DROPBOX_TOKEN_EXPIRED" ||
+        error?.message === "DROPBOX_AUTH_REQUIRED" ||
+        error?.message === "Not authenticated with Dropbox"
       ) {
         const now = Date.now();
         if (now - lastAuthError > 5000) {
           setLastAuthError(now);
-          window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+          window.dispatchEvent(new CustomEvent("dropboxTokenExpired"));
         }
-        setFiles([]); setFolders([]); setCurrentPath("");
-        setSelectedFiles(new Set()); setFolderHistory([]); setIsConnected(false);
+        setFiles([]);
+        setFolders([]);
+        setCurrentPath("");
+        setSelectedFiles(new Set());
+        setFolderHistory([]);
+        setIsConnected(false);
         return;
       }
-      toast({ title: "Error", description: error?.message || "Failed to load folders from Dropbox.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to load folders from Dropbox.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -176,12 +213,16 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
   };
   const handleSelectAll = () => {
     if (selectedFiles.size === files.length) setSelectedFiles(new Set());
-    else setSelectedFiles(new Set(files.map(f => f.path_lower)));
+    else setSelectedFiles(new Set(files.map((f) => f.path_lower)));
   };
 
-  const toggleSortOrder = () => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-  const sortedFolders = [...folders].sort((a, b) => (sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
-  const sortedFiles = [...files].sort((a, b) => (sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)));
+  const toggleSortOrder = () => setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  const sortedFolders = [...folders].sort((a, b) =>
+    sortOrder === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+  );
+  const sortedFiles = [...files].sort((a, b) =>
+    sortOrder === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+  );
 
   const checkConnection = async () => {
     try {
@@ -202,32 +243,43 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
     if (isConnected && isOpen) loadFolders();
   }, [isConnected, isOpen]);
 
-  /** server-side pipeline for non-transcode inputs (mp3/aac/...) */
+  /** Always use server endpoint; it will transcode WAV/AIFF as needed. Includes Supabase token. */
   const serverProcessAudio = async (audioUrl: string, fileName: string) => {
-    const quality = (localStorage.getItem('conversionQuality') === 'aac-320') ? 'high' : 'standard';
+    const quality =
+      localStorage.getItem("conversionQuality") === "aac-320" ? "high" : "standard";
+    const authHeader = await getAuthHeader();
+
     const res = await fetch(`${APP_API_BASE}/api/process-audio`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ audioUrl, fileName, quality })
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader },
+      credentials: "include",
+      body: JSON.stringify({ audioUrl, fileName, quality }),
     });
     if (!res.ok) {
-      const txt = await res.text().catch(() => '');
+      const txt = await res.text().catch(() => "");
       throw new Error(`process-audio failed ${res.status}: ${txt}`);
     }
-    // { ok, url, storage_type:'r2', storage_key, originalFilename, transcoded, quality }
+    // { ok, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
     return res.json();
   };
 
-  const processFile = async (file: DropboxFile, fileIndex: number, totalFiles: number): Promise<boolean> => {
-    const updateProgress = (status: FileImportStatus['status'], error?: string, progress?: number) => {
-      setImportProgress(prev => ({
+  const processFile = async (
+    file: DropboxFile,
+    fileIndex: number,
+    totalFiles: number
+  ): Promise<boolean> => {
+    const updateProgress = (
+      status: FileImportStatus["status"],
+      error?: string,
+      progress?: number
+    ) => {
+      setImportProgress((prev) => ({
         ...prev,
-        [file.path_lower]: { path: file.path_lower, name: file.name, status, error, progress }
+        [file.path_lower]: { path: file.path_lower, name: file.name, status, error, progress },
       }));
     };
 
-    updateProgress('processing', undefined, 10);
+    updateProgress("processing", undefined, 10);
 
     const createTrackWithRetry = async (trackData: any, retries = 3): Promise<void> => {
       let lastErr: Error | null = null;
@@ -237,120 +289,138 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
           return;
         } catch (e: any) {
           lastErr = e instanceof Error ? e : new Error(String(e));
-          if (attempt < retries) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+          if (attempt < retries)
+            await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
         }
       }
       throw lastErr || new Error("Track creation failed");
     };
 
     try {
-      const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
       const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
 
-      // read some tags first
+      // try embedded tags first
       const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-      const baseName = file.name.replace(/\.[^/.]+$/, "");
 
-      let result: any;
-      updateProgress('processing', undefined, 35);
+      updateProgress("processing", undefined, 35);
+      const result = await serverProcessAudio(tempUrl, file.name);
 
-      if (needsTranscoding) {
-        const conv = localStorage.getItem('conversionQuality') || 'mp3-320';
-        const outFmt = conv === 'aac-320' ? 'aac' : 'mp3';
-        result = await importTranscodingService.transcodeAndStore(tempUrl, file.name, outFmt);
-      } else {
-        result = await serverProcessAudio(tempUrl, file.name);
-      }
+      updateProgress("processing", undefined, 65);
 
-      updateProgress('processing', undefined, 65);
-
-      const url: string = result.url || result.publicUrl; // handle both helpers
+      const url: string = result.url || result.publicUrl;
       const storage_key: string = result.storage_key || result.storageKey || result.key;
 
       const secs = await getDurationFromUrl(url);
       const duration = formatDuration(secs);
 
-      const title =
-        (result.originalFilename?.replace(/\.[^/.]+$/, "") || "").trim() ||
-        (metadata.title || "").trim() ||
-        baseName ||
-        "Unknown Track";
+      // Resolve artist/title: (1) tags if present, else (2) "Artist - Title" from filename, else fallbacks
+      const collapse = (s?: string) => (s || "").replace(/\s+/g, " ").trim();
+      const fromTagsTitle = collapse(metadata?.title);
+      const fromTagsArtist = collapse(metadata?.artist);
 
-      const artist = (metadata.artist || "Unknown Artist").trim();
+      let artist = fromTagsArtist;
+      let title = fromTagsTitle;
 
-      // R2-first track row. Don't persist a public URL.
+      if (!artist || !title) {
+        const parsed = parseArtistTitleFromFilename(result.originalFilename || file.name);
+        artist = artist || parsed.artist;
+        title = title || parsed.title;
+      }
+
+      // R2-first track row. Don't persist a presigned/public URL.
       const trackData = {
         title,
         artist,
         duration,
-        storage_type: 'r2',
+        storage_type: "r2",
         storage_key,
         storage_url: null,
         fileUrl: null,
         dropbox_path: null,
-        is_public: false,
+        // Uncomment if your schema lacks defaults:
+        // is_public: false,
+        // play_count: 0,
       };
 
-      updateProgress('processing', undefined, 85);
+      updateProgress("processing", undefined, 85);
       await createTrackWithRetry(trackData);
 
-      updateProgress('success', undefined, 100);
+      updateProgress("success", undefined, 100);
       return true;
     } catch (err: any) {
-      updateProgress('error', err?.message || 'Unknown error');
+      updateProgress("error", err?.message || "Unknown error");
       return false;
     }
   };
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    const isMobileSafari =
+      /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
     try {
       const handleAuthMessage = (event: MessageEvent) => {
-        if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
-          window.removeEventListener('message', handleAuthMessage);
+        if (event.data.type === "DROPBOX_AUTH_SUCCESS") {
+          window.removeEventListener("message", handleAuthMessage);
           setIsConnecting(false);
           setTimeout(() => {
-            checkConnection().then(connected => {
+            checkConnection().then((connected) => {
               if (connected) {
                 setIsConnected(true);
                 loadFolders();
-                toast({ title: "Connected", description: "Successfully connected to Dropbox." });
+                toast({
+                  title: "Connected",
+                  description: "Successfully connected to Dropbox.",
+                });
               }
             });
           }, 800);
-        } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
-          window.removeEventListener('message', handleAuthMessage);
+        } else if (event.data.type === "DROPBOX_AUTH_ERROR") {
+          window.removeEventListener("message", handleAuthMessage);
           setIsConnecting(false);
-          toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
+          toast({
+            title: "Connection failed",
+            description: "Failed to connect to Dropbox.",
+            variant: "destructive",
+          });
         }
       };
-      window.addEventListener('message', handleAuthMessage);
+      window.addEventListener("message", handleAuthMessage);
 
       if (isMobileSafari) {
         // redirect OAuth for mobile Safari
         const state = Math.random().toString(36).slice(2);
-        localStorage.setItem('dropbox_auth_state', state);
-        localStorage.setItem('dropbox_auth_return_url', window.location.href);
+        localStorage.setItem("dropbox_auth_state", state);
+        localStorage.setItem("dropbox_auth_return_url", window.location.href);
         const redirectUri = `${window.location.origin}/dropbox-callback`;
-        const { dropbox_app_key } = (await (await fetch("/functions/v1/get-dropbox-config", { method: "POST" })).json()) || {};
+        const { dropbox_app_key } =
+          (await (await fetch("/functions/v1/get-dropbox-config", { method: "POST" })).json()) ||
+          {};
         if (!dropbox_app_key) throw new Error("Missing Dropbox app key");
-        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${dropbox_app_key}&response_type=code&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&state=${state}`;
         window.location.href = authUrl;
         return;
       }
 
       const timeout = setTimeout(() => {
-        window.removeEventListener('message', handleAuthMessage);
+        window.removeEventListener("message", handleAuthMessage);
         setIsConnecting(false);
         setTimeout(() => {
-          checkConnection().then(connected => {
+          checkConnection().then((connected) => {
             if (connected) {
               setIsConnected(true);
               loadFolders();
-              toast({ title: "Connected", description: "Successfully connected to Dropbox." });
+              toast({
+                title: "Connected",
+                description: "Successfully connected to Dropbox.",
+              });
             } else {
-              toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
+              toast({
+                title: "Connection failed",
+                description: "Failed to connect to Dropbox.",
+                variant: "destructive",
+              });
             }
           });
         }, 400);
@@ -361,13 +431,20 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
     } catch (error) {
       setIsConnecting(false);
       setTimeout(() => {
-        checkConnection().then(connected => {
+        checkConnection().then((connected) => {
           if (connected) {
             setIsConnected(true);
             loadFolders();
-            toast({ title: "Connected", description: "Successfully connected to Dropbox." });
+            toast({
+              title: "Connected",
+              description: "Successfully connected to Dropbox.",
+            });
           } else {
-            toast({ title: "Connection failed", description: "Failed to connect to Dropbox.", variant: "destructive" });
+            toast({
+              title: "Connection failed",
+              description: "Failed to connect to Dropbox.",
+              variant: "destructive",
+            });
           }
         });
       }, 800);
@@ -376,37 +453,52 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
 
   const handleDisconnect = async () => {
     try {
-      localStorage.removeItem('dropbox_access_token');
+      localStorage.removeItem("dropbox_access_token");
       setIsConnected(false);
-      setFolders([]); setFiles([]); setSelectedFiles(new Set());
-      toast({ title: "Disconnected", description: "Successfully disconnected from Dropbox." });
+      setFolders([]);
+      setFiles([]);
+      setSelectedFiles(new Set());
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from Dropbox.",
+      });
     } catch {
-      toast({ title: "Disconnect failed", description: "Failed to disconnect from Dropbox.", variant: "destructive" });
+      toast({
+        title: "Disconnect failed",
+        description: "Failed to disconnect from Dropbox.",
+        variant: "destructive",
+      });
     }
   };
 
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
-      toast({ title: "No files selected", description: "Please select files to sync.", variant: "destructive" });
+      toast({
+        title: "No files selected",
+        description: "Please select files to sync.",
+        variant: "destructive",
+      });
       return;
     }
     setIsSyncing(true);
     let syncedCount = 0;
-    const chosen = files.filter(f => selectedFiles.has(f.path_lower));
+    const chosen = files.filter((f) => selectedFiles.has(f.path_lower));
 
     // Seed progress + pending list
     const init: ImportProgress = {};
-    chosen.forEach(f => { init[f.path_lower] = { path: f.path_lower, name: f.name, status: 'pending' }; });
+    chosen.forEach((f) => {
+      init[f.path_lower] = { path: f.path_lower, name: f.name, status: "pending" };
+    });
     setImportProgress(init);
 
     onPendingTracksChange?.(
-      chosen.map(f => ({
+      chosen.map((f) => ({
         id: `pending-${f.path_lower}`,
         title: f.name,
-        artist: 'Processing...',
-        duration: f.duration || '0:00',
-        status: 'processing' as const,
-        progress: 0
+        artist: "Processing...",
+        duration: f.duration || "0:00",
+        status: "processing" as const,
+        progress: 0,
       }))
     );
 
@@ -425,10 +517,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
       const failed = chosen.length - syncedCount;
       toast({
         title: "Import Complete",
-        description: failed > 0
-          ? `Successfully imported ${syncedCount} of ${chosen.length}. ${failed} failed.`
-          : `Successfully imported all ${syncedCount} file${syncedCount === 1 ? '' : 's'}.`,
-        variant: failed > 0 ? "destructive" : "default"
+        description:
+          failed > 0
+            ? `Successfully imported ${syncedCount} of ${chosen.length}. ${failed} failed.`
+            : `Successfully imported all ${syncedCount} file${syncedCount === 1 ? "" : "s"}.`,
+        variant: failed > 0 ? "destructive" : "default",
       });
 
       if (failed === 0) {
@@ -436,7 +529,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
         setImportProgress({});
       }
     } catch (e) {
-      toast({ title: "Sync Failed", description: "Failed to sync files. Please try again.", variant: "destructive" });
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync files. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -452,7 +549,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DropboxIcon className="w-5 h-5 text-primary" />
-              <DrawerTitle className="text-lg font-semibold text-primary">Dropbox Sync</DrawerTitle>
+              <DrawerTitle className="text-lg font-semibold text-primary">
+                Dropbox Sync
+              </DrawerTitle>
             </div>
             {isConnected && (
               <div className="flex items-center gap-2">
@@ -461,7 +560,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   className="p-2 text-primary hover:bg-muted rounded-md transition-colors"
                   title="Toggle sort order"
                 >
-                  {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                  {sortOrder === "asc" ? (
+                    <ArrowUp className="h-4 w-4" />
+                  ) : (
+                    <ArrowDown className="h-4 w-4" />
+                  )}
                 </button>
                 <button
                   onClick={() => loadFolders(currentPath)}
@@ -469,7 +572,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   className="p-2 text-primary hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                   title="Refresh"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
                 </button>
               </div>
             )}
@@ -483,22 +586,44 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               {isConnected ? (
                 <>
                   <Link className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-green-600 font-medium">Connected to Dropbox</span>
+                  <span className="text-sm text-green-600 font-medium">
+                    Connected to Dropbox
+                  </span>
                 </>
               ) : (
                 <>
                   <Unlink className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Not connected to Dropbox</span>
+                  <span className="text-sm text-muted-foreground">
+                    Not connected to Dropbox
+                  </span>
                 </>
               )}
             </div>
             {isConnected ? (
-              <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-primary hover:text-primary/80">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                className="text-primary hover:text-primary/80"
+              >
                 Disconnect
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={handleConnect} disabled={isConnecting} className="flex items-center gap-2 text-primary hover:text-primary/80">
-                {isConnecting ? (<><RefreshCw className="h-4 w-4 animate-spin" />Connecting...</>) : ('Connect to Dropbox')}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="flex items-center gap-2 text-primary hover:text-primary/80"
+              >
+                {isConnecting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Connect to Dropbox"
+                )}
               </Button>
             )}
           </div>
@@ -507,7 +632,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
             <div className="flex items-center justify-center py-12 text-center">
               <div>
                 <Unlink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">Connect to Dropbox to browse your music files</p>
+                <p className="text-muted-foreground text-lg">
+                  Connect to Dropbox to browse your music files
+                </p>
               </div>
             </div>
           ) : isLoading ? (
@@ -537,7 +664,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                       onCheckedChange={handleSelectAll}
                     />
                     <span className="text-sm font-medium text-primary">
-                      {isAllSelected ? 'Deselect All' : 'Select All'}
+                      {isAllSelected ? "Deselect All" : "Select All"}
                     </span>
                   </div>
                   <span className="text-sm text-muted-foreground">
@@ -554,7 +681,9 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                   onClick={() => navigateToFolder(folder.path_lower)}
                 >
                   <Folder className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                  <span className="font-medium flex-1 truncate text-primary">{folder.name}</span>
+                  <span className="font-medium flex-1 truncate text-primary">
+                    {folder.name}
+                  </span>
                   <div className="text-primary">
                     <ArrowLeft className="w-4 h-4 rotate-180" />
                   </div>
@@ -566,13 +695,15 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                 const isSelected = selectedFiles.has(file.path_lower);
                 const isLoadingDuration = loadingDurations.has(file.path_lower);
                 const progress = importProgress[file.path_lower];
-                const isImported = progress?.status === 'success';
-                const isFailed = progress?.status === 'error';
+                const isImported = progress?.status === "success";
+                const isFailed = progress?.status === "error";
 
                 return (
                   <div
                     key={file.path_lower}
-                    className={`flex items-center p-3 rounded-lg border bg-card ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    className={`flex items-center p-3 rounded-lg border bg-card ${
+                      isSelected ? "ring-2 ring-primary" : ""
+                    }`}
                   >
                     <Checkbox
                       checked={isSelected}
@@ -580,7 +711,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                       className="mr-3 flex-shrink-0"
                       disabled={isImported}
                     />
-                    
+
                     <div className="flex items-center flex-1 min-w-0">
                       <Music className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -593,7 +724,11 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                               <Loader2 className="w-3 h-3 animate-spin mr-1" />
                               Loading...
                             </span>
-                          ) : file.duration ? file.duration : '--:--'}
+                          ) : file.duration ? (
+                            file.duration
+                          ) : (
+                            "--:--"
+                          )}
                         </div>
                       </div>
                     </div>
@@ -604,7 +739,7 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
                         <span className="text-sm">Imported</span>
                       </div>
                     )}
-                    
+
                     {isFailed && (
                       <div className="flex items-center text-red-600 ml-2">
                         <X className="w-4 h-4 mr-1" />
@@ -636,12 +771,12 @@ export const DropboxSyncDrawer = ({ isOpen, onOpenChange, onPendingTracksChange 
               {isSyncing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Importing {selectedFiles.size} file{selectedFiles.size !== 1 ? 's' : ''}...
+                  Importing {selectedFiles.size} file{selectedFiles.size !== 1 ? "s" : ""}...
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4 mr-2" />
-                  Import {selectedFiles.size} file{selectedFiles.size !== 1 ? 's' : ''}
+                  Import {selectedFiles.size} file{selectedFiles.size !== 1 ? "s" : ""}
                 </>
               )}
             </Button>

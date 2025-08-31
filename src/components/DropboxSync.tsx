@@ -51,11 +51,12 @@ import {
 } from "@/components/ui/resizable";
 import { UnsupportedFilesModal } from "./UnsupportedFilesModal";
 
-// ---- NEW: backend API base for process-audio/track-url ----
-const API_BASE =
+// ---- Backend API base for process-audio/track-url ----
+const RAW_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
   "https://transcode-server.onrender.com";
+const API_BASE = RAW_API_BASE.replace(/\/+$/, ""); // strip trailing slash
 
 interface DropboxFile {
   name: string;
@@ -63,6 +64,31 @@ interface DropboxFile {
   size: number;
   server_modified: string;
   ".tag": "file" | "folder";
+}
+
+// ---------- helpers: auth + metadata parsing ----------
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// Parse "Artist - Title.ext" into { artist, title }.
+// Only split on the *first* " - " and keep the remainder as the title.
+// If no separator present, treat the whole thing as title.
+function parseArtistTitleFromFilename(fileName: string): { artist: string; title: string } {
+  const base = fileName.replace(/\.[^/.]+$/, "");
+  const parts = base.split(/\s*-\s*/);
+  const artistCandidate = parts[0]?.trim() || "";
+  const titleCandidate = parts.length > 1 ? parts.slice(1).join(" - ").trim() : "";
+
+  const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
+
+  if (artistCandidate && titleCandidate) {
+    return { artist: collapse(artistCandidate), title: collapse(titleCandidate) };
+  }
+  // Fallback when no delimiter: unknown artist, full base name as title
+  return { artist: "Unknown Artist", title: collapse(base) };
 }
 
 const DropboxSync = () => {
@@ -77,9 +103,7 @@ const DropboxSync = () => {
   const [connectionError, setConnectionError] = useState<string>("");
   const [showBraveHelp, setShowBraveHelp] = useState(false);
   const [manualToken, setManualToken] = useState("");
-  const [viewMode, setViewMode] = useState<"folder-select" | "file-view">(
-    "folder-select"
-  );
+  const [viewMode, setViewMode] = useState<"folder-select" | "file-view">("folder-select");
   const [currentRedirectUri, setCurrentRedirectUri] = useState<string>("");
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [permissionIssue, setPermissionIssue] = useState<boolean>(false);
@@ -90,12 +114,10 @@ const DropboxSync = () => {
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [folderContents, setFolderContents] = useState<Map<string, DropboxFile[]>>(
+  const [folderContents, setFolderContents] = useState<Map<string, DropboxFile[]>>(new Map());
+  const [globalFileSelection, setGlobalFileSelection] = useState<Map<string, DropboxFile>>(
     new Map()
   );
-  const [globalFileSelection, setGlobalFileSelection] = useState<
-    Map<string, DropboxFile>
-  >(new Map());
   const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
   const [unsupportedFiles, setUnsupportedFiles] = useState<string[]>([]);
   const [supportedImportCount, setSupportedImportCount] = useState(0);
@@ -113,13 +135,9 @@ const DropboxSync = () => {
   useEffect(() => {
     const checkAuthStatus = () => {
       const authStatus = dropboxService.isAuthenticated();
-      console.log("Auth status check result:", authStatus);
-
       if (authStatus !== isConnected) {
-        console.log("Auth status changed from", isConnected, "to", authStatus);
         setIsConnected(authStatus);
         setConnectionError("");
-
         if (authStatus) {
           toast({
             title: "Connected to Dropbox",
@@ -127,10 +145,8 @@ const DropboxSync = () => {
           });
         }
       }
-
       const authSuccess = localStorage.getItem("dropbox_auth_success");
       if (authSuccess === "true") {
-        console.log("Found auth success flag, cleaning up...");
         localStorage.removeItem("dropbox_auth_success");
         setIsConnected(true);
         setConnectionError("");
@@ -141,7 +157,6 @@ const DropboxSync = () => {
     const interval = setInterval(checkAuthStatus, 2000);
 
     const handleMessage = (event: MessageEvent) => {
-      console.log("Received message from popup:", event.data);
       if (event.data?.type === "DROPBOX_AUTH_SUCCESS") {
         if (event.data.token) {
           localStorage.setItem("dropbox_access_token", event.data.token);
@@ -445,9 +460,7 @@ const DropboxSync = () => {
       if (globalFileSelection.size === 0) {
         const next = new Map<string, DropboxFile>();
         expandedFolders.forEach((folderPath) => {
-          (folderContents.get(folderPath) || []).forEach((f) =>
-            next.set(f.path_lower, f)
-          );
+          (folderContents.get(folderPath) || []).forEach((f) => next.set(f.path_lower, f));
         });
         setGlobalFileSelection(next);
       } else {
@@ -468,6 +481,7 @@ const DropboxSync = () => {
       const audio = new Audio();
       audio.addEventListener("loadedmetadata", () => resolve(audio.duration || 0));
       audio.addEventListener("error", () => resolve(0));
+      audio.preload = "metadata";
       audio.src = fileUrl;
     });
   };
@@ -479,19 +493,24 @@ const DropboxSync = () => {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // ---- NEW: single unified import path via backend /api/process-audio ----
+  // ---- Unified import path via backend /api/process-audio ----
   const processDropboxFileToR2 = async (file: DropboxFile) => {
     // Always obtain a temporary link (public URL) for backend to fetch
     const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
 
-    // Quality preference from user setting (localStorage). Backend only uses it for WAV/AIFF.
+    // Quality: backend only uses this for raw/wave formats; MP3/M4A/AAC should pass-through.
     const conversionQuality = localStorage.getItem("conversionQuality") || "mp3-320";
     const quality = conversionQuality === "aac-320" ? "high" : "standard";
 
-    // Ask backend to fetch → (transcode if needed) → upload to R2
+    // Include Supabase bearer token so the function can enforce access rules
+    const authHeader = await getAuthHeader();
+
     const resp = await fetch(`${API_BASE}/api/process-audio`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader,
+      },
       credentials: "include",
       body: JSON.stringify({
         audioUrl: tempUrl,
@@ -506,8 +525,7 @@ const DropboxSync = () => {
     }
 
     const data = await resp.json();
-    // data: { ok, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
-
+    // Expected: { ok, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
     if (!data?.ok || !data?.storage_key) {
       throw new Error("process-audio response missing storage_key");
     }
@@ -533,9 +551,7 @@ const DropboxSync = () => {
       filesToSync = Array.from(globalFileSelection.values());
     } else {
       filesToSync =
-        selectedFiles.size > 0
-          ? files.filter((f) => selectedFiles.has(f.path_lower))
-          : files;
+        selectedFiles.size > 0 ? files.filter((f) => selectedFiles.has(f.path_lower)) : files;
     }
     if (filesToSync.length === 0) return;
 
@@ -574,29 +590,27 @@ const DropboxSync = () => {
           }
 
           // Derive title/artist from filename "Artist - Title"
-          const baseName = (result.originalFilename || file.name).replace(/\.[^/.]+$/, "");
-          const [maybeArtist, maybeTitle] = baseName.split(" - ");
-          const title = (maybeTitle || baseName).trim();
-          const artist = (maybeArtist || "Unknown Artist").trim();
+          const { artist, title } = parseArtistTitleFromFilename(
+            result.originalFilename || file.name
+          );
 
           // Folder path (for source_folder)
           const sourceFolder = file.path_lower.split("/").slice(0, -1).join("/");
 
           // Insert new track row with R2 metadata (no legacy fileUrl!)
-			await addTrackMutation.mutateAsync({
-			  title,
-			  artist,
-			  duration: durationStr,
-			  storage_type: "r2",
-			  storage_key: result.storage_key,
-			  // DO NOT store presigned URL in file_url or storage_url; resolve at playback time.
-			  dropbox_path: file.path_lower,
-			  source_folder: sourceFolder,
-			  // is_public / play_count have NOT NULL in your table, but they likely have defaults.
-			  // If they don't, uncomment the next two lines:
-			  // is_public: false,
-			  // play_count: 0,
-			} as any);
+          await addTrackMutation.mutateAsync({
+            title,
+            artist,
+            duration: durationStr,
+            storage_type: "r2",
+            storage_key: result.storage_key,
+            // DO NOT store presigned URL in file_url/storage_url; resolve at playback.
+            dropbox_path: file.path_lower,
+            source_folder: sourceFolder,
+            // If tracks table lacks defaults, you can uncomment:
+            // is_public: false,
+            // play_count: 0,
+          } as any);
 
           // Optional: immediate refresh
           queryClient.invalidateQueries({ queryKey: ["tracks"] });
@@ -674,8 +688,7 @@ const DropboxSync = () => {
         </div>
         <h3 className="text-lg font-semibold mb-2 text-primary">Connect to Dropbox</h3>
         <p className="text-muted-foreground mb-4">
-          Sync your music library with a specific Dropbox folder to automatically import
-          tracks.
+          Sync your music library with a specific Dropbox folder to automatically import tracks.
         </p>
 
         {connectionError && (
@@ -688,9 +701,7 @@ const DropboxSync = () => {
               <div className="mt-2 text-xs text-muted-foreground">
                 <p>
                   Current redirect URI:{" "}
-                  <code className="bg-muted px-1 py-0.5 rounded text-xs">
-                    {currentRedirectUri}
-                  </code>
+                  <code className="bg-muted px-1 py-0.5 rounded text-xs">{currentRedirectUri}</code>
                 </p>
                 <p>Make sure this exact URI is configured in your Dropbox app settings.</p>
               </div>
@@ -708,11 +719,7 @@ const DropboxSync = () => {
         )}
 
         <div className="space-y-3">
-          <Button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="w-full max-w-[343px]"
-          >
+          <Button onClick={handleConnect} disabled={isConnecting} className="w-full max-w-[343px]">
             <DropboxIcon className="mr-2" size={16} />
             {isConnecting ? "Connecting..." : "Connect Dropbox"}
           </Button>
@@ -731,9 +738,7 @@ const DropboxSync = () => {
                   <span className="font-medium text-blue-900">1.</span>
                   <span className="text-blue-800">
                     Check that your Dropbox app redirect URI matches:{" "}
-                    <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">
-                      {currentRedirectUri}
-                    </code>
+                    <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">{currentRedirectUri}</code>
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
@@ -756,9 +761,7 @@ const DropboxSync = () => {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Manual Dropbox Connection</DialogTitle>
-                          <DialogDescription>
-                            Follow these steps to connect manually:
-                          </DialogDescription>
+                          <DialogDescription>Follow these steps to connect manually:</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="text-sm space-y-2">
@@ -829,12 +832,7 @@ const DropboxSync = () => {
               Change Folder
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadFolders(currentPath)}
-            disabled={isLoading}
-          >
+          <Button variant="outline" size="sm" onClick={() => loadFolders(currentPath)} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -849,10 +847,7 @@ const DropboxSync = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Label className="text-sm">Sort by:</Label>
-              <Select
-                value={sortBy}
-                onValueChange={(v: "name" | "modified") => setSortBy(v)}
-              >
+              <Select value={sortBy} onValueChange={(v: "name" | "modified") => setSortBy(v)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -862,11 +857,7 @@ const DropboxSync = () => {
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={toggleSortOrder}>
-                {sortOrder === "asc" ? (
-                  <ArrowUp className="w-4 h-4" />
-                ) : (
-                  <ArrowDown className="w-4 h-4" />
-                )}
+                {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
               </Button>
             </div>
           </div>
@@ -877,9 +868,7 @@ const DropboxSync = () => {
                 {selectedFiles.size === files.length ? "Deselect All" : "Select All"}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {selectedFiles.size > 0
-                  ? `${selectedFiles.size} selected`
-                  : "None selected"}
+                {selectedFiles.size > 0 ? `${selectedFiles.size} selected` : "None selected"}
               </span>
             </div>
           )}
@@ -890,8 +879,7 @@ const DropboxSync = () => {
                 Clear All Selections
               </Button>
               <span className="text-sm text-muted-foreground">
-                {globalFileSelection.size} file
-                {globalFileSelection.size === 1 ? "" : "s"} selected
+                {globalFileSelection.size} file{globalFileSelection.size === 1 ? "" : "s"} selected
               </span>
             </div>
           )}
@@ -903,8 +891,7 @@ const DropboxSync = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-sm">
-                {globalFileSelection.size} file
-                {globalFileSelection.size === 1 ? "" : "s"} selected for sync
+                {globalFileSelection.size} file{globalFileSelection.size === 1 ? "" : "s"} selected for sync
               </p>
               <p className="text-xs text-muted-foreground">
                 Files selected from{" "}
@@ -931,9 +918,7 @@ const DropboxSync = () => {
               <Download className="w-4 h-4 mr-2" />
               {isSyncing
                 ? "Syncing..."
-                : `Sync ${globalFileSelection.size} File${
-                    globalFileSelection.size === 1 ? "" : "s"
-                  }`}
+                : `Sync ${globalFileSelection.size} File${globalFileSelection.size === 1 ? "" : "s"}`}
             </Button>
           </div>
         </div>
@@ -995,9 +980,7 @@ const DropboxSync = () => {
           ) : viewMode === "folder-select" ? (
             <div className="p-2">
               <div className="mb-4">
-                <h4 className="text-sm font-medium mb-2 text-primary">
-                  Choose a folder to sync:
-                </h4>
+                <h4 className="text-sm font-medium mb-2 text-primary">Choose a folder to sync:</h4>
                 {currentPath && (
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
                     <span>Current path: /{currentPath.replace(/^\//, "")}</span>
@@ -1019,12 +1002,7 @@ const DropboxSync = () => {
                     <p className="mt-2">Check the debug information above for details.</p>
                   </div>
                   {currentPath && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => loadFolders("")}
-                    >
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => loadFolders("")}>
                       Go to Root
                     </Button>
                   )}
@@ -1070,11 +1048,7 @@ const DropboxSync = () => {
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigateToFolder(folder.path_lower)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => navigateToFolder(folder.path_lower)}>
                             Browse
                           </Button>
                           <Button
@@ -1106,9 +1080,7 @@ const DropboxSync = () => {
                       {expandedFolders.has(folder.path_lower) && (
                         <div className="border-t border-border px-3 pb-3">
                           {folderContents.get(folder.path_lower)?.length === 0 ? (
-                            <p className="text-xs text-muted-foreground py-2">
-                              No audio files found
-                            </p>
+                            <p className="text-xs text-muted-foreground py-2">No audio files found</p>
                           ) : (
                             <div className="space-y-1 mt-2 max-h-32 overflow-y-auto">
                               {folderContents.get(folder.path_lower)?.map((file) => (
@@ -1149,8 +1121,8 @@ const DropboxSync = () => {
                   <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-muted-foreground">No music files found in this folder</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Make sure you have audio files (.mp3, .wav, .m4a, .aif, .aiff, .flac, .aac,
-                    .ogg, .wma) in the selected folder
+                    Make sure you have audio files (.mp3, .wav, .m4a, .aif, .aiff, .flac, .aac, .ogg, .wma) in the
+                    selected folder
                   </p>
                 </div>
               ) : (
@@ -1158,8 +1130,7 @@ const DropboxSync = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Found {files.length} music file{files.length !== 1 ? "s" : ""} in
-                        selected folder
+                        Found {files.length} music file{files.length !== 1 ? "s" : ""} in selected folder
                         {selectedFiles.size > 0 && ` (${selectedFiles.size} selected)`}
                       </p>
                       {files.length > 0 && (
@@ -1180,16 +1151,12 @@ const DropboxSync = () => {
                     </div>
                     <Button
                       onClick={syncFiles}
-                      disabled={
-                        isSyncing || addTrackMutation.isPending || (selectedFiles.size === 0 && files.length > 0)
-                      }
+                      disabled={isSyncing || addTrackMutation.isPending || (selectedFiles.size === 0 && files.length > 0)}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       {isSyncing
                         ? "Syncing..."
-                        : `Sync ${
-                            selectedFiles.size > 0 ? selectedFiles.size : files.length
-                          } File${
+                        : `Sync ${selectedFiles.size > 0 ? selectedFiles.size : files.length} File${
                             selectedFiles.size === 1 || files.length === 1 ? "" : "s"
                           }`}
                     </Button>
@@ -1197,10 +1164,7 @@ const DropboxSync = () => {
 
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {files.map((file) => (
-                      <div
-                        key={file.path_lower}
-                        className="flex items-center justify-between p-2 rounded border"
-                      >
+                      <div key={file.path_lower} className="flex items-center justify-between p-2 rounded border">
                         <div className="flex items-center space-x-3">
                           <Checkbox
                             checked={selectedFiles.has(file.path_lower)}
@@ -1208,9 +1172,7 @@ const DropboxSync = () => {
                           />
                           <div>
                             <p className="font-medium text-sm">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(file.size / 1024 / 1024).toFixed(1)} MB
-                            </p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
                           </div>
                         </div>
                         <Badge variant="outline" className="text-xs">

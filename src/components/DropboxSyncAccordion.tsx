@@ -1,5 +1,6 @@
+// src/components/DropboxSyncAccordion.tsx
 import { useState, useEffect } from "react";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -9,29 +10,30 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { audioMetadataService } from "@/services/audioMetadataService";
-import { 
-  RefreshCw, 
-  Folder, 
-  ChevronRight, 
+import {
+  RefreshCw,
+  Folder,
+  ChevronRight,
   Music,
   Loader2,
   ArrowUpDown,
   Link,
-  Unlink
+  Unlink,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import { dropboxService } from "@/services/dropboxService";
 import { useAddTrack } from "@/hooks/useTracks";
 import { useQueryClient } from "@tanstack/react-query";
-import { importTranscodingService } from "@/services/importTranscodingService";
 import { FileImportStatus, ImportProgress } from "@/types/fileImport";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Prefer app API base, else transcode-server */
-const APP_API_BASE =
+const RAW_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
   "https://transcode-server.onrender.com";
+const APP_API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 
 interface DropboxFile {
   name: string;
@@ -45,10 +47,41 @@ interface DropboxFile {
 interface DropboxSyncAccordionProps {
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
-  onPendingTracksChange?: (pendingTracks: import("@/types/music").PendingTrack[]) => void;
+  onPendingTracksChange?: (
+    pendingTracks: import("@/types/music").PendingTrack[]
+  ) => void;
 }
 
-export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onPendingTracksChange }: DropboxSyncAccordionProps) => {
+/** Build Authorization header from Supabase session */
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** Parse "Artist - Title.ext" -> { artist, title }, only split on first " - " */
+function parseArtistTitleFromFilename(
+  fileName: string
+): { artist: string; title: string } {
+  const base = fileName.replace(/\.[^/.]+$/, "");
+  const parts = base.split(/\s*-\s*/);
+  const artistCandidate = parts[0]?.trim() || "";
+  const titleCandidate =
+    parts.length > 1 ? parts.slice(1).join(" - ").trim() : "";
+
+  const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
+
+  if (artistCandidate && titleCandidate) {
+    return { artist: collapse(artistCandidate), title: collapse(titleCandidate) };
+  }
+  return { artist: "Unknown Artist", title: collapse(base) };
+}
+
+export const DropboxSyncAccordion = ({
+  isExpanded = false,
+  onExpandedChange,
+  onPendingTracksChange,
+}: DropboxSyncAccordionProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
   const [folders, setFolders] = useState<DropboxFile[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -56,7 +89,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [loadingDurations, setLoadingDurations] = useState<Set<string>>(new Set());
   const [lastAuthError, setLastAuthError] = useState<number>(0);
   const [importProgress, setImportProgress] = useState<ImportProgress>({});
@@ -69,7 +102,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
   const sortItems = (items: DropboxFile[]) => {
     return [...items].sort((a, b) => {
       const comparison = a.name.localeCompare(b.name);
-      return sortOrder === 'asc' ? comparison : -comparison;
+      return sortOrder === "asc" ? comparison : -comparison;
     });
   };
 
@@ -84,21 +117,21 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
         resolve(val && !isNaN(val) && val > 0 ? val : 180); // default ~3:00
       };
 
-      audio.addEventListener('loadedmetadata', () => done(audio.duration));
-      audio.addEventListener('canplaythrough', () => done(audio.duration));
-      audio.addEventListener('error', () => done());
+      audio.addEventListener("loadedmetadata", () => done(audio.duration));
+      audio.addEventListener("canplaythrough", () => done(audio.duration));
+      audio.addEventListener("error", () => done());
       setTimeout(() => done(), 15000);
 
-      audio.preload = 'metadata';
+      audio.preload = "metadata";
       audio.src = url;
     });
   };
 
   const formatDuration = (seconds: number): string => {
-    if (!seconds || isNaN(seconds)) return '--:--';
+    if (!seconds || isNaN(seconds)) return "--:--";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   const getTempLinkAndDuration = async (file: DropboxFile): Promise<string> => {
@@ -115,10 +148,12 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
 
   const loadFileDuration = async (file: DropboxFile) => {
     if (file.duration) return;
-    setLoadingDurations(prev => new Set(prev).add(file.path_lower));
+    setLoadingDurations((prev) => new Set(prev).add(file.path_lower));
     const duration = await getTempLinkAndDuration(file);
-    setFiles(prev => prev.map(f => f.path_lower === file.path_lower ? { ...f, duration } : f));
-    setLoadingDurations(prev => {
+    setFiles((prev) =>
+      prev.map((f) => (f.path_lower === file.path_lower ? { ...f, duration } : f))
+    );
+    setLoadingDurations((prev) => {
       const s = new Set(prev);
       s.delete(file.path_lower);
       return s;
@@ -134,7 +169,9 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
       const musicFiles = allItems.filter((i: any) => {
         if (i[".tag"] !== "file") return false;
         const n = i.name.toLowerCase();
-        return ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.wma', '.aif', '.aiff'].some(ext => n.endsWith(ext));
+        return [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".wma", ".aif", ".aiff"].some(
+          (ext) => n.endsWith(ext)
+        );
       });
 
       const sortedFolders = sortItems(folderItems);
@@ -149,14 +186,14 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
       sortedFiles.forEach(loadFileDuration);
     } catch (error: any) {
       if (
-        error?.message === 'DROPBOX_TOKEN_EXPIRED' ||
-        error?.message === 'DROPBOX_AUTH_REQUIRED' ||
-        error?.message === 'Not authenticated with Dropbox'
+        error?.message === "DROPBOX_TOKEN_EXPIRED" ||
+        error?.message === "DROPBOX_AUTH_REQUIRED" ||
+        error?.message === "Not authenticated with Dropbox"
       ) {
         const now = Date.now();
         if (now - lastAuthError > 5000) {
           setLastAuthError(now);
-          window.dispatchEvent(new CustomEvent('dropboxTokenExpired'));
+          window.dispatchEvent(new CustomEvent("dropboxTokenExpired"));
         }
         setFiles([]);
         setFolders([]);
@@ -196,54 +233,64 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
 
   const handleSelectAll = () => {
     if (selectedFiles.size === files.length) setSelectedFiles(new Set());
-    else setSelectedFiles(new Set(files.map(f => f.path_lower)));
+    else setSelectedFiles(new Set(files.map((f) => f.path_lower)));
   };
 
   const isAllSelected = files.length > 0 && selectedFiles.size === files.length;
   const isIndeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length;
 
-  /** Call the unified server endpoint for non-transcode inputs (mp3/aac/etc) */
+  /** Always use server endpoint; it will transcode WAV/AIFF as needed. Includes Supabase token. */
   const serverProcessAudio = async (audioUrl: string, fileName: string) => {
     const quality =
-      (localStorage.getItem('conversionQuality') === 'aac-320') ? 'high' : 'standard';
+      localStorage.getItem("conversionQuality") === "aac-320" ? "high" : "standard";
+    const authHeader = await getAuthHeader();
+
     const res = await fetch(`${APP_API_BASE}/api/process-audio`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ audioUrl, fileName, quality })
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader },
+      credentials: "include",
+      body: JSON.stringify({ audioUrl, fileName, quality }),
     });
     if (!res.ok) {
-      const txt = await res.text().catch(() => '');
+      const txt = await res.text().catch(() => "");
       throw new Error(`process-audio failed ${res.status}: ${txt}`);
     }
     return res.json(); // { ok, url, storage_type:'r2', storage_bucket, storage_key, content_type, originalFilename, transcoded, quality }
   };
 
   const retryFailedImport = async (filePath: string) => {
-    const file = files.find(f => f.path_lower === filePath);
+    const file = files.find((f) => f.path_lower === filePath);
     if (!file) return;
-    setImportProgress(prev => ({
+    setImportProgress((prev) => ({
       ...prev,
-      [filePath]: { ...prev[filePath], status: 'pending', error: undefined }
+      [filePath]: { ...prev[filePath], status: "pending", error: undefined },
     }));
     await processFile(file, 1, 1);
   };
 
-  const processFile = async (file: DropboxFile, fileIndex: number, totalFiles: number): Promise<boolean> => {
-    const updateProgress = (status: FileImportStatus['status'], error?: string, progress?: number) => {
-      setImportProgress(prev => ({
+  const processFile = async (
+    file: DropboxFile,
+    fileIndex: number,
+    totalFiles: number
+  ): Promise<boolean> => {
+    const updateProgress = (
+      status: FileImportStatus["status"],
+      error?: string,
+      progress?: number
+    ) => {
+      setImportProgress((prev) => ({
         ...prev,
         [file.path_lower]: {
           path: file.path_lower,
           name: file.name,
           status,
           error,
-          progress
-        }
+          progress,
+        },
       }));
     };
 
-    updateProgress('processing', undefined, 10);
+    updateProgress("processing", undefined, 10);
 
     const createTrack = async (payload: any) => {
       // basic retry
@@ -254,67 +301,68 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
           return;
         } catch (e: any) {
           lastErr = e instanceof Error ? e : new Error(String(e));
-          if (a < 3) await new Promise(r => setTimeout(r, 500 * Math.pow(2, a - 1)));
+          if (a < 3) await new Promise((r) => setTimeout(r, 500 * Math.pow(2, a - 1)));
         }
       }
       throw lastErr || new Error("addTrack failed");
     };
 
     try {
-      const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
       const tempUrl = await dropboxService.getTemporaryLink(file.path_lower);
 
-      // Extract any tags we can before transform
+      // Try to read embedded tags (may return empty strings)
       const metadata = await audioMetadataService.getBestMetadata(tempUrl, file.name);
-      const desiredTitleFromName = file.name.replace(/\.[^/.]+$/, "");
 
-      let result: any;
-      if (needsTranscoding) {
-        updateProgress('processing', undefined, 35);
-        const conv = localStorage.getItem('conversionQuality') || 'mp3-320';
-        const outFmt = conv === 'aac-320' ? 'aac' : 'mp3';
-        result = await importTranscodingService.transcodeAndStore(tempUrl, file.name, outFmt);
-      } else {
-        updateProgress('processing', undefined, 35);
-        result = await serverProcessAudio(tempUrl, file.name);
-      }
+      updateProgress("processing", undefined, 35);
+      const result = await serverProcessAudio(tempUrl, file.name);
 
-      updateProgress('processing', undefined, 65);
+      updateProgress("processing", undefined, 65);
 
       // Determine duration from the stored file's playback URL
       const seconds = await getDurationFromUrl(result.url);
       const duration = formatDuration(seconds);
 
-      const title =
-        (result.originalFilename?.replace(/\.[^/.]+$/, "") || "").trim() ||
-        (metadata.title || "").trim() ||
-        desiredTitleFromName ||
-        "Unknown Track";
+      // Title/Artist resolution:
+      // 1) Embedded tags if present (trim+collapse)
+      // 2) Filename "Artist - Title"
+      // 3) Fallbacks: Unknown Artist / base name as title
+      const collapse = (s?: string) => (s || "").replace(/\s+/g, " ").trim();
+      const fromTagsTitle = collapse(metadata?.title);
+      const fromTagsArtist = collapse(metadata?.artist);
 
-      const artist = (metadata.artist || "Unknown Artist").trim();
+      let artist = fromTagsArtist;
+      let title = fromTagsTitle;
 
-      // Create the DB row using R2-first fields; do not persist a presigned URL
+      if (!artist || !title) {
+        const parsed = parseArtistTitleFromFilename(
+          result.originalFilename || file.name
+        );
+        artist = artist || parsed.artist;
+        title = title || parsed.title;
+      }
+
       const trackData = {
         title,
         artist,
         duration,
-        // R2 storage fields:
-        storage_type: 'r2',
+        storage_type: "r2",
         storage_key: result.storage_key,
-        // optional extras if your insert supports them:
+        // Do not persist presigned URLs; resolve at playback.
         storage_url: null,
         fileUrl: null,
-        dropbox_path: null,
-        is_public: false,
+        dropbox_path: file.path_lower,
+        // Uncomment if your schema lacks defaults:
+        // is_public: false,
+        // play_count: 0,
       };
 
-      updateProgress('processing', undefined, 85);
+      updateProgress("processing", undefined, 85);
       await createTrack(trackData);
 
-      updateProgress('success', undefined, 100);
+      updateProgress("success", undefined, 100);
       return true;
     } catch (err: any) {
-      updateProgress('error', err?.message || 'Unknown error');
+      updateProgress("error", err?.message || "Unknown error");
       return false;
     }
   };
@@ -335,23 +383,23 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
     setIsConnecting(true);
     try {
       const onMsg = (event: MessageEvent) => {
-        if (event.data?.type === 'DROPBOX_AUTH_SUCCESS') {
-          window.removeEventListener('message', onMsg);
+        if (event.data?.type === "DROPBOX_AUTH_SUCCESS") {
+          window.removeEventListener("message", onMsg);
           setIsConnecting(false);
           setTimeout(() => {
-            checkConnection().then(ok => {
+            checkConnection().then((ok) => {
               if (ok) {
                 setIsConnected(true);
                 loadFolders();
               }
             });
           }, 800);
-        } else if (event.data?.type === 'DROPBOX_AUTH_ERROR') {
-          window.removeEventListener('message', onMsg);
+        } else if (event.data?.type === "DROPBOX_AUTH_ERROR") {
+          window.removeEventListener("message", onMsg);
           setIsConnecting(false);
         }
       };
-      window.addEventListener('message', onMsg);
+      window.addEventListener("message", onMsg);
       await dropboxService.authenticate();
     } catch (error) {
       setIsConnecting(false);
@@ -365,38 +413,51 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
 
   const handleDisconnect = async () => {
     try {
-      localStorage.removeItem('dropbox_access_token');
+      localStorage.removeItem("dropbox_access_token");
       setIsConnected(false);
       setFolders([]);
       setFiles([]);
       setSelectedFiles(new Set());
-      toast({ title: "Disconnected", description: "Successfully disconnected from Dropbox." });
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from Dropbox.",
+      });
     } catch {
-      toast({ title: "Disconnect failed", description: "Failed to disconnect from Dropbox.", variant: "destructive" });
+      toast({
+        title: "Disconnect failed",
+        description: "Failed to disconnect from Dropbox.",
+        variant: "destructive",
+      });
     }
   };
 
   const syncSelectedFiles = async () => {
     if (selectedFiles.size === 0) {
-      toast({ title: "No files selected", description: "Please select files to sync.", variant: "destructive" });
+      toast({
+        title: "No files selected",
+        description: "Please select files to sync.",
+        variant: "destructive",
+      });
       return;
     }
     setIsSyncing(true);
 
     // Seed progress + pending list
-    const chosen = files.filter(f => selectedFiles.has(f.path_lower));
+    const chosen = files.filter((f) => selectedFiles.has(f.path_lower));
     const initial: ImportProgress = {};
-    chosen.forEach(f => { initial[f.path_lower] = { path: f.path_lower, name: f.name, status: 'pending' }; });
+    chosen.forEach((f) => {
+      initial[f.path_lower] = { path: f.path_lower, name: f.name, status: "pending" };
+    });
     setImportProgress(initial);
 
     onPendingTracksChange?.(
-      chosen.map(f => ({
+      chosen.map((f) => ({
         id: `pending-${f.path_lower}`,
         title: f.name,
-        artist: 'Processing...',
-        duration: f.duration || '--:--',
-        status: 'processing' as const,
-        progress: 0
+        artist: "Processing...",
+        duration: f.duration || "--:--",
+        status: "processing" as const,
+        progress: 0,
       }))
     );
 
@@ -415,9 +476,10 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
     const failed = chosen.length - ok;
     toast({
       title: "Import Complete",
-      description: failed > 0
-        ? `Imported ${ok}/${chosen.length}. ${failed} failed — see status list.`
-        : `Imported all ${ok} file${ok === 1 ? '' : 's'} to your library.`,
+      description:
+        failed > 0
+          ? `Imported ${ok}/${chosen.length}. ${failed} failed — see status list.`
+          : `Imported all ${ok} file${ok === 1 ? "" : "s"} to your library.`,
       variant: failed > 0 ? "destructive" : "default",
     });
 
@@ -427,7 +489,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
   // Load root when expanded
   useEffect(() => {
     if (isExpanded) {
-      checkConnection().then(connected => {
+      checkConnection().then((connected) => {
         if (connected && files.length === 0 && folders.length === 0 && !isLoading) {
           loadFolders();
         }
@@ -442,40 +504,23 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
         if (isExpanded) loadFolders(currentPath);
       }, 500);
     };
-    window.addEventListener('dropboxAuthRefreshed', handleAuthRefresh);
-    return () => window.removeEventListener('dropboxAuthRefreshed', handleAuthRefresh);
+    window.addEventListener("dropboxAuthRefreshed", handleAuthRefresh);
+    return () => window.removeEventListener("dropboxAuthRefreshed", handleAuthRefresh);
   }, [isExpanded, currentPath]);
 
   // Resort on order change
   useEffect(() => {
     if (files.length > 0 || folders.length > 0) {
-      setFiles(prev => sortItems(prev));
-      setFolders(prev => sortItems(prev));
+      setFiles((prev) => sortItems(prev));
+      setFolders((prev) => sortItems(prev));
     }
   }, [sortOrder]);
-
-  // Convert progress -> pending tracks for outer list
-  useEffect(() => {
-    const pending = Object.values(importProgress)
-      .filter(p => p.status === 'pending' || p.status === 'processing' || p.status === 'error')
-      .map(p => ({
-        id: `pending-${p.path}`,
-        title: p.name.replace(/\.[^/.]+$/, '') || 'Unknown Track',
-        artist: p.status === 'pending' ? 'Queued...' :
-                p.status === 'processing' ? 'Processing...' : 'Unknown Artist',
-        duration: '--:--',
-        status: p.status === 'error' ? 'failed' as const : 'processing' as const,
-        error: p.error,
-        progress: p.progress || 0
-      }));
-    onPendingTracksChange?.(pending);
-  }, [importProgress, onPendingTracksChange]);
 
   const accordionValue = isExpanded ? "dropbox-sync" : "";
 
   return (
-    <Accordion 
-      type="single" 
+    <Accordion
+      type="single"
       value={accordionValue}
       onValueChange={(v) => onExpandedChange?.(v === "dropbox-sync")}
       className="w-full"
@@ -488,11 +533,13 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
             </div>
             <div className="text-left">
               <div className="font-medium">Dropbox Sync</div>
-              <div className="text-sm text-muted-foreground">Browse and sync music from your Dropbox</div>
+              <div className="text-sm text-muted-foreground">
+                Browse and sync music from your Dropbox
+              </div>
             </div>
           </div>
         </AccordionTrigger>
-        
+
         <AccordionContent className="px-4 pb-4">
           <div className="space-y-4">
             {/* Connection row */}
@@ -501,22 +548,44 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                 {isConnected ? (
                   <>
                     <Link className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-600 font-medium">Connected to Dropbox</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      Connected to Dropbox
+                    </span>
                   </>
                 ) : (
                   <>
                     <Unlink className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Not connected to Dropbox</span>
+                    <span className="text-sm text-muted-foreground">
+                      Not connected to Dropbox
+                    </span>
                   </>
                 )}
               </div>
               {isConnected ? (
-                <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-primary hover:text-primary/80">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  className="text-primary hover:text-primary/80"
+                >
                   Disconnect
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={handleConnect} disabled={isConnecting} className="flex items-center gap-2">
-                  {isConnecting ? (<><RefreshCw className="h-4 w-4 animate-spin" />Connecting...</>) : ('Connect to Dropbox')}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="flex items-center gap-2"
+                >
+                  {isConnecting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    "Connect to Dropbox"
+                  )}
                 </Button>
               )}
             </div>
@@ -528,12 +597,12 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                   className="h-8 px-3 text-xs gap-1.5 hover:bg-muted"
-                  title={`Currently sorting ${sortOrder === 'asc' ? 'A to Z' : 'Z to A'}. Click to reverse order.`}
+                  title={`Currently sorting ${sortOrder === "asc" ? "A to Z" : "Z to A"}. Click to reverse order.`}
                 >
                   <ArrowUpDown className="w-3 h-3" />
-                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                  {sortOrder === "asc" ? "A→Z" : "Z→A"}
                 </Button>
               </div>
             )}
@@ -563,7 +632,9 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
               <div className="flex items-center justify-center py-8 text-center">
                 <div>
                   <Unlink className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">Connect to Dropbox to browse your music files</p>
+                  <p className="text-muted-foreground">
+                    Connect to Dropbox to browse your music files
+                  </p>
                 </div>
               </div>
             )}
@@ -605,10 +676,14 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                     checked={isAllSelected}
                     onCheckedChange={handleSelectAll}
                     className="data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground"
-                    style={{ backgroundColor: isIndeterminate ? 'hsl(var(--primary))' : undefined }}
+                    style={{ backgroundColor: isIndeterminate ? "hsl(var(--primary))" : undefined }}
                   />
                   <span className="text-sm font-medium">
-                    {isAllSelected ? 'Deselect All' : isIndeterminate ? `${selectedFiles.size} selected` : 'Select All'}
+                    {isAllSelected
+                      ? "Deselect All"
+                      : isIndeterminate
+                      ? `${selectedFiles.size} selected`
+                      : "Select All"}
                   </span>
                   {selectedFiles.size > 0 && (
                     <Badge variant="outline" className="ml-auto">
@@ -616,7 +691,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                     </Badge>
                   )}
                 </div>
-                
+
                 <div className="space-y-1 max-h-60 overflow-y-auto">
                   {files.map((file) => {
                     const progress = importProgress[file.path_lower];
@@ -630,7 +705,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                           checked={selectedFiles.has(file.path_lower)}
                           onCheckedChange={() => handleFileToggle(file.path_lower)}
                           onClick={(e) => e.stopPropagation()}
-                          disabled={progress?.status === 'processing'}
+                          disabled={progress?.status === "processing"}
                         />
                         <Music className="w-4 h-4 text-muted-foreground" />
                         <div className="flex-1 min-w-0">
@@ -640,19 +715,28 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                             {progress && (
                               <>
                                 <span>•</span>
-                                <span className={`capitalize ${
-                                  progress.status === 'success' ? 'text-green-600' :
-                                  progress.status === 'error' ? 'text-red-600' :
-                                  progress.status === 'processing' ? 'text-blue-600' :
-                                  'text-muted-foreground'
-                                }`}>
-                                  {progress.status}{progress.progress && ` (${progress.progress}%)`}
+                                <span
+                                  className={`capitalize ${
+                                    progress.status === "success"
+                                      ? "text-green-600"
+                                      : progress.status === "error"
+                                      ? "text-red-600"
+                                      : progress.status === "processing"
+                                      ? "text-blue-600"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {progress.status}
+                                  {progress.progress && ` (${progress.progress}%)`}
                                 </span>
-                                {progress.status === 'error' && (
+                                {progress.status === "error" && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={(e) => { e.stopPropagation(); retryFailedImport(file.path_lower); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      retryFailedImport(file.path_lower);
+                                    }}
                                     className="h-4 px-1 text-xs"
                                   >
                                     <RefreshCw className="w-3 h-3 mr-1" />
@@ -663,15 +747,21 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                             )}
                           </div>
                           {progress?.error && (
-                            <div className="text-xs text-red-600 mt-1 truncate" title={progress.error}>
+                            <div
+                              className="text-xs text-red-600 mt-1 truncate"
+                              title={progress.error}
+                            >
                               {progress.error}
                             </div>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground min-w-[50px] text-right">
-                          {progress?.status === 'processing' || loadingDurations.has(file.path_lower)
-                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                            : (file.duration || "--:--")}
+                          {progress?.status === "processing" ||
+                          loadingDurations.has(file.path_lower) ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            file.duration || "--:--"
+                          )}
                         </div>
                       </div>
                     );
@@ -682,16 +772,33 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                 {Object.keys(importProgress).length > 0 && (
                   <div className="pt-2 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-2">
-                      Import Status: {Object.values(importProgress).filter(f => f.status === 'success').length} success, {Object.values(importProgress).filter(f => f.status === 'error').length} failed, {Object.values(importProgress).filter(f => f.status === 'processing').length} processing
+                      Import Status:{" "}
+                      {
+                        Object.values(importProgress).filter((f) => f.status === "success")
+                          .length
+                      }{" "}
+                      success,{" "}
+                      {
+                        Object.values(importProgress).filter((f) => f.status === "error")
+                          .length
+                      }{" "}
+                      failed,{" "}
+                      {
+                        Object.values(importProgress).filter((f) => f.status === "processing")
+                          .length
+                      }{" "}
+                      processing
                     </div>
-                    {Object.values(importProgress).some(f => f.status === 'error') && (
+                    {Object.values(importProgress).some((f) => f.status === "error") && (
                       <div className="flex gap-2 mb-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const failed = Object.values(importProgress).filter(f => f.status === 'error');
-                            Promise.all(failed.map(f => retryFailedImport(f.path)));
+                            const failed = Object.values(importProgress).filter(
+                              (f) => f.status === "error"
+                            );
+                            Promise.all(failed.map((f) => retryFailedImport(f.path)));
                           }}
                           className="text-xs"
                         >
@@ -712,9 +819,21 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                 )}
 
                 {selectedFiles.size > 0 && (
-                  <div className="flex justify-center items-center gap-2 pt-2 border-top">
-                    <Button onClick={syncSelectedFiles} disabled={isSyncing} size="sm" className="max-w-[343px]">
-                      {isSyncing ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importing...</>) : ('Import selected')}
+                  <div className="flex justify-center items-center gap-2 pt-2 border-t">
+                    <Button
+                      onClick={syncSelectedFiles}
+                      disabled={isSyncing}
+                      size="sm"
+                      className="max-w-[343px]"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        "Import selected"
+                      )}
                     </Button>
                   </div>
                 )}
@@ -739,7 +858,7 @@ export const DropboxSyncAccordion = ({ isExpanded = false, onExpandedChange, onP
                   disabled={isLoading}
                   className="max-w-[343px]"
                 >
-                  <RefreshCw className="w-4 w-4 mr-2" />
+                  <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
                 </Button>
               </div>
