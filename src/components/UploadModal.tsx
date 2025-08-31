@@ -13,7 +13,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription as AlertBody,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -24,9 +24,6 @@ const APP_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
   "https://transcode-server.onrender.com";
-
-const MODERN_PROCESS_URL = `${APP_API_BASE}/api/process-audio`;
-const LEGACY_TRANSCODE_URL = `${APP_API_BASE}/api/transcode`;
 
 interface UploadModalProps {
   open: boolean;
@@ -45,6 +42,13 @@ interface UploadFile {
 const SUPPORTED_FORMATS = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.aif', '.aiff'];
 const UNSUPPORTED_FORMATS: string[] = [];
 
+/** Strict local extension check so MP3s never show 'Transcoding' */
+const ext = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  return dot === -1 ? "" : name.slice(dot).toLowerCase();
+};
+const SHOULD_TRANSCODE = new Set(['.wav', '.aif', '.aiff', '.flac']); // never transcode mp3/m4a/aac
+
 export default function UploadModal({ open, onOpenChange, audioQuality }: UploadModalProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -56,15 +60,13 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
   const { toast } = useToast();
 
   const validateFileType = (file: File): boolean => {
-    const fileName = file.name.toLowerCase();
-    const extension = '.' + fileName.split('.').pop();
-    return SUPPORTED_FORMATS.includes(extension);
+    const e = ext(file.name);
+    return SUPPORTED_FORMATS.includes(e);
   };
 
   const isUnsupportedFormat = (file: File): boolean => {
-    const fileName = file.name.toLowerCase();
-    const extension = '.' + fileName.split('.').pop();
-    return UNSUPPORTED_FORMATS.includes(extension);
+    const e = ext(file.name);
+    return UNSUPPORTED_FORMATS.includes(e);
   };
 
   const handleFileSelect = () => fileInputRef.current?.click();
@@ -146,105 +148,97 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     return { artist: 'Unknown Artist', title: nameWithoutExt.trim() };
   };
 
-  /** Modern pipeline (if present on your backend) — uploads to R2 and returns storage_key + temp URL */
-  const serverProcessAudio = async (file: File, desiredQuality: string) => {
+  /**
+   * Try the modern endpoint first, then legacy.
+   * Success == persistent R2 handle: storage_key (preferred) OR public R2 URL.
+   */
+  const processOnServer = async (file: File, desiredQuality: string) => {
+    const tryPost = async (path: string, body: FormData) => {
+      const url = `${APP_API_BASE}${path}`;
+      console.log(`[upload] POST ${url}`);
+      const res = await fetch(url, { method: "POST", body, credentials: "include" });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        const err = new Error(`${path.replace("/api/", "")} failed ${res.status}: ${text}`);
+        (err as any).status = res.status;
+        throw err;
+      }
+      return res.json();
+    };
+
+    // Build a flexible payload that works for both handlers
     const form = new FormData();
     form.append("audio", file);
     form.append("fileName", file.name);
-    form.append("quality", desiredQuality);
-    const res = await fetch(MODERN_PROCESS_URL, {
-      method: "POST",
-      body: form,
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      const err = new Error(`process-audio failed ${res.status}: ${text}`) as any;
-      if (res.status === 404) err.code = "NO_PROCESS_AUDIO";
-      throw err;
-    }
-    // Expected: { url, storage_key, storage_type:'r2', ... }
-    return res.json();
-  };
+    // For modern handler:
+    form.append("quality", desiredQuality); // e.g., 'mp3-320'
+    // For legacy handler:
+    form.append("outputFormat", desiredQuality.startsWith("aac") ? "aac" : "mp3");
+    form.append("bitrate", "320k");
 
-  /** Legacy transcode → always stores result on R2 public bucket and returns { publicUrl } */
-  const legacyTranscodeToR2 = async (file: File, outputFormat: 'mp3' | 'aac') => {
-    const form = new FormData();
-    form.append('audio', file);
-    form.append('fileName', file.name);
-    form.append('outputFormat', outputFormat);
-    form.append('bitrate', '320k');
-    const res = await fetch(LEGACY_TRANSCODE_URL, { method: 'POST', body: form });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`legacy transcode failed ${res.status}: ${text}`);
+    // 1) Preferred modern route
+    try {
+      const data = await tryPost("/api/process-upload", form);
+      return { data, used: "process-upload" as const };
+    } catch (e: any) {
+      if (e.status !== 404) throw e;
+      console.warn("[upload] /api/process-upload not found, falling back to /api/transcode");
     }
-    return res.json() as Promise<{ publicUrl: string }>;
+
+    // 2) Legacy route that should still store into R2
+    const data = await tryPost("/api/transcode", form);
+    return { data, used: "transcode" as const };
   };
 
   const uploadFile = async (uploadFile: UploadFile, index: number) => {
     const { file } = uploadFile;
-    const needsTranscoding = importTranscodingService.needsTranscoding(file.name);
+    const e = ext(file.name);
+    const shouldTranscode = SHOULD_TRANSCODE.has(e);
     const desiredQuality = audioQuality || 'mp3-320';
 
     try {
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'uploading', progress: 10 }) : f));
 
-      let finalUrl = "";
-      let storageType: "r2" | "url" = "r2";
-      let storageKey: string | null = null;
-
-      try {
-        // Try modern pipeline first (R2 with storage_key)
-        if (needsTranscoding) {
-          setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
-        }
-        const modern = await serverProcessAudio(file, desiredQuality);
-        finalUrl = modern.url;                 // temporary URL for duration sniff
-        storageType = "r2";
-        storageKey  = modern.storage_key ?? null;
-      } catch (err: any) {
-        if (err?.code !== "NO_PROCESS_AUDIO") throw err;
-
-        // Fallback path when /api/process-audio is not available:
-        // use legacy /api/transcode for EVERYTHING (including MP3) so the file lands on R2.
+      // Only show "Transcoding" for formats that truly need it
+      if (shouldTranscode) {
         setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
-        const format: 'mp3' | 'aac' = desiredQuality.startsWith('aac') ? 'aac' : 'mp3';
-        const legacy = await legacyTranscodeToR2(file, format);
-        finalUrl = legacy.publicUrl;           // public R2 URL
-        storageType = "url";                   // we only have a public URL (no storage_key)
-        storageKey = null;
+      }
+
+      const { data, used } = await processOnServer(file, desiredQuality);
+      console.log("[upload] server response from", used, data);
+
+      // Accept multiple possible shapes:
+      // - Modern: { storage_key, storage_bucket, url? }
+      // - Legacy: { storage_key?, storage_bucket?, publicUrl? or url? }
+      const storage_key = data.storage_key || data.storageKey;
+      const storage_bucket = data.storage_bucket || data.bucket || data.bucketName;
+      const returnedUrl = data.url || data.publicUrl;
+
+      // Require either a storage_key (preferred) or an R2 public URL.
+      if (!storage_key && !returnedUrl) {
+        throw new Error("Server did not return a persistent R2 handle (storage_key or public URL).");
       }
 
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'importing', progress: 80 }) : f));
 
-      const secs = await getDurationFromUrl(finalUrl);
+      // Use the (temporary or public) url to sniff duration for the track row
+      const sniffUrl = returnedUrl;
+      const secs = sniffUrl ? await getDurationFromUrl(sniffUrl) : 180;
       const formattedDuration = formatDuration(secs);
       const { artist, title } = extractMetadata(file.name);
 
-      // Create track:
-      // - If we got storage_key (modern path), save as r2 w/ key (no fileUrl needed).
-      // - If legacy path, we only have a public R2 URL → store it for playback.
+      // Build track data: new R2-first fields; do NOT save Supabase file_url
       const trackData: any = {
         title,
         artist,
         duration: formattedDuration,
+        storage_type: 'r2',
+        storage_key: storage_key ?? null,
+        storage_url: storage_key ? null : (returnedUrl ?? null), // if no key, fall back to public URL
+        fileUrl: null,
         source_folder: 'Direct Upload',
         is_public: false,
       };
-
-      if (storageType === "r2" && storageKey) {
-        trackData.storage_type = "r2";
-        trackData.storage_key = storageKey;
-        trackData.storage_url = null;
-        trackData.fileUrl = null;
-      } else {
-        // legacy public R2 URL
-        trackData.storage_type = "r2";
-        trackData.storage_key = null;
-        trackData.storage_url = finalUrl; // keep for reference
-        trackData.fileUrl = finalUrl;     // used by player since there's no key
-      }
 
       const created = await addTrackMutation.mutateAsync(trackData);
 
@@ -292,7 +286,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       case 'uploading':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'transcoding':
-        return null; // spinner shown in text line
+        return null; // center spinner shown in text line
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'error':
@@ -306,7 +300,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     switch (uploadFile.status) {
       case 'pending': return 'Ready to upload';
       case 'uploading': return 'Uploading file...';
-      case 'transcoding': return 'Transcoding / processing...';
+      case 'transcoding': return 'Transcoding audio...';
       case 'importing': return 'Finalizing import...';
       case 'success': return 'Upload complete';
       case 'error': return uploadFile.error || 'Upload failed';
@@ -320,11 +314,11 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="upload-modal-desc">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-primary">Cast waveforms into the current</DialogTitle>
-            <DialogDescription id="upload-modal-desc" className="sr-only">
-              Upload audio files. Drag and drop or use the file picker.
+            <DialogDescription className="sr-only">
+              Upload audio files to R2 storage. MP3/AAC files upload as-is; WAV/AIFF/FLAC are transcoded.
             </DialogDescription>
           </DialogHeader>
 
@@ -439,7 +433,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Unsupported File Format
             </AlertDialogTitle>
-            <AlertBody>
+            <AlertDialogDescription>
               The following files are not supported and cannot be uploaded:
               <div className="mt-3 space-y-2">
                 {unsupportedFiles.map((file, index) => (
@@ -449,7 +443,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
                   </div>
                 ))}
               </div>
-            </AlertBody>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
