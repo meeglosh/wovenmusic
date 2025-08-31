@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
+  AlertDialogDescription as AlertBody,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -24,6 +24,9 @@ const APP_API_BASE =
   (import.meta as any)?.env?.VITE_APP_API_BASE ||
   (import.meta as any)?.env?.VITE_TRANSCODE_SERVER_URL ||
   "https://transcode-server.onrender.com";
+
+const MODERN_PROCESS_URL = `${APP_API_BASE}/api/process-audio`;
+const LEGACY_TRANSCODE_URL = `${APP_API_BASE}/api/transcode`;
 
 interface UploadModalProps {
   open: boolean;
@@ -143,23 +146,40 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     return { artist: 'Unknown Artist', title: nameWithoutExt.trim() };
   };
 
-  /** Server-side pipeline for *local* uploads (handles transcode-if-needed + store to R2). */
-  const serverProcessUpload = async (file: File, desiredQuality: string) => {
+  /** Modern pipeline (if present on your backend) — uploads to R2 and returns storage_key + temp URL */
+  const serverProcessAudio = async (file: File, desiredQuality: string) => {
     const form = new FormData();
     form.append("audio", file);
     form.append("fileName", file.name);
-    form.append("quality", desiredQuality); // e.g., 'mp3-320' | 'aac-320'
-    const res = await fetch(`${APP_API_BASE}/api/process-audio`, {
+    form.append("quality", desiredQuality);
+    const res = await fetch(MODERN_PROCESS_URL, {
       method: "POST",
       body: form,
       credentials: "include",
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`process-audio failed ${res.status}: ${text}`);
+      const err = new Error(`process-audio failed ${res.status}: ${text}`) as any;
+      if (res.status === 404) err.code = "NO_PROCESS_AUDIO";
+      throw err;
     }
-    // Expected: { ok, url, storage_type:'r2', storage_key, originalFilename, transcoded, quality }
+    // Expected: { url, storage_key, storage_type:'r2', ... }
     return res.json();
+  };
+
+  /** Legacy transcode → always stores result on R2 public bucket and returns { publicUrl } */
+  const legacyTranscodeToR2 = async (file: File, outputFormat: 'mp3' | 'aac') => {
+    const form = new FormData();
+    form.append('audio', file);
+    form.append('fileName', file.name);
+    form.append('outputFormat', outputFormat);
+    form.append('bitrate', '320k');
+    const res = await fetch(LEGACY_TRANSCODE_URL, { method: 'POST', body: form });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`legacy transcode failed ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<{ publicUrl: string }>;
   };
 
   const uploadFile = async (uploadFile: UploadFile, index: number) => {
@@ -170,31 +190,61 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     try {
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'uploading', progress: 10 }) : f));
 
-      // Let the server handle everything (including transcoding if needed).
-      if (needsTranscoding) {
+      let finalUrl = "";
+      let storageType: "r2" | "url" = "r2";
+      let storageKey: string | null = null;
+
+      try {
+        // Try modern pipeline first (R2 with storage_key)
+        if (needsTranscoding) {
+          setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
+        }
+        const modern = await serverProcessAudio(file, desiredQuality);
+        finalUrl = modern.url;                 // temporary URL for duration sniff
+        storageType = "r2";
+        storageKey  = modern.storage_key ?? null;
+      } catch (err: any) {
+        if (err?.code !== "NO_PROCESS_AUDIO") throw err;
+
+        // Fallback path when /api/process-audio is not available:
+        // use legacy /api/transcode for EVERYTHING (including MP3) so the file lands on R2.
         setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'transcoding', progress: 40 }) : f));
+        const format: 'mp3' | 'aac' = desiredQuality.startsWith('aac') ? 'aac' : 'mp3';
+        const legacy = await legacyTranscodeToR2(file, format);
+        finalUrl = legacy.publicUrl;           // public R2 URL
+        storageType = "url";                   // we only have a public URL (no storage_key)
+        storageKey = null;
       }
 
-      const result = await serverProcessUpload(file, desiredQuality);
-      // result.url is a temporary URL good for sniffing duration; storage_key is the persistent handle
       setUploadFiles(prev => prev.map((f, i) => i === index ? ({ ...f, status: 'importing', progress: 80 }) : f));
 
-      const secs = await getDurationFromUrl(result.url);
+      const secs = await getDurationFromUrl(finalUrl);
       const formattedDuration = formatDuration(secs);
       const { artist, title } = extractMetadata(file.name);
 
-      // Create track referencing R2 object (no fileUrl persisted)
-      const trackData = {
+      // Create track:
+      // - If we got storage_key (modern path), save as r2 w/ key (no fileUrl needed).
+      // - If legacy path, we only have a public R2 URL → store it for playback.
+      const trackData: any = {
         title,
         artist,
         duration: formattedDuration,
-        storage_type: 'r2',
-        storage_key: result.storage_key,
-        storage_url: null,
-        fileUrl: null,
         source_folder: 'Direct Upload',
         is_public: false,
       };
+
+      if (storageType === "r2" && storageKey) {
+        trackData.storage_type = "r2";
+        trackData.storage_key = storageKey;
+        trackData.storage_url = null;
+        trackData.fileUrl = null;
+      } else {
+        // legacy public R2 URL
+        trackData.storage_type = "r2";
+        trackData.storage_key = null;
+        trackData.storage_url = finalUrl; // keep for reference
+        trackData.fileUrl = finalUrl;     // used by player since there's no key
+      }
 
       const created = await addTrackMutation.mutateAsync(trackData);
 
@@ -242,7 +292,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
       case 'uploading':
         return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'transcoding':
-        return null; // center spinner shown in text line
+        return null; // spinner shown in text line
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'error':
@@ -256,7 +306,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
     switch (uploadFile.status) {
       case 'pending': return 'Ready to upload';
       case 'uploading': return 'Uploading file...';
-      case 'transcoding': return 'Transcoding audio...';
+      case 'transcoding': return 'Transcoding / processing...';
       case 'importing': return 'Finalizing import...';
       case 'success': return 'Upload complete';
       case 'error': return uploadFile.error || 'Upload failed';
@@ -270,9 +320,12 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="upload-modal-desc">
           <DialogHeader>
             <DialogTitle className="text-primary">Cast waveforms into the current</DialogTitle>
+            <DialogDescription id="upload-modal-desc" className="sr-only">
+              Upload audio files. Drag and drop or use the file picker.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -386,7 +439,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Unsupported File Format
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertBody>
               The following files are not supported and cannot be uploaded:
               <div className="mt-3 space-y-2">
                 {unsupportedFiles.map((file, index) => (
@@ -396,7 +449,7 @@ export default function UploadModal({ open, onOpenChange, audioQuality }: Upload
                   </div>
                 ))}
               </div>
-            </AlertDialogDescription>
+            </AlertBody>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
