@@ -1,60 +1,75 @@
 // functions/api/track-stream.ts
-// Streams a private object from AUDIO_PRIVATE after a basic auth check.
+import { createClient } from "@supabase/supabase-js";
 
 type Env = {
-  AUDIO_PRIVATE: R2Bucket;
-  SUPABASE_JWT_SECRET?: string; // optional; if present we'll verify HS256 JWT signature
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  PRIVATE_BUCKET: R2Bucket;
 };
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
-  if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
-  if (request.method !== "GET") return new Response("Method Not Allowed", { status:405, headers: cors() });
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  try {
+    const url = new URL(request.url);
+    const trackId = url.searchParams.get("id");
+    if (!trackId) return new Response("Missing id", { status: 400 });
 
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key");
-  if (!key) return new Response("Missing key", { status:400, headers: cors() });
+    // Auth
+    const auth = request.headers.get("authorization") || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (!token) return new Response("Unauthorized", { status: 401 });
 
-  // Very light auth gate:
-  //  - If you want strict checks (admin/invited), call Supabase here to verify the
-  //    requesting user can see the *track id* that owns this key.
-  //  - For now we require an Authorization Bearer (a Supabase user JWT) to be present.
-  const auth = request.headers.get("authorization") || "";
-  if (!auth.startsWith("Bearer ")) return new Response("Unauthorized", { status:401, headers: cors() });
-  // (Optional) verify JWT with SUPABASE_JWT_SECRET; omitted for brevity.
+    const supaAnon = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    const { data: userRes } = await supaAnon.auth.getUser(token);
+    const userId = userRes?.user?.id;
+    if (!userId) return new Response("Unauthorized", { status: 401 });
 
-  const obj = await env.AUDIO_PRIVATE.get(key);
-  if (!obj) return new Response("Not Found", { status:404, headers: cors() });
+    // Access check
+    const supa = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data: hasAccess } = await supa.rpc("has_track_access", {
+      p_user: userId,
+      p_track: trackId,
+    });
+    if (!hasAccess) return new Response("Forbidden", { status: 403 });
 
-  const headers = new Headers({
-    "content-type": obj.httpMetadata?.contentType || "audio/mpeg",
-    "accept-ranges": "bytes",
-    "cache-control": "private, max-age=0, no-store",
-    ...cors(),
-  });
+    // Lookup the key
+    const { data: track } = await supa
+      .from("tracks")
+      .select("storage_type, storage_key, mime_type")
+      .eq("id", trackId)
+      .single();
 
-  // Support range requests for scrubbing
-  if (request.headers.get("range")) {
-    const size = obj.size;
-    const m = request.headers.get("range")!.match(/bytes=(\d+)-(\d+)?/);
-    const start = m ? Number(m[1]) : 0;
-    const end = m && m[2] ? Number(m[2]) : size - 1;
-    const length = end - start + 1;
+    if (!track?.storage_key || track.storage_type !== "r2")
+      return new Response("Not found", { status: 404 });
 
-    const part = await env.AUDIO_PRIVATE.get(key, { range: { offset: start, length } });
-    if (!part || !part.body) return new Response("Range Not Satisfiable", { status:416, headers: cors() });
+    // Range support
+    const range = request.headers.get("Range") ?? undefined;
+    const obj = await env.PRIVATE_BUCKET.get(track.storage_key, {
+      range: range ? { range } : undefined,
+    });
+    if (!obj) return new Response("Not found", { status: 404 });
 
-    headers.set("content-range", `bytes ${start}-${end}/${size}`);
-    headers.set("content-length", String(length));
-    return new Response(part.body, { status:206, headers });
+    const headers = new Headers();
+    // MIME if known
+    if (track.mime_type) headers.set("Content-Type", track.mime_type);
+
+    // R2 gives these metadata fields:
+    if (obj.httpMetadata?.contentType && !headers.has("Content-Type"))
+      headers.set("Content-Type", obj.httpMetadata.contentType);
+
+    headers.set("Accept-Ranges", "bytes");
+    if (obj.range) {
+      headers.set("Content-Range", `bytes ${obj.range.offset}-${obj.range.end}/${obj.size}`);
+      headers.set("Content-Length", String(obj.range.end - obj.range.offset + 1));
+      return new Response(obj.body, { status: 206, headers });
+    } else {
+      headers.set("Content-Length", String(obj.size));
+      return new Response(obj.body, { status: 200, headers });
+    }
+  } catch (e) {
+    console.error(e);
+    return new Response("Server error", { status: 500 });
   }
-
-  return new Response(obj.body, { headers });
 };
-
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Range, Content-Type",
-  };
-}
