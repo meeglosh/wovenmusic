@@ -1,5 +1,5 @@
 // src/services/trackUrls.ts
-// Frontend-only helper: ask the backend for a playable URL.
+// Frontend-only helpers: ask the backend for a playable URL.
 // No AWS SDK imports here.
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,10 @@ const BASE = RAW_BASE.replace(/\/+$/, "");
 
 async function fetchJson(pathWithQuery: string) {
   // Include Supabase bearer if present (needed for private tracks)
-  const { data: { session } = { session: null } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const headers: Record<string, string> = {};
   if (session?.access_token) headers["authorization"] = `Bearer ${session.access_token}`;
 
@@ -27,7 +30,7 @@ async function fetchJson(pathWithQuery: string) {
   let lastText = "";
   for (const url of candidates) {
     try {
-      const res = await fetch(url, { headers, credentials: "include" });
+      const res = await fetch(url, { headers, credentials: "include", cache: "no-store" });
       if (res.ok) return await res.json();
       lastText = await res.text().catch(() => "");
     } catch (e) {
@@ -53,6 +56,23 @@ export async function getTrackUrlWithMeta(
   return data;
 }
 
-// Optional default export for legacy imports
-const trackUrls = { getTrackUrl, getTrackUrlWithMeta };
+/** Back-compat for callers expecting `resolveTrackUrl(...)`. */
+export async function resolveTrackUrl(
+  trackOrId: string | { id: string }
+): Promise<string> {
+  const id = typeof trackOrId === "string" ? trackOrId : trackOrId?.id;
+  if (!id) throw new Error("resolveTrackUrl: missing track id");
+  return getTrackUrl(id);
+}
+
+// Optional helper: canonical image URL from a storage key.
+export function getImageUrlFromKey(rawKey: string): string {
+  let k = (rawKey || "").trim();
+  k = k.replace(/^playlist-images\//, "images/");
+  if (!k.startsWith("images/")) k = `images/${k}`;
+  return `https://images.wovenmusic.app/${k.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+// Default export for legacy imports
+const trackUrls = { getTrackUrl, getTrackUrlWithMeta, resolveTrackUrl, getImageUrlFromKey };
 export default trackUrls;
