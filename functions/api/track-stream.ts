@@ -2,11 +2,13 @@
 import { createClient } from "@supabase/supabase-js";
 
 type Env = {
+  // Supabase
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
 
-  // R2 bucket bindings (match your Pages "Bindings")
+  // R2 bucket bindings (configure in Cloudflare Pages → Settings → R2 bindings)
+  // Bind these names to your actual buckets.
   AUDIO_PRIVATE: R2Bucket;
   AUDIO_PUBLIC: R2Bucket;
 };
@@ -15,13 +17,13 @@ type Track = {
   is_public: boolean;
   storage_type: string | null;   // 'r2' | ...
   storage_key: string | null;
-  mime_type?: string | null;     // optional column; we fall back to R2 metadata or extension
+  mime_type?: string | null;
 };
 
 function guessMimeFromExt(key: string): string | undefined {
   const k = key.toLowerCase();
   if (k.endsWith(".mp3")) return "audio/mpeg";
-  if (k.endsWith(".m4a")) return "audio/mp4";
+  if (k.endsWith(".m4a") || k.endsWith(".mp4") || k.endsWith(".aac")) return "audio/mp4";
   if (k.endsWith(".aac")) return "audio/aac";
   if (k.endsWith(".wav")) return "audio/wav";
   if (k.endsWith(".aif") || k.endsWith(".aiff")) return "audio/aiff";
@@ -48,18 +50,15 @@ function parseRangeHeader(rangeHeader: string | null): R2Range | undefined {
     }
     return undefined;
   }
-
   if (startStr && !endStr) {
     const start = Number(startStr);
     if (Number.isFinite(start)) return { offset: start };
     return undefined;
   }
-
   if (!startStr && endStr) {
     const lastN = Number(endStr);
     if (Number.isFinite(lastN) && lastN > 0) return { suffix: lastN };
   }
-
   return undefined;
 }
 
@@ -69,6 +68,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const trackId = url.searchParams.get("id");
     if (!trackId) return new Response("Missing id", { status: 400 });
 
+    // Supabase clients
     const supaAnon = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
       auth: { persistSession: false },
     });
@@ -76,7 +76,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       auth: { persistSession: false },
     });
 
-    // Look up the track
+    // Fetch track metadata
     const { data: track, error } = await supaService
       .from("tracks")
       .select("is_public, storage_type, storage_key, mime_type")
@@ -87,10 +87,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       return new Response("Not found", { status: 404 });
     }
 
-    // Decide bucket by visibility
+    // Choose bucket: public vs private
     const bucket: R2Bucket = track.is_public ? env.AUDIO_PUBLIC : env.AUDIO_PRIVATE;
 
-    // PRIVATE tracks require auth + RPC check; PUBLIC tracks do not
+    // Private tracks require auth + ACL check
     if (!track.is_public) {
       const auth = request.headers.get("authorization") || "";
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
@@ -111,17 +111,19 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       if (!can) return new Response("Forbidden", { status: 403 });
     }
 
-    // Range / partial content
+    // Range support
     const rangeHeader = request.headers.get("Range");
     const r2Range = parseRangeHeader(rangeHeader);
 
+    // Fetch from R2
     const obj = await bucket.get(track.storage_key, r2Range ? { range: r2Range } : undefined);
     if (!obj) return new Response("Not found", { status: 404 });
 
+    // Headers
     const headers = new Headers();
     headers.set("Accept-Ranges", "bytes");
 
-    // Content-Type precedence: DB mime_type → R2 metadata → guess from extension
+    // Content-Type precedence: DB → R2 metadata → extension
     const ct =
       track.mime_type ||
       obj.httpMetadata?.contentType ||
@@ -129,7 +131,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       "application/octet-stream";
     headers.set("Content-Type", ct);
 
-    // Compute length & 206 response if we served a range
+    // Pass through useful metadata if available
+    if (obj.httpEtag) headers.set("ETag", obj.httpEtag);
+    if (obj.uploaded) headers.set("Last-Modified", new Date(obj.uploaded).toUTCString());
+
+    // Partial vs full body
     if (obj.range) {
       const { offset, length } = obj.range;
       const end = offset + length - 1;
@@ -141,7 +147,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     headers.set("Content-Length", String(obj.size));
     return new Response(obj.body, { status: 200, headers });
   } catch (e) {
-    console.error(e);
+    console.error("track-stream error", e);
     return new Response("Server error", { status: 500 });
   }
 };
