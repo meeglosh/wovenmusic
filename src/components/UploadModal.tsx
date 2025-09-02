@@ -19,10 +19,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-/** Strictly use our app API base. No transcode-server fallback. */
-const APP_API_BASE =
-  (import.meta as any)?.env?.VITE_APP_API_BASE ||
-  "https://your-pages-domain.example.com"; // set VITE_APP_API_BASE in Cloudflare Pages
+/** Strictly use our app API base. No transcode-server fallback.
+ * Default to same-origin so uploads hit your Cloudflare Pages Functions.
+ * Optionally override via VITE_APP_API_BASE (e.g., for local dev).
+ */
+const rawBase = (import.meta as any)?.env?.VITE_APP_API_BASE;
+export const APP_API_BASE =
+  (typeof rawBase === "string" && rawBase.trim() !== "")
+    ? rawBase.trim().replace(/\/+$/, "") // strip trailing slashes
+    : ""; // same-origin (recommended default)
+
+// Usage example:
+// fetch(`${APP_API_BASE}/api/process-upload`, { method: "POST", body: formData })
+
 
 /** Your public R2 base (e.g., https://bucket.hash.r2.cloudflarestorage.com) */
 const CDN_BASE = (import.meta as any)?.env?.VITE_R2_CDN_BASE || "";
