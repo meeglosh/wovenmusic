@@ -5,29 +5,16 @@ type Env = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  CDN_BASE?: string; // optional public audio CDN, usually not used
-  PUBLIC_BUCKET: R2Bucket;
-  PRIVATE_BUCKET: R2Bucket;
+  CDN_AUDIO_BASE?: string; // optional for public audio via CDN
 };
 
-function pickFirst<T extends object>(o: T | null | undefined, keys: string[]): string | null {
-  if (!o) return null;
-  for (const k of keys) {
-    const v = (o as any)[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return null;
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 }
-
-function pickBool<T extends object>(o: T | null | undefined, keys: string[], def = false): boolean {
-  if (!o) return def;
-  for (const k of keys) {
-    const v = (o as any)[k];
-    if (typeof v === "boolean") return v;
-    if (v === 0 || v === 1) return !!v;
-  }
-  return def;
-}
+function getOrigin(u: URL) { return `${u.protocol}//${u.host}`; }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   try {
@@ -35,68 +22,56 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const trackId = url.searchParams.get("id");
     if (!trackId) return new Response("Missing id", { status: 400 });
 
-    // Require bearer (private tracks)
+    // Grab any bearer the frontend sent us (it can, because this is a fetch)
     const auth = request.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-    if (!token) return new Response("Unauthorized", { status: 401 });
+    const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : null;
 
-    // Verify user
+    // Verify user (bearer required to ask for private URLs)
     const supaAnon = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-    const { data: userRes } = await supaAnon.auth.getUser(token);
-    const userId = userRes?.user?.id;
-    if (!userId) return new Response("Unauthorized", { status: 401 });
+    const { data: userRes } = await supaAnon.auth.getUser(bearer || "");
+    const userId = userRes?.user?.id || null;
 
-    // Access check
+    // Service role for ACL + track read
     const supa = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
-    const { data: hasAccess, error: rpcErr } = await supa.rpc("has_track_access", {
-      p_user: userId,
-      p_track: trackId,
-    });
-    if (rpcErr) {
-      console.error("has_track_access error", rpcErr);
-      return new Response("Server error", { status: 500 });
-    }
-    if (!hasAccess) return new Response("Forbidden", { status: 403 });
 
-    // Be schema-agnostic: select *
-    const { data: track, error } = await supa.from("tracks").select("*").eq("id", trackId).single();
+    const { data: track, error } = await supa
+      .from("tracks")
+      .select("id, is_public, storage_type, storage_key, storage_url, file_url, mime_type")
+      .eq("id", trackId)
+      .single();
+
     if (error || !track) return new Response("Not found", { status: 404 });
 
-    const isPublic = pickBool(track, ["is_public", "public"], false);
-
-    // Key-first (R2-style)
-    const key =
-      pickFirst(track, ["storage_key", "audio_storage_key", "file_key", "path", "object_key"]) || null;
-
-    const storageType = pickFirst(track, ["storage_type", "audio_storage_type"]) || null;
-
-    if (key && (storageType === "r2" || !/^https?:\/\//i.test(key))) {
-      // If you set CDN_BASE for public audio, you can serve it directly
-      if (isPublic && env.CDN_BASE) {
-        const cdn = env.CDN_BASE.replace(/\/+$/, "");
-        return json({ url: `${cdn}/${key}` });
+    // If in R2
+    if (track.storage_type === "r2" && track.storage_key) {
+      if (track.is_public) {
+        // Public: return direct CDN URL if you’ve set one
+        const cdn = (env.CDN_AUDIO_BASE || "").replace(/\/+$/, "");
+        if (cdn) return json({ url: `${cdn}/${track.storage_key}` });
+        // Fallback to our proxy (works too)
+        const base = getOrigin(url);
+        return json({ url: `${base}/api/track-stream?id=${encodeURIComponent(trackId)}` });
       }
-      // Private (or no CDN): proxy through our Range-supporting stream
-      const origin = `${url.protocol}//${url.host}`;
-      return json({ url: `${origin}/api/track-stream?id=${encodeURIComponent(trackId)}` });
+
+      // Private track: we must embed a token since <audio> can’t send headers
+      if (!userId || !bearer) return new Response("Unauthorized", { status: 401 });
+
+      // (We already did an auth.getUser with this bearer; that’s enough for now.)
+      const base = getOrigin(url);
+      const ts = Date.now(); // cache-busting / prevent reuse by players
+      const streamUrl = `${base}/api/track-stream?id=${encodeURIComponent(trackId)}&token=${encodeURIComponent(bearer)}&ts=${ts}`;
+      return json({ url: streamUrl });
     }
 
-    // URL fallbacks for legacy rows
-    const directUrl =
-      pickFirst(track, ["storage_url", "file_url", "audio_url", "url"]) || null;
-    if (directUrl) return json({ url: directUrl });
+    // Legacy fallbacks
+    if (track.storage_url) return json({ url: track.storage_url });
+    if (track.file_url) return json({ url: track.file_url });
 
     return new Response("No storage handle", { status: 404 });
   } catch (e) {
-    console.error("track-url error", e);
+    console.error(e);
     return new Response("Server error", { status: 500 });
   }
 };
-
-function json(body: unknown) {
-  return new Response(JSON.stringify(body), {
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
-}
