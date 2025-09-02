@@ -76,3 +76,7 @@ export function getImageUrlFromKey(rawKey: string): string {
 // Default export for legacy imports
 const trackUrls = { getTrackUrl, getTrackUrlWithMeta, resolveTrackUrl, getImageUrlFromKey };
 export default trackUrls;
+
+export async function resolveTrackUrl(trackOrId){const id=typeof trackOrId==="string"?trackOrId:trackOrId?.id;if(!id)throw new Error("resolveTrackUrl: missing track id"); return getTrackUrl(id);}
+
+export async function resolveTrackUrl(trackOrId){const id=typeof trackOrId==="string"?trackOrId:trackOrId?.id;if(!id)throw new Error("resolveTrackUrl: missing track id"); return getTrackUrl(id);}

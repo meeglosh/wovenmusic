@@ -1,6 +1,6 @@
 import { Track, Playlist } from "@/types/music";
 import { dropboxService } from "@/services/dropboxService";
-import { resolveTrackUrl } from "@/services/trackUrls";
+import { getTrackUrl as resolveTrackUrl } from "@/services/trackUrls";
 
 const CACHE_NAME = "wovenmusic-offline-tracks";
 const OFFLINE_METADATA_KEY = "offline-tracks-metadata";
