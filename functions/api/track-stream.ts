@@ -5,6 +5,7 @@ type Env = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  // R2 bucket bindings (Pages → Settings → Functions → Bindings)
   AUDIO_PRIVATE: R2Bucket;
   AUDIO_PUBLIC: R2Bucket;
 };
@@ -29,13 +30,16 @@ function guessMimeFromExt(key: string): string | undefined {
   return undefined;
 }
 
+// Parse "Range: bytes=start-end" into an R2Range
 function parseRangeHeader(rangeHeader: string | null): R2Range | undefined {
   if (!rangeHeader) return undefined;
   const m = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim());
   if (!m) return undefined;
-  const [ , startStr, endStr ] = m;
+  const [, startStr, endStr] = m;
+
   if (startStr && endStr) {
-    const start = Number(startStr), end = Number(endStr);
+    const start = Number(startStr);
+    const end = Number(endStr);
     if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
       return { offset: start, length: end - start + 1 };
     }
@@ -43,12 +47,11 @@ function parseRangeHeader(rangeHeader: string | null): R2Range | undefined {
   }
   if (startStr && !endStr) {
     const start = Number(startStr);
-    if (Number.isFinite(start)) return { offset: start };
-    return undefined;
+    return Number.isFinite(start) ? { offset: start } : undefined;
   }
   if (!startStr && endStr) {
     const lastN = Number(endStr);
-    if (Number.isFinite(lastN) && lastN > 0) return { suffix: lastN };
+    return Number.isFinite(lastN) && lastN > 0 ? { suffix: lastN } : undefined;
   }
   return undefined;
 }
@@ -66,19 +69,21 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       auth: { persistSession: false },
     });
 
+    // Look up the track metadata
     const { data: track, error } = await supaService
       .from("tracks")
       .select("is_public, storage_type, storage_key, mime_type")
       .eq("id", trackId)
       .single<Track>();
 
-    if (error || !track?.storage_key || track.storage_type !== "r2") {
+    if (error || !track || track.storage_type !== "r2" || !track.storage_key) {
       return new Response("Not found", { status: 404 });
     }
 
+    // Choose bucket by visibility
     const bucket: R2Bucket = track.is_public ? env.AUDIO_PUBLIC : env.AUDIO_PRIVATE;
 
-    // PRIVATE: accept Authorization header OR token query param (for <audio>)
+    // PRIVATE: accept Authorization header OR token=query param (for <audio>)
     if (!track.is_public) {
       const headerAuth = request.headers.get("authorization") || "";
       const bearer = headerAuth.startsWith("Bearer ") ? headerAuth.slice(7) : null;
@@ -90,11 +95,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       const userId = userRes?.user?.id;
       if (userErr || !userId) return new Response("Unauthorized", { status: 401 });
 
-      // Optional: reuse your ACL RPC if you want an additional check
-      // const { data: can } = await supaService.rpc("has_track_access", { p_user: userId, p_track: trackId });
+      // Optional: extra ACL gate if you want it (uncomment and provide RPC)
+      // const { data: can, error: rpcErr } = await supaService.rpc("has_track_access", {
+      //   p_user: userId, p_track: trackId
+      // });
+      // if (rpcErr) return new Response("Server error", { status: 500 });
       // if (!can) return new Response("Forbidden", { status: 403 });
     }
 
+    // Handle Range requests for seeking
     const rangeHeader = request.headers.get("Range");
     const r2Range = parseRangeHeader(rangeHeader);
 
@@ -103,13 +112,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     const headers = new Headers();
     headers.set("Accept-Ranges", "bytes");
-
+    // Same-origin stream; a clear content type avoids ORB complaints
     const ct =
       track.mime_type ||
       obj.httpMetadata?.contentType ||
       guessMimeFromExt(track.storage_key) ||
       "application/octet-stream";
     headers.set("Content-Type", ct);
+    // Caching: public audio can be cached long; private we keep modest
+    headers.set(
+      "Cache-Control",
+      track.is_public ? "public, max-age=86400, immutable" : "private, max-age=60"
+    );
+    // Optional: advertise same-origin to browsers
+    headers.set("Cross-Origin-Resource-Policy", "same-origin");
 
     if (obj.range) {
       const { offset, length } = obj.range;
@@ -122,7 +138,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     headers.set("Content-Length", String(obj.size));
     return new Response(obj.body, { status: 200, headers });
   } catch (e) {
-    console.error(e);
+    console.error("track-stream error", e);
     return new Response("Server error", { status: 500 });
   }
 };
