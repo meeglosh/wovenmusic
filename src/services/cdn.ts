@@ -1,34 +1,85 @@
-const CDN_BASE =
-  import.meta.env.VITE_CDN_BASE ||
-  "https://wovenmusic-public.16e03ea92574afdd207c0db88357f095.r2.cloudflarestorage.com";
+// src/services/cdn.ts
+import { CONFIG } from "@/lib/config";
 
-// Utility to strip leading slashes from paths
-function stripLeadingSlash(s: string): string {
-  return s.startsWith("/") ? s.slice(1) : s;
+// 1x1 transparent GIF (prevents broken image icons)
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+
+// Prefer the canonical CDN; allow VITE_CDN_BASE to override if you ever need to
+const CDN_BASE =
+  (CONFIG?.IMAGES_CDN_BASE || "").replace(/\/+$/, "") ||
+  ((import.meta as any)?.env?.VITE_CDN_BASE || "").replace(/\/+$/, "") ||
+  "https://images.wovenmusic.app";
+
+const ABSOLUTE = /^https?:\/\//i;
+
+const encPath = (p: string) =>
+  p.split("/").map(encodeURIComponent).join("/");
+
+function normalizeKey(raw: string): string {
+  let k = String(raw || "").trim();
+  k = k.replace(/^\/+/, ""); // strip leading slashes
+  // normalize legacy prefixes to our canonical "images/"
+  k = k.replace(/^playlist-images\//, "images/");
+  k = k.replace(/^profile-images\//, "images/");
+  if (!/^images\//.test(k)) k = `images/${k}`;
+  return k;
 }
 
-// Function to resolve image URL, either from legacy or current key
-export function resolveImageUrl(legacyUrlOrNull?: string, keyOrNull?: string): string {
-  // Preferred: key from DB (e.g. "images/playlists/<uuid>.jpg")
-  if (keyOrNull) return `${CDN_BASE}/${stripLeadingSlash(keyOrNull)}`;
+function toCdnUrl(keyLike: string): string {
+  const norm = normalizeKey(keyLike);
+  return `${CDN_BASE}/${encPath(norm)}`;
+}
 
-  // Legacy URL format handling (either encoded or not)
-  if (legacyUrlOrNull) {
+/**
+ * Resolve a playlist/profile image reference to a stable public URL.
+ *
+ * Accepts EITHER:
+ *  - (legacyUrlOrNull) [single-arg usage]
+ *  - (legacyUrlOrNull, keyOrNull) [two-arg usage]
+ *
+ * Rules:
+ *  - If `key` is provided: use CDN_BASE + normalized key.
+ *  - Else if `legacyUrl` is absolute and is an R2 public URL under /images/,
+ *    rewrite to CDN_BASE.
+ *  - Else if `legacyUrl` is absolute and not R2: pass through as-is (legacy).
+ *  - Else treat the single argument as a key-like string and build CDN URL.
+ *  - If nothing is available, return a transparent GIF.
+ */
+export function resolveImageUrl(
+  legacyUrlOrNull?: string | null,
+  keyOrNull?: string | null
+): string {
+  const key = (keyOrNull || "").trim();
+  if (key) return toCdnUrl(key);
+
+  const val = (legacyUrlOrNull || "").trim();
+  if (!val) return BLANK;
+
+  if (ABSOLUTE.test(val)) {
     try {
-      // Try to decode the legacy URL
-      const decoded = decodeURIComponent(legacyUrlOrNull);
-      // Match and return the URL for images
-      const match = decoded.match(/images\/[a-zA-Z0-9/_\-.]+$/);
-      if (match) return `${CDN_BASE}/${match[0]}`;
-    } catch (e) {
-      // In case decoding fails, log it for debugging (optional)
-      console.error("Failed to decode legacy URL:", legacyUrlOrNull, e);
-    }
+      const u = new URL(val);
+      const host = u.hostname;
+      const path = u.pathname.replace(/^\/+/, "");
+      const cdnHost = new URL(CDN_BASE).hostname;
 
-    // If decoding failed, fallback to matching the URL directly
-    const match = legacyUrlOrNull.match(/images\/[a-zA-Z0-9/_\-.]+$/);
-    if (match) return `${CDN_BASE}/${match[0]}`;
+      // already canonical
+      if (host === cdnHost) return val;
+
+      // Known R2 public endpoints — canonicalize when path begins with images/
+      const isR2Public =
+        host.endsWith(".r2.dev") ||
+        host.endsWith(".r2.cloudflarestorage.com");
+      if (isR2Public && path.startsWith("images/")) {
+        return toCdnUrl(path);
+      }
+
+      // Unknown absolute URL (e.g., legacy external host) — pass through
+      return val;
+    } catch {
+      // fall through and treat as key-like
+    }
   }
 
-  return ""; // Return empty string if no valid image URL can be determined
+  // Treat single arg as a key-like path
+  return toCdnUrl(val);
 }
