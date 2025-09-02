@@ -33,7 +33,15 @@ function normalizeImageKey(raw: string): string {
   let k = raw.trim().replace(/^\/+/, "");
   k = k.replace(/^playlist-images\//, "images/");
   k = k.replace(/^profile-images\//, "images/");
+
+  // Bare filename → treat as playlist cover
   if (!k.includes("/")) k = `images/playlists/${k}`;
+
+  // If it's exactly "images/<file>" (one segment after images), also treat as playlist cover
+  if (/^images\/[^/]+$/.test(k)) {
+    k = k.replace(/^images\//, "images/playlists/");
+  }
+
   if (!k.startsWith("images/")) k = `images/${k}`;
   return k;
 }
