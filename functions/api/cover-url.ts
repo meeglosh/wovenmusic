@@ -28,9 +28,12 @@ function encodePath(p: string) {
 }
 
 function normalizeImageKey(raw: string): string {
-  let k = raw.trim();
-  // tolerate legacy prefix and missing "images/"
+  // Normalize legacy prefixes, ensure under images/, and for bare filenames
+  // default to playlist covers location: images/playlists/<file>
+  let k = raw.trim().replace(/^\/+/, "");
   k = k.replace(/^playlist-images\//, "images/");
+  k = k.replace(/^profile-images\//, "images/");
+  if (!k.includes("/")) k = `images/playlists/${k}`;
   if (!k.startsWith("images/")) k = `images/${k}`;
   return k;
 }
@@ -41,7 +44,7 @@ function toCanonicalImageUrlFromKey(rawKey: string, base?: string) {
   return `${cdn}/${encodePath(key)}`;
 }
 
-function extractCoverKey(pl: any, imagesBase?: string): string | null {
+function extractCoverKeyOrUrl(pl: any, imagesBase?: string): string | null {
   // Prefer explicit key-ish fields
   const key =
     pickFirst(pl, [
@@ -52,8 +55,7 @@ function extractCoverKey(pl: any, imagesBase?: string): string | null {
       "cover_path",
       "image_path",
       "key",
-    ]) ||
-    null;
+    ]) || null;
 
   if (key) return key;
 
@@ -71,19 +73,25 @@ function extractCoverKey(pl: any, imagesBase?: string): string | null {
 
   if (!url) return null;
 
-  if (!isHttp(url)) {
-    // looks like a relative key already
-    return url;
-  }
+  // If it's not absolute, it's already a key-like string
+  if (!isHttp(url)) return url;
 
-  // Strip origin if it points at our CDN (or anything https://<host>/<path>)
+  // If absolute: only strip origin if it's our CDN or a public R2 endpoint.
   try {
     const u = new URL(url);
-    // if it was our CDN domain, path is the key
-    if (!u.pathname || u.pathname === "/") return null;
-    return u.pathname.replace(/^\/+/, "");
+    const host = u.hostname;
+    const path = u.pathname.replace(/^\/+/, "");
+    const cdnHost = new URL(imagesBase || DEFAULT_IMAGES_BASE).hostname;
+    const isR2Public = host.endsWith(".r2.dev") || host.endsWith(".r2.cloudflarestorage.com");
+
+    // For our CDN or R2 public endpoints, return just the path (key)
+    if ((host === cdnHost || isR2Public) && path) return path;
+
+    // For other absolute hosts, return the absolute URL as-is (pass-through)
+    return url;
   } catch {
-    return null;
+    // Invalid URL → treat as key-ish string
+    return url;
   }
 }
 
@@ -98,14 +106,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     });
 
     // Be schema-agnostic: select *
-    const { data: pl, error } = await supa.from("playlists").select("*").eq("id", playlistId).single();
+    const { data: pl, error } = await supa
+      .from("playlists")
+      .select("*")
+      .eq("id", playlistId)
+      .single();
 
     if (error || !pl) return new Response("Not found", { status: 404 });
 
-    const rawKey = extractCoverKey(pl, env.CDN_IMAGES_BASE || DEFAULT_IMAGES_BASE);
-    if (!rawKey) return new Response("No cover", { status: 404 });
+    const raw = extractCoverKeyOrUrl(pl, env.CDN_IMAGES_BASE || DEFAULT_IMAGES_BASE);
+    if (!raw) return new Response("No cover", { status: 404 });
 
-    const urlStr = toCanonicalImageUrlFromKey(rawKey, env.CDN_IMAGES_BASE);
+    // If we got a full absolute URL for a non-R2/non-CDN host, return it as-is.
+    if (isHttp(raw)) {
+      return new Response(JSON.stringify({ url: raw }), {
+        headers: {
+          "content-type": "application/json",
+          "cache-control": "public, max-age=300",
+        },
+      });
+    }
+
+    // Otherwise treat it as a key and canonicalize to our CDN
+    const urlStr = toCanonicalImageUrlFromKey(raw, env.CDN_IMAGES_BASE);
     return new Response(JSON.stringify({ url: urlStr }), {
       headers: {
         "content-type": "application/json",
