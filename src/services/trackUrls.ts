@@ -30,7 +30,11 @@ async function fetchJson(pathWithQuery: string) {
   let lastText = "";
   for (const url of candidates) {
     try {
-      const res = await fetch(url, { headers, credentials: "include", cache: "no-store" });
+      const res = await fetch(url, {
+        headers,
+        credentials: "include",
+        cache: "no-store",
+      });
       if (res.ok) return await res.json();
       lastText = await res.text().catch(() => "");
     } catch (e) {
@@ -56,7 +60,7 @@ export async function getTrackUrlWithMeta(
   return data;
 }
 
-/** Back-compat for callers expecting `resolveTrackUrl(...)`. */
+/** Back-compat: callers expecting `resolveTrackUrl(...)`. */
 export async function resolveTrackUrl(
   trackOrId: string | { id: string }
 ): Promise<string> {
@@ -65,7 +69,7 @@ export async function resolveTrackUrl(
   return getTrackUrl(id);
 }
 
-// Optional helper: canonical image URL from a storage key.
+/** Optional helper: canonical image URL from a storage key. */
 export function getImageUrlFromKey(rawKey: string): string {
   let k = (rawKey || "").trim();
   k = k.replace(/^playlist-images\//, "images/");
@@ -76,7 +80,3 @@ export function getImageUrlFromKey(rawKey: string): string {
 // Default export for legacy imports
 const trackUrls = { getTrackUrl, getTrackUrlWithMeta, resolveTrackUrl, getImageUrlFromKey };
 export default trackUrls;
-
-export async function resolveTrackUrl(trackOrId){const id=typeof trackOrId==="string"?trackOrId:trackOrId?.id;if(!id)throw new Error("resolveTrackUrl: missing track id"); return getTrackUrl(id);}
-
-export async function resolveTrackUrl(trackOrId){const id=typeof trackOrId==="string"?trackOrId:trackOrId?.id;if(!id)throw new Error("resolveTrackUrl: missing track id"); return getTrackUrl(id);}
