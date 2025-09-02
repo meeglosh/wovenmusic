@@ -74,6 +74,7 @@ export function getImageUrlFromKey(rawKey: string): string {
   let k = (rawKey || "").trim();
   k = k.replace(/^playlist-images\//, "images/");
   if (!k.startsWith("images/")) k = `images/${k}`;
+  // Encode each segment to keep slashes
   return `https://images.wovenmusic.app/${k.split("/").map(encodeURIComponent).join("/")}`;
 }
 
