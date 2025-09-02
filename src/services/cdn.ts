@@ -1,8 +1,20 @@
 // src/services/cdn.ts
-// Canonical images CDN base
-const CDN_BASE =
-  (import.meta as any)?.env?.VITE_CDN_IMAGES_BASE ||
+// Canonical images CDN base for the frontend.
+// Reads from Vite env at build time and falls back to the production domain.
+
+const envAny = (import.meta as any)?.env ?? {};
+const CDN_BASE: string =
+  envAny.VITE_CDN_IMAGES_BASE ||
+  envAny.VITE_CDN_BASE || // legacy support if it exists
   "https://images.wovenmusic.app";
+
+// Expose for quick console verification
+try {
+  // @ts-ignore
+  (window as any).__CDN_IMAGES_BASE__ = CDN_BASE;
+  // eslint-disable-next-line no-console
+  console.info("CDN base:", CDN_BASE);
+} catch { /* ignore on SSR */ }
 
 function isHttp(s?: string): s is string {
   return typeof s === "string" && /^https?:\/\//i.test(s);
@@ -12,66 +24,47 @@ function encodePath(p: string) {
   return p.split("/").map(encodeURIComponent).join("/");
 }
 
-function normalizeKey(raw: string): string {
-  // Normalize legacy prefixes and make sure keys live under images/
-  // Bare filenames and "images/<file>" become "images/playlists/<file>"
-  let k = (raw || "").trim().replace(/^\/+/, "");
+/**
+ * Normalize to a key rooted under "images/" without forcing a "playlists/" segment.
+ * Accepts either an absolute URL or a key-ish string.
+ */
+function normalizeKey(input: string): string {
+  let k = (input || "").trim();
   if (!k) return "";
 
+  // Absolute URL? keep just the path as our key
+  if (isHttp(k)) {
+    try {
+      const u = new URL(k);
+      k = u.pathname.replace(/^\/+/, "");
+    } catch {
+      // fall through and treat as key-ish
+    }
+  }
+
+  // Legacy prefixes -> images/
+  k = k.replace(/^\/+/, "");
   k = k.replace(/^playlist-images\//, "images/");
   k = k.replace(/^profile-images\//, "images/");
 
-  // Bare filename → treat as playlist cover
-  if (!k.includes("/")) k = `images/playlists/${k}`;
-
-  // "images/<file>" (one segment after images) → playlist cover
-  if (/^images\/[^/]+$/.test(k)) {
-    k = k.replace(/^images\//, "images/playlists/");
-  }
-
+  // Ensure under images/, but DO NOT inject "playlists/"
   if (!k.startsWith("images/")) k = `images/${k}`;
+
   return k;
 }
 
 /**
  * Resolve an image URL for the app.
- * Accepts either:
- *  - resolveImageUrl(image_url)                // single arg (URL or key)
- *  - resolveImageUrl(image_url, image_key)     // two args (image_url preferred)
+ * - Use both fields when you have them: resolveImageUrl(image_url, image_key)
+ * - We prefer the explicit key if provided.
  */
 export function resolveImageUrl(urlOrKey?: string, maybeKey?: string): string {
-  // Prefer explicit key if provided as the 2nd argument
-  const raw =
+  const picked =
     (maybeKey && maybeKey.trim()) ||
     (urlOrKey && urlOrKey.trim()) ||
     "";
+  if (!picked) return "";
 
-  if (!raw) return "";
-
-  // Absolute URL?
-  if (isHttp(raw)) {
-    try {
-      const u = new URL(raw);
-      const host = u.hostname;
-      const path = u.pathname.replace(/^\/+/, "");
-      const cdnHost = new URL(CDN_BASE).hostname;
-      const isR2Public =
-        host.endsWith(".r2.dev") || host.endsWith(".r2.cloudflarestorage.com");
-
-      // If it’s our CDN or a public R2 endpoint, rewrite to canonical CDN base
-      if ((host === cdnHost || isR2Public) && path) {
-        const key = normalizeKey(path);
-        return `${CDN_BASE}/${encodePath(key)}`;
-      }
-
-      // Otherwise leave external absolute URLs as-is
-      return raw;
-    } catch {
-      // Fall through and treat as key-ish
-    }
-  }
-
-  // Key-ish input
-  const key = normalizeKey(raw);
-  return key ? `${CDN_BASE}/${encodePath(key)}` : "";
+  const key = normalizeKey(picked);
+  return `${CDN_BASE}/${encodePath(key)}`;
 }
