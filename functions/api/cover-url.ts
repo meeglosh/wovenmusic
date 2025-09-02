@@ -28,12 +28,21 @@ function encodePath(p: string) {
 }
 
 function normalizeImageKey(raw: string): string {
-  // Normalize legacy prefixes, ensure under images/, and for bare filenames
-  // default to playlist covers location: images/playlists/<file>
   let k = raw.trim().replace(/^\/+/, "");
   k = k.replace(/^playlist-images\//, "images/");
   k = k.replace(/^profile-images\//, "images/");
+
+  // If it's just a filename, assume playlist covers
   if (!k.includes("/")) k = `images/playlists/${k}`;
+
+  // If it's "images/<file>" (no subfolder), also assume playlists/
+  if (k.startsWith("images/")) {
+    const rest = k.slice("images/".length);
+    if (rest && !rest.includes("/")) {
+      k = `images/playlists/${rest}`;
+    }
+  }
+
   if (!k.startsWith("images/")) k = `images/${k}`;
   return k;
 }
