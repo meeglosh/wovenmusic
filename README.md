@@ -1,6 +1,6 @@
 ## Project info
 
-**URL**: https://lovable.dev/projects/964c4d45-feaa-4b3e-9e2b-b8dbb89f0f2f
+**URL**: https://wovenmusic.app
 
 ## How can I edit this code?
 
