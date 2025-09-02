@@ -1,85 +1,67 @@
 // src/services/cdn.ts
-import { CONFIG } from "@/lib/config";
+// Canonical image resolver used by the UI.
+// Accepts either an absolute legacy URL OR a storage key and returns the
+// canonical CDN URL on images.wovenmusic.app.
 
-// 1x1 transparent GIF (prevents broken image icons)
-const BLANK = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
-
-// Prefer the canonical CDN; allow VITE_CDN_BASE to override if you ever need to
 const CDN_BASE =
-  (CONFIG?.IMAGES_CDN_BASE || "").replace(/\/+$/, "") ||
-  ((import.meta as any)?.env?.VITE_CDN_BASE || "").replace(/\/+$/, "") ||
+  (import.meta as any)?.env?.VITE_CDN_IMAGES_BASE ||
   "https://images.wovenmusic.app";
 
-const ABSOLUTE = /^https?:\/\//i;
+function isHttp(s: string) {
+  return /^https?:\/\//i.test(s);
+}
 
-const encPath = (p: string) =>
-  p.split("/").map(encodeURIComponent).join("/");
+function encodePath(p: string) {
+  return p.split("/").map(encodeURIComponent).join("/");
+}
 
 function normalizeKey(raw: string): string {
-  let k = String(raw || "").trim();
-  k = k.replace(/^\/+/, ""); // strip leading slashes
-  // normalize legacy prefixes to our canonical "images/"
+  // Strip leading slashes
+  let k = String(raw || "").trim().replace(/^\/+/, "");
+  // Collapse legacy prefixes to images/
   k = k.replace(/^playlist-images\//, "images/");
   k = k.replace(/^profile-images\//, "images/");
-  if (!/^images\//.test(k)) k = `images/${k}`;
+  // Bare filenames → assume playlist covers location
+  if (!k.includes("/")) k = `images/playlists/${k}`;
+  // Ensure it lives under images/
+  if (!k.startsWith("images/")) k = `images/${k}`;
   return k;
 }
 
-function toCdnUrl(keyLike: string): string {
-  const norm = normalizeKey(keyLike);
-  return `${CDN_BASE}/${encPath(norm)}`;
-}
-
 /**
- * Resolve a playlist/profile image reference to a stable public URL.
- *
- * Accepts EITHER:
- *  - (legacyUrlOrNull) [single-arg usage]
- *  - (legacyUrlOrNull, keyOrNull) [two-arg usage]
- *
- * Rules:
- *  - If `key` is provided: use CDN_BASE + normalized key.
- *  - Else if `legacyUrl` is absolute and is an R2 public URL under /images/,
- *    rewrite to CDN_BASE.
- *  - Else if `legacyUrl` is absolute and not R2: pass through as-is (legacy).
- *  - Else treat the single argument as a key-like string and build CDN URL.
- *  - If nothing is available, return a transparent GIF.
+ * Resolve a canonical image URL.
+ * - If input is an absolute URL:
+ *   - If it’s already our CDN or an R2 public host, rewrite to CDN.
+ *   - Otherwise, return as-is (pass-through).
+ * - If input is a key/filename, normalize to images/... and join to CDN.
  */
-export function resolveImageUrl(
-  legacyUrlOrNull?: string | null,
-  keyOrNull?: string | null
-): string {
-  const key = (keyOrNull || "").trim();
-  if (key) return toCdnUrl(key);
+export function resolveImageUrl(input?: string): string {
+  const val = (input || "").trim();
+  if (!val) return "";
 
-  const val = (legacyUrlOrNull || "").trim();
-  if (!val) return BLANK;
-
-  if (ABSOLUTE.test(val)) {
+  if (isHttp(val)) {
     try {
       const u = new URL(val);
       const host = u.hostname;
       const path = u.pathname.replace(/^\/+/, "");
       const cdnHost = new URL(CDN_BASE).hostname;
-
-      // already canonical
-      if (host === cdnHost) return val;
-
-      // Known R2 public endpoints — canonicalize when path begins with images/
       const isR2Public =
-        host.endsWith(".r2.dev") ||
-        host.endsWith(".r2.cloudflarestorage.com");
-      if (isR2Public && path.startsWith("images/")) {
-        return toCdnUrl(path);
+        host.endsWith(".r2.dev") || host.endsWith(".r2.cloudflarestorage.com");
+
+      // If it’s already on our CDN or an R2 public origin, canonicalize to CDN
+      if ((host === cdnHost || isR2Public) && path) {
+        const key = normalizeKey(path);
+        return `${CDN_BASE.replace(/\/+$/, "")}/${encodePath(key)}`;
       }
 
-      // Unknown absolute URL (e.g., legacy external host) — pass through
+      // Any other absolute URL: return as-is (don’t break external links)
       return val;
     } catch {
-      // fall through and treat as key-like
+      // Not a valid URL → treat as key below
     }
   }
 
-  // Treat single arg as a key-like path
-  return toCdnUrl(val);
+  // Treat as key/filename
+  const key = normalizeKey(val);
+  return `${CDN_BASE.replace(/\/+$/, "")}/${encodePath(key)}`;
 }
