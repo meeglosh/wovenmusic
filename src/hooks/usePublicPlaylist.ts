@@ -1,21 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { playlistImageSrc } from "@/services/imageFor";
 
-// Prefer env, fall back to current hardcoded values for public, non-auth access
-const PUBLIC_SUPABASE_URL =
-  (import.meta as any)?.env?.VITE_PUBLIC_SUPABASE_URL ||
-  "https://woakvdhlpludrttjixxq.supabase.co";
-
-const PUBLIC_SUPABASE_ANON_KEY =
-  (import.meta as any)?.env?.VITE_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvYWt2ZGhscGx1ZHJ0dGppeHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjMwODEsImV4cCI6MjA2NjY5OTA4MX0.TklesWo8b-lZW2SsE39icrcC0Y8ho5xzGUdj9MZg-Xg";
-
-// Separate Supabase client without auth for public access
-const publicSupabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-  auth: { persistSession: false },
-});
-
+// Keep track mapping helper
 const mapTracksInPlaylistOrder = (
   playlistTracks: Array<{ track_id: string; position: number }>,
   tracks: Array<{
@@ -55,7 +42,7 @@ export const usePublicPlaylist = (playlistId: string) => {
     gcTime: 5 * 60_000,
     queryFn: async () => {
       // 1) Fetch the public playlist
-      const { data: playlist, error: playlistError } = await publicSupabase
+      const { data: playlist, error: playlistError } = await supabase
         .from("playlists")
         .select("id, name, image_url, created_at, updated_at, is_public")
         .eq("id", playlistId)
@@ -67,7 +54,7 @@ export const usePublicPlaylist = (playlistId: string) => {
       }
 
       // 2) Fetch playlist track ids in order
-      const { data: playlistTracks, error: tracksError } = await publicSupabase
+      const { data: playlistTracks, error: tracksError } = await supabase
         .from("playlist_tracks")
         .select("track_id, position")
         .eq("playlist_id", playlistId)
@@ -90,7 +77,7 @@ export const usePublicPlaylist = (playlistId: string) => {
         const trackIds = playlistTracks.map((pt) => pt.track_id);
 
         // 3) Fetch only public tracks and include storage_url + file_url
-        const { data: tracks } = await publicSupabase
+        const { data: tracks } = await supabase
           .from("tracks")
           .select("id, title, artist, duration, file_url, storage_url")
           .in("id", trackIds)
@@ -122,7 +109,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
     gcTime: 5 * 60_000,
     queryFn: async () => {
       // 1) Fetch the public playlist by share token
-      const { data: playlist, error: playlistError } = await publicSupabase
+      const { data: playlist, error: playlistError } = await supabase
         .from("playlists")
         .select("id, name, image_url, created_at, updated_at, is_public")
         .eq("share_token", shareToken)
@@ -131,10 +118,10 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
 
       if (playlistError || !playlist) {
         throw new Error("Playlist not found or not public");
-        }
+      }
 
       // 2) Fetch playlist track ids in order
-      const { data: playlistTracks, error: tracksError } = await publicSupabase
+      const { data: playlistTracks, error: tracksError } = await supabase
         .from("playlist_tracks")
         .select("track_id, position")
         .eq("playlist_id", playlist.id)
@@ -156,7 +143,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
         const trackIds = playlistTracks.map((pt) => pt.track_id);
 
         // 3) Only public tracks; include storage_url + file_url
-        const { data: tracks } = await publicSupabase
+        const { data: tracks } = await supabase
           .from("tracks")
           .select("id, title, artist, duration, file_url, storage_url")
           .in("id", trackIds)
