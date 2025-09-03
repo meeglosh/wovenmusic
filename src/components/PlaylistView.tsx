@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +19,7 @@ import { PlaylistComments } from "@/components/PlaylistComments";
 import { OfflineDownloadToggle } from "@/components/OfflineDownloadToggle";
 import OptimizedImage from "@/components/OptimizedImage";
 import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -280,6 +280,11 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
       const bIndex = orderedTrackIds.length > 0 ? orderedTrackIds.indexOf(b.id) : playlist.trackIds.indexOf(b.id);
       return aIndex - bIndex;
     });
+
+  // Prefer 300x300 thumbnail; fall back to full-size; finally existing helper
+  const coverSrc =
+    coverUrlForPlaylist(playlist) ??
+    playlistImageSrc(playlist);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -596,9 +601,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
 
       <div className="flex flex-col md:flex-row md:items-start space-y-6 md:space-y-0 md:space-x-6 mb-8">
         <div className="relative w-48 h-48 rounded-lg overflow-hidden group cursor-pointer border border-primary/20 flex-shrink-0 mx-auto md:mx-0" onClick={() => fileInputRef.current?.click()}>
-          {playlistImageSrc(playlist) ? (
+          {coverSrc ? (
             <OptimizedImage
-              src={playlistImageSrc(playlist)}
+              src={coverSrc}
               alt={playlist.name} 
               className="w-full h-full"
               sizes="192px"
@@ -854,7 +859,7 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                   onPlay={onPlayTrack}
                   onRemove={handleRemoveTrack}
                   playlist={playlistTracks}
-                  playlistImageUrl={playlistImageSrc(playlist)}
+                  playlistImageUrl={coverSrc}
                   canManagePlaylistTracks={canManagePlaylistTracks(playlist)}
                 />
               ))}
@@ -1008,9 +1013,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
               <Label>Playlist image</Label>
               <div className="flex items-start gap-4">
                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                   {playlistImageSrc(playlist) ? (
+                   {coverSrc ? (
                      <OptimizedImage
-                       src={playlistImageSrc(playlist)} 
+                       src={coverSrc} 
                        alt={playlist.name} 
                        className="w-full h-full"
                        sizes="80px"
@@ -1033,9 +1038,9 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
                     className="w-full justify-start"
                   >
                     <Image className="w-4 h-4 mr-2" />
-                    {playlistImageSrc(playlist) ? "Change image" : "Upload image"}
+                    {coverSrc ? "Change image" : "Upload image"}
                   </Button>
-                  {playlistImageSrc(playlist) && (
+                  {coverSrc && (
                     <Button
                       type="button"
                       variant="outline"

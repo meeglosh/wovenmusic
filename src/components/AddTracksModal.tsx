@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,11 +20,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useAddTrackToPlaylist } from "@/hooks/usePlaylists";
+import { useAddTrackToPlaylist, usePlaylists } from "@/hooks/usePlaylists";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Track, getFileName } from "@/types/music";
 import { Search, Music, Plus } from "lucide-react";
+import OptimizedImage from "@/components/OptimizedImage";
+import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 
 interface AddTracksModalProps {
   open: boolean;
@@ -50,29 +53,46 @@ const AddTracksModal = ({
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Pull the current playlist to show a compact cover preview (no prop changes needed)
+  const { data: playlists = [] } = usePlaylists();
+  const currentPlaylist = playlists.find((p) => p.id === playlistId);
+  const coverSrc =
+    (currentPlaylist && (coverUrlForPlaylist(currentPlaylist as any) ?? playlistImageSrc(currentPlaylist as any))) ||
+    undefined;
+
   // Filter tracks that aren't already in the playlist
-  const availableTracks = allTracks.filter(track => !existingTrackIds.includes(track.id));
+  const availableTracks = useMemo(
+    () => allTracks.filter((track) => !existingTrackIds.includes(track.id)),
+    [allTracks, existingTrackIds]
+  );
   
   // Filter tracks based on search query
-  const filteredTracks = availableTracks.filter(track => 
-    getFileName(track).toLowerCase().includes(searchQuery.toLowerCase()) ||
-    track.artist.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTracks = useMemo(
+    () =>
+      availableTracks.filter((track) => {
+        const q = searchQuery.toLowerCase();
+        return getFileName(track).toLowerCase().includes(q) || track.artist.toLowerCase().includes(q);
+      }),
+    [availableTracks, searchQuery]
   );
 
   const handleTrackSelect = (trackId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTracks(prev => [...prev, trackId]);
-    } else {
-      setSelectedTracks(prev => prev.filter(id => id !== trackId));
-    }
+    setSelectedTracks((prev) => {
+      if (checked) {
+        if (prev.includes(trackId)) return prev;
+        return [...prev, trackId];
+      } else {
+        return prev.filter((id) => id !== trackId);
+      }
+    });
   };
 
   const handleSelectAll = () => {
-    if (selectedTracks.length === filteredTracks.length) {
-      setSelectedTracks([]);
-    } else {
-      setSelectedTracks(filteredTracks.map(track => track.id));
-    }
+    setSelectedTracks((prev) => {
+      const allIds = filteredTracks.map((t) => t.id);
+      const allSelected = allIds.every((id) => prev.includes(id));
+      return allSelected ? prev.filter((id) => !allIds.includes(id)) : Array.from(new Set([...prev, ...allIds]));
+    });
   };
 
   const handleAddTracks = async () => {
@@ -88,7 +108,7 @@ const AddTracksModal = ({
       
       toast({
         title: "Tracks added!",
-        description: `${selectedTracks.length} track${selectedTracks.length !== 1 ? 's' : ''} added to "${playlistName}".`,
+        description: `${selectedTracks.length} track${selectedTracks.length !== 1 ? "s" : ""} added to "${playlistName}".`,
       });
       
       setSelectedTracks([]);
@@ -112,8 +132,34 @@ const AddTracksModal = ({
     onOpenChange(false);
   };
 
+  const HeaderPreview = () => (
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex items-center justify-center border border-border">
+        {coverSrc ? (
+          <OptimizedImage
+            src={coverSrc}
+            alt={`${playlistName} cover`}
+            className="w-full h-full"
+            sizes="48px"
+            objectFit="cover"
+            loading="lazy"
+          />
+        ) : (
+          <Music className="w-5 h-5 text-muted-foreground" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-medium truncate">{playlistName}</div>
+        <p className="text-xs text-muted-foreground">Add tracks from your library</p>
+      </div>
+    </div>
+  );
+
   const renderContent = () => (
     <div className="space-y-4">
+      {/* Compact playlist cover preview */}
+      <HeaderPreview />
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -134,7 +180,10 @@ const AddTracksModal = ({
             onClick={handleSelectAll}
             className="text-sm"
           >
-            {selectedTracks.length === filteredTracks.length ? "Deselect All" : "Select All"}
+            {selectedTracks.length > 0 &&
+            filteredTracks.every((t) => selectedTracks.includes(t.id))
+              ? "Deselect All"
+              : "Select All"}
           </Button>
           {selectedTracks.length > 0 && (
             <Badge variant="secondary">
@@ -145,7 +194,7 @@ const AddTracksModal = ({
       )}
 
       {/* Track List */}
-      <ScrollArea className={`border rounded-md ${isMobile ? 'h-[250px]' : 'h-[400px]'}`}>
+      <ScrollArea className={`border rounded-md ${isMobile ? "h-[250px]" : "h-[400px]"}`}>
         {filteredTracks.length === 0 ? (
           <div className="text-center py-8">
             {availableTracks.length === 0 ? (
@@ -170,7 +219,7 @@ const AddTracksModal = ({
                 <Checkbox
                   id={track.id}
                   checked={selectedTracks.includes(track.id)}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     handleTrackSelect(track.id, checked as boolean)
                   }
                 />
@@ -221,7 +270,7 @@ const AddTracksModal = ({
       >
         {isLoading 
           ? "Adding..." 
-          : `Add ${selectedTracks.length} Track${selectedTracks.length !== 1 ? 's' : ''}`
+          : `Add ${selectedTracks.length} Track${selectedTracks.length !== 1 ? "s" : ""}`
         }
       </Button>
     </>

@@ -6,6 +6,7 @@ import { Playlist, Track, calculatePlaylistDuration } from "@/types/music";
 import { usePlaylistCategories, usePlaylistCategoryLinks } from "@/hooks/usePlaylistCategories";
 import OptimizedImage from "@/components/OptimizedImage";
 import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 
 interface PlaylistsGridProps {
   playlists: Playlist[];
@@ -104,61 +105,68 @@ const PlaylistsGrid = ({ playlists, tracks, onPlayPlaylist, onPlaylistSelect }: 
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {getVisiblePlaylists(group).map((playlist) => (
-              <div
-                key={playlist.id}
-                className="group cursor-pointer space-y-2"
-                onClick={() => handlePlaylistClick(playlist)}
-              >
-                <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-                   {playlistImageSrc(playlist) ? (
-                     <OptimizedImage
-                       src={playlistImageSrc(playlist)}
-                       alt={playlist.name}
-                       className="w-full h-full transition-transform duration-200 group-hover:scale-105"
-                       sizes="(max-width: 640px) calc(50vw - 2rem), (max-width: 768px) calc(33.333vw - 2rem), (max-width: 1024px) calc(25vw - 2rem), (max-width: 1280px) calc(20vw - 2rem), calc(16.666vw - 2rem)"
-                       objectFit="cover"
-                     />
-                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
-                      <div className="text-2xl font-bold text-muted-foreground/60">
-                        {playlist.name.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Play button overlay - positioned in bottom right corner to avoid scroll interference */}
-                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Button
-                      size="icon"
-                      variant="default"
-                      className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform duration-200"
-                      onClick={(e) => handlePlayAllClick(e, playlist.id)}
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                    </Button>
-                  </div>
-                </div>
+            {getVisiblePlaylists(group).map((playlist) => {
+              // Prefer thumbnail; fall back to full-size; then fall back to existing helper
+              const imgSrc =
+                coverUrlForPlaylist(playlist) ??
+                playlistImageSrc(playlist);
 
-                <div className="space-y-1">
-                  {playlist.artistName && (
-                    <div className="text-xs text-muted-foreground/80 truncate">{playlist.artistName}</div>
-                  )}
-                  <h3 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                    {playlist.name}
-                  </h3>
-                  <div className="text-xs text-muted-foreground">
-                    {playlist.trackIds?.length || 0} tracks
-                    {playlist.trackIds && playlist.trackIds.length > 0 && (
-                      <span> • {calculatePlaylistDuration(tracks.filter(track => playlist.trackIds.includes(track.id)))}</span>
+              return (
+                <div
+                  key={playlist.id}
+                  className="group cursor-pointer space-y-2"
+                  onClick={() => handlePlaylistClick(playlist)}
+                >
+                  <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+                    {imgSrc ? (
+                      <OptimizedImage
+                        src={imgSrc}
+                        alt={playlist.name}
+                        className="w-full h-full transition-transform duration-200 group-hover:scale-105"
+                        sizes="(max-width: 640px) calc(50vw - 2rem), (max-width: 768px) calc(33.333vw - 2rem), (max-width: 1024px) calc(25vw - 2rem), (max-width: 1280px) calc(20vw - 2rem), calc(16.666vw - 2rem)"
+                        objectFit="cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                        <div className="text-2xl font-bold text-muted-foreground/60">
+                          {playlist.name.charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Play button overlay - positioned in bottom right corner to avoid scroll interference */}
+                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Button
+                        size="icon"
+                        variant="default"
+                        className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform duration-200"
+                        onClick={(e) => handlePlayAllClick(e, playlist.id)}
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {playlist.artistName && (
+                      <div className="text-xs text-muted-foreground/80 truncate">{playlist.artistName}</div>
+                    )}
+                    <h3 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                      {playlist.name}
+                    </h3>
+                    <div className="text-xs text-muted-foreground">
+                      {playlist.trackIds?.length || 0} tracks
+                      {playlist.trackIds && playlist.trackIds.length > 0 && (
+                        <span> • {calculatePlaylistDuration(tracks.filter(track => playlist.trackIds.includes(track.id)))}</span>
+                      )}
+                    </div>
+                    {playlist.isPublic && (
+                      <div className="text-xs text-muted-foreground/60">Public</div>
                     )}
                   </div>
-                  {playlist.isPublic && (
-                    <div className="text-xs text-muted-foreground/60">Public</div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}

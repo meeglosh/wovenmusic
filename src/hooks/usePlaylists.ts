@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Playlist } from "@/types/music";
 import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 import { CONFIG, joinUrl } from "@/lib/config";
 
 function supabaseFunctionsBase(): string {
@@ -54,7 +55,8 @@ export const usePlaylists = () => {
         id: playlist.id,
         name: playlist.name,
         artistName: playlist.artist_name,
-        imageUrl: playlistImageSrc(playlist),
+        // Prefer 300x300 thumb if present; fall back to full-size cover and then any legacy logic
+        imageUrl: coverUrlForPlaylist(playlist) ?? playlistImageSrc(playlist),
         trackIds: (playlist.playlist_tracks || [])
           .slice()
           .sort((a: any, b: any) => a.position - b.position)

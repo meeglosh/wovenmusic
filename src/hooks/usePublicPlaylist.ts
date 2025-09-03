@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 
 // Keep track mapping helper
 const mapTracksInPlaylistOrder = (
@@ -65,7 +66,7 @@ export const usePublicPlaylist = (playlistId: string) => {
         return {
           id: playlist.id,
           name: playlist.name,
-          imageUrl: playlistImageSrc(playlist),
+          imageUrl: coverUrlForPlaylist(playlist as any) ?? playlistImageSrc(playlist),
           tracks: [] as any[],
           isPublic: playlist.is_public,
           createdAt: new Date(playlist.created_at),
@@ -91,7 +92,7 @@ export const usePublicPlaylist = (playlistId: string) => {
       return {
         id: playlist.id,
         name: playlist.name,
-        imageUrl: playlistImageSrc(playlist),
+        imageUrl: coverUrlForPlaylist(playlist as any) ?? playlistImageSrc(playlist),
         tracks: publicTracks,
         isPublic: playlist.is_public,
         createdAt: new Date(playlist.created_at),
@@ -131,7 +132,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
         return {
           id: playlist.id,
           name: playlist.name,
-          imageUrl: playlistImageSrc(playlist),
+          imageUrl: coverUrlForPlaylist(playlist as any) ?? playlistImageSrc(playlist),
           tracks: [] as any[],
           isPublic: playlist.is_public,
           createdAt: new Date(playlist.created_at),
@@ -157,7 +158,7 @@ export const usePublicPlaylistByToken = (shareToken: string) => {
       return {
         id: playlist.id,
         name: playlist.name,
-        imageUrl: playlistImageSrc(playlist),
+        imageUrl: coverUrlForPlaylist(playlist as any) ?? playlistImageSrc(playlist),
         tracks: publicTracks,
         isPublic: playlist.is_public,
         createdAt: new Date(playlist.created_at),

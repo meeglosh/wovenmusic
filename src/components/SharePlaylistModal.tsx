@@ -5,12 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Mail, Trash2, Users, Globe } from "lucide-react";
+import { Copy, Mail, Trash2, Users, Globe, Lock } from "lucide-react";
 import { Playlist } from "@/types/music";
 import { useSharePlaylist, useUpdatePlaylistVisibility, useRemovePlaylistShare } from "@/hooks/usePlaylistSharing";
 import { usePermissions } from "@/hooks/usePermissions";
 import { generatePlaylistShareUrl } from "@/lib/config";
 import { toast } from "sonner";
+import OptimizedImage from "@/components/OptimizedImage";
+import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 
 interface SharePlaylistModalProps {
   open: boolean;
@@ -26,6 +29,12 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
   const updateVisibilityMutation = useUpdatePlaylistVisibility();
   const removeShareMutation = useRemovePlaylistShare();
   const { canEditPlaylistPrivacy } = usePermissions();
+
+  // Prefer 300x300 thumb, then full cover, then any legacy imageUrl
+  const coverSrc =
+    coverUrlForPlaylist(playlist as any) ??
+    playlistImageSrc(playlist as any) ??
+    (playlist as any)?.imageUrl;
 
   const handleShareByEmail = async () => {
     if (!email.trim()) {
@@ -52,7 +61,7 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
         isPublic: !isPublic
       });
       setIsPublic(!isPublic);
-      toast.success(`Playlist ${!isPublic ? 'made public' : 'made private'}`);
+      toast.success(`Playlist ${!isPublic ? "made public" : "made private"}`);
     } catch (error) {
       toast.error("Failed to update playlist visibility");
     }
@@ -88,8 +97,36 @@ export default function SharePlaylistModal({ open, onOpenChange, playlist }: Sha
             Share this playlist with other band members or make it publicly accessible.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Compact cover preview */}
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex items-center justify-center border border-border">
+            {coverSrc ? (
+              <OptimizedImage
+                src={coverSrc}
+                alt={`${playlist.name} cover`}
+                className="w-full h-full"
+                sizes="48px"
+                objectFit="cover"
+                loading="lazy"
+              />
+            ) : (
+              <span className="text-sm text-muted-foreground">♪</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{playlist.name}</div>
+            <Badge variant={isPublic ? "default" : "secondary"} className="mt-1">
+              {isPublic ? (
+                <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> Public</span>
+              ) : (
+                <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Private</span>
+              )}
+            </Badge>
+          </div>
+        </div>
         
-        <div className="space-y-6">
+        <div className="space-y-6 mt-4">
           {/* Public/Private Toggle - Only show to playlist creator or admin */}
           {canEditPlaylistPrivacy(playlist) && (
             <div className="flex items-center justify-between">

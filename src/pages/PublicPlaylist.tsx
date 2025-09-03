@@ -17,6 +17,7 @@ import { useClosedBeta } from "@/hooks/useClosedBeta";
 import ClosedBetaSplash from "@/components/ClosedBetaSplash";
 import OptimizedImage from "@/components/OptimizedImage";
 import { playlistImageSrc } from "@/services/imageFor";
+import { coverUrlForPlaylist } from "@/services/covers";
 
 const PublicPlaylist = () => {
   console.log("PublicPlaylist component mounting");
@@ -121,12 +122,17 @@ const PublicPlaylist = () => {
     }
   };
 
+  // Prefer 300x300 thumbnail; fall back to full-size; finally any legacy imageUrl
+  const coverSrc =
+    (playlist ? coverUrlForPlaylist(playlist as any) : undefined) ??
+    (playlist ? playlistImageSrc(playlist as any) : undefined);
+
   const handlePlayPlaylist = () => {
     if (playlist?.tracks && playlist.tracks.length > 0) {
       playPlaylist(playlist.tracks, 0, {
         id: playlist.id,
         name: playlist.name,
-        imageUrl: playlist.imageUrl
+        imageUrl: coverSrc || (playlist as any).imageUrl || undefined,
       });
     }
   };
@@ -261,9 +267,9 @@ const PublicPlaylist = () => {
         {/* Playlist Header */}
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <div className="flex-shrink-0">
-            {playlistImageSrc(playlist as any) ? (
+            {coverSrc ? (
               <OptimizedImage
-                src={playlistImageSrc(playlist as any)}
+                src={coverSrc}
                 alt={playlist.name}
                 className="w-48 h-48 rounded-lg shadow-lg"
                 sizes="192px"
