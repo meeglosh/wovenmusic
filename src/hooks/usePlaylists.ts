@@ -256,42 +256,46 @@ export const useUploadPlaylistImage = () => {
 
   return useMutation({
     mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
-      // Supabase Edge Function (derived from VITE_SUPABASE_URL)
-      const base = supabaseFunctionsBase();
-      if (!base) throw new Error("Supabase Functions base URL not configured");
-      const endpoint = joinUrl(base, "image-upload");
-
       const formData = new FormData();
       formData.append("file", file);
       formData.append("entityType", "playlist");
       formData.append("entityId", playlistId);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        // Try to parse JSON error; fall back to status text
-        let msg = response.statusText;
-        try {
-          const err = await response.json();
-          msg = err?.error || msg;
-        } catch {
-          /* ignore */
+      // 1) Prefer Cloudflare Pages Function (no auth header required)
+      const pagesBase = (CONFIG.APP_API_BASE || "").replace(/\/+$/, "");
+      if (pagesBase) {
+        const endpoint = joinUrl(pagesBase, "api/image-upload");
+        const res = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          let msg = res.statusText;
+          try { msg = (await res.json())?.error || msg; } catch {}
+          throw new Error(msg || "Upload failed");
         }
-        throw new Error(msg || "Upload failed");
+        return res.json();
       }
 
-      return response.json();
+      // 2) Fallback to Supabase Edge Function (requires user session)
+      const sbf = supabaseFunctionsBase();
+      if (!sbf) throw new Error("No upload endpoint configured");
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const endpoint = joinUrl(sbf, "image-upload");
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        let msg = res.statusText;
+        try { msg = (await res.json())?.error || msg; } catch {}
+        throw new Error(msg || "Upload failed");
+      }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
@@ -304,18 +308,32 @@ export const useDeletePlaylistImage = () => {
 
   return useMutation({
     mutationFn: async (playlistId: string) => {
-      // Remove both key and URL on the playlist row
-      const { data, error } = await supabase
-        .from("playlists")
-        .update({
+      // Try to clear both main and thumb fields; if schema lacks thumb columns, fall back.
+      const attempt = async (payload: Record<string, any>) =>
+        supabase
+          .from("playlists")
+          .update(payload)
+          .eq("id", playlistId)
+          .select()
+          .single();
+
+      let { data, error } = await attempt({
+        image_key: null,
+        image_url: null,
+        cover_thumb_key: null,
+        cover_thumb_url: null,
+      });
+
+      if (error) {
+        // Fallback for older schema without thumb fields
+        const res = await attempt({
           image_key: null,
           image_url: null,
-        })
-        .eq("id", playlistId)
-        .select()
-        .single();
+        });
+        data = res.data;
+        if (res.error) throw res.error;
+      }
 
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
