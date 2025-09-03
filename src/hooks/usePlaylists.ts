@@ -254,48 +254,94 @@ export const useDeletePlaylist = () => {
 export const useUploadPlaylistImage = () => {
   const queryClient = useQueryClient();
 
+  function supabaseFunctionsBase(): string {
+    try {
+      const host = new URL(CONFIG.SUPABASE_URL).host; // <ref>.supabase.co
+      const ref = host.split(".")[0];
+      return `https://${ref}.functions.supabase.co`;
+    } catch {
+      return "";
+    }
+  }
+
+  // Prefer same-origin Pages Function. Works in production Pages without any env var.
+  const pagesUploadUrl = (): string => "/api/image-upload";
+
+  // Optional extra base (if you ever want to point the frontend at another domain)
+  const appBase =
+    (import.meta as any)?.env?.VITE_APP_API_BASE ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  const join = (base: string, path: string) =>
+    `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+
   return useMutation({
     mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
+      console.log("[cover-upload] start", { name: file.name, type: file.type, size: file.size, playlistId });
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("entityType", "playlist");
       formData.append("entityId", playlistId);
 
-      // 1) Prefer Cloudflare Pages Function (no auth header required)
-      const pagesBase = (CONFIG.APP_API_BASE || "").replace(/\/+$/, "");
-      if (pagesBase) {
-        const endpoint = joinUrl(pagesBase, "api/image-upload");
-        const res = await fetch(endpoint, {
+      // 1) Try same-origin Pages Function
+      const pagesUrl = pagesUploadUrl();
+      try {
+        const res = await fetch(pagesUrl, { method: "POST", body: formData });
+        if (res.ok) {
+          console.log("[cover-upload] via Pages Function");
+          return await res.json();
+        }
+        console.warn("[cover-upload] Pages Function returned", res.status);
+      } catch (e) {
+        console.warn("[cover-upload] Pages Function fetch failed", e);
+      }
+
+      // 2) Try explicit APP base (if set)
+      if (appBase) {
+        try {
+          const res = await fetch(join(appBase, "/api/image-upload"), {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            console.log("[cover-upload] via APP_API_BASE");
+            return await res.json();
+          }
+          console.warn("[cover-upload] APP_API_BASE upload returned", res.status);
+        } catch (e) {
+          console.warn("[cover-upload] APP_API_BASE upload failed", e);
+        }
+      }
+
+      // 3) Fall back to Supabase Edge Function (requires auth)
+      const functionsBase = supabaseFunctionsBase();
+      if (functionsBase) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) throw new Error("Not authenticated");
+
+        const res = await fetch(join(functionsBase, "image-upload"), {
           method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
           body: formData,
         });
+
         if (!res.ok) {
           let msg = res.statusText;
-          try { msg = (await res.json())?.error || msg; } catch {}
+          try {
+            const err = await res.json();
+            msg = err?.error || msg;
+          } catch {}
           throw new Error(msg || "Upload failed");
         }
+        console.log("[cover-upload] via Supabase Function");
         return res.json();
       }
 
-      // 2) Fallback to Supabase Edge Function (requires user session)
-      const sbf = supabaseFunctionsBase();
-      if (!sbf) throw new Error("No upload endpoint configured");
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const endpoint = joinUrl(sbf, "image-upload");
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      });
-      if (!res.ok) {
-        let msg = res.statusText;
-        try { msg = (await res.json())?.error || msg; } catch {}
-        throw new Error(msg || "Upload failed");
-      }
-      return res.json();
+      // Nothing available
+      throw new Error("No upload endpoint configured");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
