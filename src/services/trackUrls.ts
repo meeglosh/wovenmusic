@@ -20,46 +20,36 @@ async function fetchJson(pathWithQuery: string) {
   const headers: Record<string, string> = {};
   if (session?.access_token) headers["authorization"] = `Bearer ${session.access_token}`;
 
-  // Try Supabase Edge Function first for private tracks
+  // Try Supabase Edge Function first - it should return the signed URL directly
   if (pathWithQuery.startsWith('track-url')) {
     try {
       const trackId = new URLSearchParams(pathWithQuery.split('?')[1]).get('id');
       if (trackId) {
-        const { data, error } = await supabase.functions.invoke('track-url', {
-          body: { id: trackId },
-          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+        // Use the correct HTTP method (GET) for the edge function
+        const response = await fetch(`https://woakvdhlpludrttjixxq.supabase.co/functions/v1/track-url?id=${encodeURIComponent(trackId)}`, {
+          method: 'GET',
+          headers: session?.access_token ? { 
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          } : { 'Content-Type': 'application/json' }
         });
         
-        if (error) throw error;
-        if (data?.ok && data?.url) return data;
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Supabase Edge Function response:', data);
+          if (data?.ok && data?.url) return data;
+        } else {
+          const errorText = await response.text();
+          console.warn(`Supabase Edge Function returned ${response.status}: ${errorText}`);
+        }
       }
     } catch (e) {
       console.warn('Supabase Edge Function failed, trying other endpoints:', e);
     }
   }
 
-  const candidates = [
-    BASE ? `${BASE}/api/${pathWithQuery}` : "", // e.g. https://api.example.com/api/track-url?id=...
-    BASE ? `${BASE}/${pathWithQuery}` : "",     // e.g. https://api.example.com/track-url?id=...
-    `/api/${pathWithQuery}`,                    // same-origin CF Pages Function
-    `/${pathWithQuery}`,                        // fallback if mounted without /api
-  ].filter(Boolean);
-
-  let lastText = "";
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url, {
-        headers,
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (res.ok) return await res.json();
-      lastText = await res.text().catch(() => "");
-    } catch (e) {
-      lastText = (e as Error)?.message || String(e);
-    }
-  }
-  throw new Error(lastText || "track-url request failed");
+  // Skip Cloudflare Pages Functions for now since they require R2 bindings
+  throw new Error("Unable to resolve track URL - please check configuration");
 }
 
 /** Resolve a playable URL (string) for a given track id (public or private). */
