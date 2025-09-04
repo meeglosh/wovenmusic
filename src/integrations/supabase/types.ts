@@ -157,6 +157,35 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_acl: {
+        Row: {
+          created_at: string | null
+          playlist_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          playlist_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          playlist_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_acl_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_categories: {
         Row: {
           created_at: string
@@ -466,6 +495,35 @@ export type Database = {
         }
         Relationships: []
       }
+      track_acl: {
+        Row: {
+          created_at: string | null
+          role: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          role?: string
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          role?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_acl_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
           artist: string
@@ -531,6 +589,10 @@ export type Database = {
       }
       has_any_band_members: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      has_track_access: {
+        Args: { p_track: string; p_user: string }
         Returns: boolean
       }
       is_admin_safe: {
