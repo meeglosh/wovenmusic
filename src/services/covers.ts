@@ -5,55 +5,80 @@ function appendQuery(u: string, q: string) {
   return u.includes("?") ? `${u}&${q}` : `${u}?${q}`;
 }
 
+// Robust picker that accepts snake_case and camelCase
+function pick<T = string>(
+  obj: Record<string, any>,
+  ...keys: string[]
+): T | undefined {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (typeof v === "string" && v.trim() !== "") return v as T;
+  }
+  return undefined;
+}
+
 /**
- * Prefer thumb URLs if present. Always append a cache-busting version so
- * updates are visible immediately (even if CDN or SW has an old copy).
+ * Build the best cover URL for a playlist:
+ * - Prefer explicit *thumb* URLs (cover_thumb_url, thumb_url, coverThumbUrl, thumbUrl)
+ * - Then full cover/image URLs (cover_url, image_url, coverUrl, imageUrl)
+ * - Then image keys (image_key, imageKey) via CDN
+ * - Finally fallback to /api/cover-redirect?playlist_id=...
+ *
+ * Always append a cache-busting `v=` param when we can infer an updated time.
  */
 export function coverUrlForPlaylist(p: {
-  // known fields we might see
   id?: string | null;
+
   cover_thumb_url?: string | null;
   thumb_url?: string | null;
   cover_url?: string | null;
-  coverUrl?: string | null;
   image_url?: string | null;
-  image_key?: string | null; // legacy
-  // any "version-ish" fields we can use
+
+  coverThumbUrl?: string | null;
+  thumbUrl?: string | null;
+  coverUrl?: string | null;
+  imageUrl?: string | null;
+
+  image_key?: string | null;
+  imageKey?: string | null;
+
   image_updated_at?: string | null;
   updated_at?: string | null;
   updatedAt?: Date | string | number | null;
   version?: number | string | null;
 }) {
-  // pick a base (avoid mixing ?? with ||)
-  let baseRaw =
-    p.cover_thumb_url ??
-    p.thumb_url ??
-    p.cover_url ??
-    p.coverUrl ??
-    p.image_url ??
-    p.image_key ??
-    null;
+  // 1) Choose a base candidate
+  const baseCandidate =
+    pick(p, "cover_thumb_url", "thumb_url", "coverThumbUrl", "thumbUrl") ??
+    pick(p, "cover_url", "image_url", "coverUrl", "imageUrl") ??
+    pick(p, "image_key", "imageKey");
 
-  if (!baseRaw && p.id) {
-    baseRaw = `/api/cover-redirect?playlist_id=${encodeURIComponent(p.id)}`;
-  }
-  if (!baseRaw) return "";
+  let base =
+    baseCandidate ??
+    (p.id ? `/api/cover-redirect?playlist_id=${encodeURIComponent(p.id)}` : "");
 
-  const absolute = resolveImageUrl(baseRaw);
+  if (!base) return "";
 
-  // derive a version number for cache-busting
-  const vRaw =
+  // 2) Build absolute URL:
+  // - If it is app-relative (/something), DO NOT send through resolveImageUrl.
+  // - If it's a bare key or an absolute URL, resolveImageUrl will do the right thing.
+  const isAppRelative = typeof base === "string" && base.startsWith("/");
+  let absolute = isAppRelative ? base : resolveImageUrl(base);
+
+  // 3) Derive a cache-busting version
+  const rawV =
     p.image_updated_at ??
     p.updated_at ??
     (p.updatedAt instanceof Date ? p.updatedAt.getTime() : p.updatedAt) ??
     p.version;
 
-  const v =
-    typeof vRaw === "number"
-      ? vRaw
-      : vRaw
-      ? Date.parse(String(vRaw)) || Date.now()
-      : undefined;
+  let v: number | undefined;
+  if (typeof rawV === "number") {
+    v = rawV;
+  } else if (rawV != null) {
+    const parsed = Date.parse(String(rawV));
+    if (!Number.isNaN(parsed)) v = parsed;
+  }
 
   return v ? appendQuery(absolute, `v=${v}`) : absolute;
 }

@@ -16,9 +16,34 @@ function supabaseFunctionsBase(): string {
   }
 }
 
+// Small helper to add/refresh a cache-busting param
+function bust(u?: string | null): string | undefined {
+  if (!u) return u ?? undefined;
+  const v = Date.now();
+  return u.includes("?") ? `${u}&v=${v}` : `${u}?v=${v}`;
+}
+
+// Be polite on transient 429s from Cloudflare
+async function fetchWith429Retry(url: string, init: RequestInit, max = 3) {
+  for (let attempt = 0; attempt < max; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429) return res;
+    const retryAfter = res.headers.get("Retry-After");
+    const waitMs =
+      retryAfter ? Number(retryAfter) * 1000 :
+      Math.min(1500, 250 * 2 ** attempt) + Math.floor(Math.random() * 150);
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  // final try
+  return fetch(url, init);
+}
+
 export const usePlaylists = () => {
   return useQuery({
     queryKey: ["playlists"],
+    // keep from hammering APIs when focusing the tab
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("playlists")
@@ -51,25 +76,29 @@ export const usePlaylists = () => {
         if (!profErr) creatorProfiles = profiles || [];
       }
 
-      return data.map((playlist) => ({
-        id: playlist.id,
-        name: playlist.name,
-        artistName: playlist.artist_name,
-        // Prefer 300x300 thumb if present; fall back to full-size cover and then any legacy logic
-        imageUrl: coverUrlForPlaylist(playlist) ?? playlistImageSrc(playlist),
-        trackIds: (playlist.playlist_tracks || [])
-          .slice()
-          .sort((a: any, b: any) => a.position - b.position)
-          .map((pt: any) => pt.track_id),
-        createdAt: new Date(playlist.created_at),
-        updatedAt: playlist.updated_at ? new Date(playlist.updated_at) : undefined, // <- expose for cache-busting logic elsewhere
-        sharedWith: playlist.playlist_shares?.map((share: any) => share.email) || [],
-        isPublic: playlist.is_public,
-        shareToken: playlist.share_token,
-        created_by: playlist.created_by,
-        createdByName:
-          creatorProfiles.find((p) => p.id === playlist.created_by)?.full_name || "Unknown User",
-      })) as Playlist[];
+      // Map rows to app Playlist objects.
+      // NOTE: We compute imageUrl using the *row* so coverUrlForPlaylist can
+      // see updated_at/image fields and append a v= cache-buster.
+      return data.map((row) => {
+        const image = coverUrlForPlaylist(row) ?? playlistImageSrc(row);
+        return {
+          id: row.id,
+          name: row.name,
+          artistName: row.artist_name,
+          imageUrl: image,
+          trackIds: (row.playlist_tracks || [])
+            .slice()
+            .sort((a: any, b: any) => a.position - b.position)
+            .map((pt: any) => pt.track_id),
+          createdAt: new Date(row.created_at),
+          sharedWith: row.playlist_shares?.map((share: any) => share.email) || [],
+          isPublic: row.is_public,
+          shareToken: row.share_token,
+          created_by: row.created_by,
+          createdByName:
+            creatorProfiles.find((p) => p.id === row.created_by)?.full_name || "Unknown User",
+        } as Playlist;
+      });
     },
   });
 };
@@ -255,7 +284,7 @@ export const useDeletePlaylist = () => {
 export const useUploadPlaylistImage = () => {
   const queryClient = useQueryClient();
 
-  // Prefer same-origin Pages Function (production Pages has this route)
+  // Prefer same-origin Pages Function. Works in production Pages without any env var.
   const pagesUploadUrl = (): string => "/api/image-upload";
 
   // Optional extra base (if you ever want to point the frontend at another domain)
@@ -266,24 +295,9 @@ export const useUploadPlaylistImage = () => {
   const join = (base: string, path: string) =>
     `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 
-  // pick a useful URL from any backend response shape
-  const pickImageUrl = (res: any): string | undefined =>
-    res?.thumb_url ||
-    res?.thumbnail_url ||
-    res?.cover_thumb_url ||
-    res?.thumbUrl ||
-    res?.thumbnailUrl ||
-    res?.coverThumbUrl ||
-    res?.image_url ||
-    res?.imageUrl ||
-    res?.url;
-
-  const cacheBust = (u: string) => (u ? (u.includes("?") ? `${u}&v=${Date.now()}` : `${u}?v=${Date.now()}`) : u);
-
   return useMutation({
     mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
-      console.log("[cover-upload] start", { name: file.name, type: file.type, size: file.size, playlistId });
-
+      // NOTE: keep console noise minimal; repeated logs can look like duplicate calls in the console
       const formData = new FormData();
       formData.append("file", file);
       formData.append("entityType", "playlist");
@@ -291,31 +305,19 @@ export const useUploadPlaylistImage = () => {
 
       // 1) Try same-origin Pages Function
       try {
-        const res = await fetch(pagesUploadUrl(), { method: "POST", body: formData });
-        if (res.ok) {
-          console.log("[cover-upload] via Pages Function");
-          return await res.json();
-        }
-        console.warn("[cover-upload] Pages Function returned", res.status);
-      } catch (e) {
-        console.warn("[cover-upload] Pages Function fetch failed", e);
-      }
+        const res = await fetchWith429Retry(pagesUploadUrl(), { method: "POST", body: formData });
+        if (res.ok) return await res.json();
+      } catch (_) { /* ignore, try next */ }
 
       // 2) Try explicit APP base (if set)
       if (appBase) {
         try {
-          const res = await fetch(join(appBase, "/api/image-upload"), {
+          const res = await fetchWith429Retry(join(appBase, "/api/image-upload"), {
             method: "POST",
             body: formData,
           });
-          if (res.ok) {
-            console.log("[cover-upload] via APP_API_BASE");
-            return await res.json();
-          }
-          console.warn("[cover-upload] APP_API_BASE upload returned", res.status);
-        } catch (e) {
-          console.warn("[cover-upload] APP_API_BASE upload failed", e);
-        }
+          if (res.ok) return await res.json();
+        } catch (_) { /* ignore, try next */ }
       }
 
       // 3) Fall back to Supabase Edge Function (requires auth)
@@ -340,26 +342,34 @@ export const useUploadPlaylistImage = () => {
           } catch {}
           throw new Error(msg || "Upload failed");
         }
-        console.log("[cover-upload] via Supabase Function");
         return res.json();
       }
 
-      // Nothing available
       throw new Error("No upload endpoint configured");
     },
-    onSuccess: (res: any, vars) => {
-      // Optimistically show the new cover immediately
-      const raw = pickImageUrl(res);
-      const busted = raw ? cacheBust(raw) : undefined;
-
-      if (busted && vars?.playlistId) {
-        queryClient.setQueryData<Playlist[] | undefined>(["playlists"], (prev) =>
-          prev?.map((p) => (p.id === vars.playlistId ? ({ ...p, imageUrl: busted } as Playlist) : p))
+    onSuccess: (_resp, vars) => {
+      // Instant UI refresh: bump the cached image URL for this playlist
+      queryClient.setQueryData(["playlists"], (old: unknown) => {
+        const arr = Array.isArray(old) ? (old as Playlist[]) : undefined;
+        if (!arr) return old;
+        return arr.map((p) =>
+          p.id === vars.playlistId ? { ...p, imageUrl: bust(p.imageUrl) } : p
         );
-      }
+      });
 
-      // Still refresh from server so other derived data stays in sync
+      // And revalidate for persistence and other fields (e.g., updated_at)
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
+
+      // Optional: nuke any SW runtime cache for the old URL
+      if (typeof window !== "undefined" && "caches" in window) {
+        const prev = (queryClient.getQueryData(["playlists"]) as Playlist[] | undefined)
+          ?.find((p) => p.id === vars.playlistId)?.imageUrl;
+        if (prev) {
+          caches.keys().then((keys) =>
+            Promise.all(keys.map((k) => caches.open(k).then((c) => c.delete(prev))))
+          ).catch(() => {});
+        }
+      }
     },
   });
 };
@@ -397,13 +407,15 @@ export const useDeletePlaylistImage = () => {
 
       return data;
     },
-    onSuccess: (_res, playlistId) => {
-      // Optimistically clear from cache
-      if (playlistId) {
-        queryClient.setQueryData<Playlist[] | undefined>(["playlists"], (prev) =>
-          prev?.map((p) => (p.id === playlistId ? ({ ...p, imageUrl: "" } as Playlist) : p))
+    onSuccess: (_data, playlistId) => {
+      // Update cached object so UI shows removal immediately
+      queryClient.setQueryData(["playlists"], (old: unknown) => {
+        const arr = Array.isArray(old) ? (old as Playlist[]) : undefined;
+        if (!arr) return old;
+        return arr.map((p) =>
+          p.id === playlistId ? { ...p, imageUrl: "" } : p
         );
-      }
+      });
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
   });
