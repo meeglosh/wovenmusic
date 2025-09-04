@@ -62,6 +62,7 @@ export const usePlaylists = () => {
           .sort((a: any, b: any) => a.position - b.position)
           .map((pt: any) => pt.track_id),
         createdAt: new Date(playlist.created_at),
+        updatedAt: playlist.updated_at ? new Date(playlist.updated_at) : undefined, // <- expose for cache-busting logic elsewhere
         sharedWith: playlist.playlist_shares?.map((share: any) => share.email) || [],
         isPublic: playlist.is_public,
         shareToken: playlist.share_token,
@@ -254,17 +255,7 @@ export const useDeletePlaylist = () => {
 export const useUploadPlaylistImage = () => {
   const queryClient = useQueryClient();
 
-  function supabaseFunctionsBase(): string {
-    try {
-      const host = new URL(CONFIG.SUPABASE_URL).host; // <ref>.supabase.co
-      const ref = host.split(".")[0];
-      return `https://${ref}.functions.supabase.co`;
-    } catch {
-      return "";
-    }
-  }
-
-  // Prefer same-origin Pages Function. Works in production Pages without any env var.
+  // Prefer same-origin Pages Function (production Pages has this route)
   const pagesUploadUrl = (): string => "/api/image-upload";
 
   // Optional extra base (if you ever want to point the frontend at another domain)
@@ -274,6 +265,20 @@ export const useUploadPlaylistImage = () => {
 
   const join = (base: string, path: string) =>
     `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+
+  // pick a useful URL from any backend response shape
+  const pickImageUrl = (res: any): string | undefined =>
+    res?.thumb_url ||
+    res?.thumbnail_url ||
+    res?.cover_thumb_url ||
+    res?.thumbUrl ||
+    res?.thumbnailUrl ||
+    res?.coverThumbUrl ||
+    res?.image_url ||
+    res?.imageUrl ||
+    res?.url;
+
+  const cacheBust = (u: string) => (u ? (u.includes("?") ? `${u}&v=${Date.now()}` : `${u}?v=${Date.now()}`) : u);
 
   return useMutation({
     mutationFn: async ({ file, playlistId }: { file: File; playlistId: string }) => {
@@ -285,9 +290,8 @@ export const useUploadPlaylistImage = () => {
       formData.append("entityId", playlistId);
 
       // 1) Try same-origin Pages Function
-      const pagesUrl = pagesUploadUrl();
       try {
-        const res = await fetch(pagesUrl, { method: "POST", body: formData });
+        const res = await fetch(pagesUploadUrl(), { method: "POST", body: formData });
         if (res.ok) {
           console.log("[cover-upload] via Pages Function");
           return await res.json();
@@ -343,7 +347,18 @@ export const useUploadPlaylistImage = () => {
       // Nothing available
       throw new Error("No upload endpoint configured");
     },
-    onSuccess: () => {
+    onSuccess: (res: any, vars) => {
+      // Optimistically show the new cover immediately
+      const raw = pickImageUrl(res);
+      const busted = raw ? cacheBust(raw) : undefined;
+
+      if (busted && vars?.playlistId) {
+        queryClient.setQueryData<Playlist[] | undefined>(["playlists"], (prev) =>
+          prev?.map((p) => (p.id === vars.playlistId ? ({ ...p, imageUrl: busted } as Playlist) : p))
+        );
+      }
+
+      // Still refresh from server so other derived data stays in sync
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
   });
@@ -382,7 +397,13 @@ export const useDeletePlaylistImage = () => {
 
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_res, playlistId) => {
+      // Optimistically clear from cache
+      if (playlistId) {
+        queryClient.setQueryData<Playlist[] | undefined>(["playlists"], (prev) =>
+          prev?.map((p) => (p.id === playlistId ? ({ ...p, imageUrl: "" } as Playlist) : p))
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
   });
