@@ -30,3 +30,6 @@ verify_jwt = true
 
 [functions.fix-r2-metadata]
 verify_jwt = true
+
+[functions.r2-diagnostics]
+verify_jwt = true
