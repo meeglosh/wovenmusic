@@ -69,8 +69,20 @@ serve(async (req) => {
 
     // Generate signed URL using the exact storage_key from DB
     console.log(`Generating signed URL for track ${id}, storage_key: "${t.storage_key}"`);
+    console.log(`Using private bucket: ${Deno.env.get("R2_BUCKET_PRIVATE")}`);
     const signed = await getPrivateSignedUrl(t.storage_key, 3600);
     console.log(`Generated signed URL: ${signed}`);
+    
+    // Test the URL with a HEAD request to see if the file exists
+    try {
+      const testResponse = await fetch(signed, { method: 'HEAD' });
+      console.log(`HEAD request status: ${testResponse.status} for URL: ${signed.substring(0, 150)}...`);
+      if (testResponse.status === 404) {
+        console.error(`File not found at storage_key: "${t.storage_key}" - check if bucket/path is correct`);
+      }
+    } catch (headError) {
+      console.error('HEAD request failed:', headError);
+    }
     
     // Debug mode: check actual R2 response headers
     if (debug) {
