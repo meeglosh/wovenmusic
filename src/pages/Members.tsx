@@ -14,6 +14,7 @@ import { useBandMembers, useInvitations, useCustomRoles, useCurrentUserProfile }
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileAvatarSrc } from "@/services/imageFor";
+import { R2DiagnosticsPanel } from "@/components/R2DiagnosticsPanel";
 
 const Members = () => {
   const navigate = useNavigate();
@@ -299,6 +300,17 @@ const Members = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* R2 Diagnostics Panel - Admin Only */}
+        {isAdmin && (
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-primary mb-2">R2 Storage Diagnostics</h2>
+              <p className="text-sm text-muted-foreground">Test R2 connectivity and file access for troubleshooting storage issues.</p>
+            </div>
+            <R2DiagnosticsPanel />
           </div>
         )}
       </div>
