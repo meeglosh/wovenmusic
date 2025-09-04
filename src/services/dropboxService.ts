@@ -1,4 +1,4 @@
-import { R2StorageService } from './r2StorageService'; // Assuming R2StorageService is imported
+import { supabase } from "@/integrations/supabase/client";
 
 interface DropboxFile {
   name: string;
@@ -303,6 +303,115 @@ export class DropboxService {
     }
 
     return null;
+  }
+
+  // Add missing methods required by components
+  isAuthenticated(): boolean {
+    const token = this.getStoredToken();
+    return !!token && !this.isTokenExpired();
+  }
+
+  private isTokenExpired(): boolean {
+    if (!this.tokenExpiresAt) return false;
+    return Date.now() > this.tokenExpiresAt;
+  }
+
+  async getAccountInfo(): Promise<any> {
+    let token = this.getStoredToken();
+    
+    if (!token) {
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
+
+    if (this.isTokenExpired()) {
+      token = await this.refreshAccessToken();
+      if (!token) throw new Error('DROPBOX_TOKEN_EXPIRED');
+    }
+
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dropbox API error: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error getting account info:', error);
+      throw error;
+    }
+  }
+
+  async checkAppPermissions(): Promise<any> {
+    let token = this.getStoredToken();
+    
+    if (!token) {
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
+
+    if (this.isTokenExpired()) {
+      token = await this.refreshAccessToken();
+      if (!token) throw new Error('DROPBOX_TOKEN_EXPIRED');
+    }
+
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/check/user', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dropbox API error: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      throw error;
+    }
+  }
+
+  async getTemporaryLink(path: string): Promise<string> {
+    let token = this.getStoredToken();
+    
+    if (!token) {
+      throw new Error('DROPBOX_AUTH_REQUIRED');
+    }
+
+    if (this.isTokenExpired()) {
+      token = await this.refreshAccessToken();
+      if (!token) throw new Error('DROPBOX_TOKEN_EXPIRED');
+    }
+
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dropbox API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.link;
+    } catch (error) {
+      console.error('Error getting temporary link:', error);
+      throw error;
+    }
   }
 }
 

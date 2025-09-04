@@ -63,8 +63,13 @@ export const usePlaylists = () => {
 
       if (error) throw error;
 
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid playlist data received');
+      }
+
       // Get all unique creator IDs
-      const creatorIds = [...new Set(data.map((p) => p.created_by).filter(Boolean))];
+      const creatorIds = [...new Set(data.map((p: any) => p.created_by).filter(Boolean))];
 
       // Fetch creator profiles
       let creatorProfiles: any[] = [];
@@ -79,7 +84,7 @@ export const usePlaylists = () => {
       // Map rows to app Playlist objects.
       // NOTE: We compute imageUrl using the *row* so coverUrlForPlaylist can
       // see updated_at/image fields and append a v= cache-buster.
-      return data.map((row) => {
+      return data.map((row: any) => {
         const image = coverUrlForPlaylist(row) ?? playlistImageSrc(row);
         return {
           id: row.id,

@@ -217,7 +217,7 @@ export const usePlaybackUrl = (trackId?: string) => {
         is_public: data.is_public ?? false,
         play_count: data.play_count ?? 0,
         created_by: data.created_by ?? undefined,
-        storage_type: data.storage_type ?? undefined,
+        storage_type: (data.storage_type as "supabase" | "r2") ?? "r2",
         storage_key: data.storage_key ?? undefined,
         storage_url: data.storage_url ?? undefined,
       };

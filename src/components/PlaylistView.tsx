@@ -349,6 +349,26 @@ const PlaylistView = ({ playlistId, onPlayTrack, onBack }: PlaylistViewProps) =>
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      await createCategoryMutation.mutateAsync({ name: newCategoryName.trim() });
+      toast({ 
+        title: "Category created", 
+        description: `Category "${newCategoryName.trim()}" has been created.` 
+      });
+      setNewCategoryName("");
+      setShowNewCategoryInput(false);
+    } catch (error) {
+      toast({
+        title: "Error creating category",
+        description: "Could not create category. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeletePlaylist = async () => {
     try {
       await deletePlaylistMutation.mutateAsync(playlist.id);
