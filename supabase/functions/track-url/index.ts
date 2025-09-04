@@ -233,6 +233,35 @@ serve(async (req) => {
     console.log(`📋 Original storage_key: "${t.storage_key}"`);
     console.log(`🪣 Using private bucket: ${Deno.env.get("R2_BUCKET_PRIVATE")}`);
     
+    // Debug R2 configuration
+    const r2AccountId = Deno.env.get("CLOUDFLARE_R2_ACCOUNT_ID");
+    const r2AccessKey = Deno.env.get("CLOUDFLARE_R2_ACCESS_KEY_ID");
+    const r2SecretKey = Deno.env.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY");
+    const r2BucketPrivate = Deno.env.get("R2_BUCKET_PRIVATE");
+    
+    console.log(`🔧 R2 Config Debug:`);
+    console.log(`   Account ID: ${r2AccountId ? r2AccountId.substring(0, 8) + "..." : "MISSING"}`);
+    console.log(`   Access Key: ${r2AccessKey ? r2AccessKey.substring(0, 8) + "..." : "MISSING"}`);
+    console.log(`   Secret Key: ${r2SecretKey ? "SET" : "MISSING"}`);
+    console.log(`   Private Bucket: ${r2BucketPrivate || "MISSING"}`);
+    
+    if (!r2AccountId || !r2AccessKey || !r2SecretKey || !r2BucketPrivate) {
+      console.error("❌ R2 configuration incomplete - missing required environment variables");
+      return new Response(JSON.stringify({
+        ok: false,
+        error: "R2 configuration incomplete",
+        missing_vars: {
+          account_id: !r2AccountId,
+          access_key: !r2AccessKey,
+          secret_key: !r2SecretKey,
+          private_bucket: !r2BucketPrivate
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Initialize debug info
     const debugInfo: DebugInfo = {
       trackId: id,
