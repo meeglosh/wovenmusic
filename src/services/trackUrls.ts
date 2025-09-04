@@ -48,8 +48,25 @@ async function fetchJson(pathWithQuery: string) {
     }
   }
 
-  // Skip Cloudflare Pages Functions for now since they require R2 bindings
-  throw new Error("Unable to resolve track URL - please check configuration");
+  // Final fallback: try Cloudflare Pages Functions (if available)
+  try {
+    const trackId = new URLSearchParams(pathWithQuery.split('?')[1]).get('id');
+    if (trackId) {
+      const cfResponse = await fetch(`${BASE}/api/track-url?id=${encodeURIComponent(trackId)}`, {
+        headers
+      });
+      
+      if (cfResponse.ok) {
+        const data = await cfResponse.json();
+        console.log('Cloudflare Pages Function response:', data);
+        if (data?.url) return data;
+      }
+    }
+  } catch (e) {
+    console.warn('Cloudflare Pages Function failed:', e);
+  }
+
+  throw new Error("Unable to resolve track URL - all endpoints failed");
 }
 
 /** Resolve a playable URL (string) for a given track id (public or private). */

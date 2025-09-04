@@ -200,7 +200,7 @@ serve(async (req) => {
 
     const { data: t, error } = await supabase
       .from("tracks")
-      .select("id, storage_key, is_public, storage_url, created_at")
+      .select("id, storage_key, is_public, storage_url, created_at, file_url")
       .eq("id", id)
       .single();
 
@@ -270,16 +270,35 @@ serve(async (req) => {
       }
     }
     
-    // If no file found, provide comprehensive error information
+    // FALLBACK: If no file found in R2, check for Supabase Storage URL
+    if (!signed && t.file_url) {
+      console.log(`⚠️  R2 file not found, falling back to Supabase Storage URL: ${t.file_url}`);
+      
+      // Return the Supabase Storage URL directly as fallback
+      return new Response(JSON.stringify({
+        ok: true,
+        url: t.file_url,
+        kind: "supabase_storage_fallback",
+        fallback_reason: "R2 file not found, using legacy Supabase Storage URL",
+        paths_tried: possiblePaths.slice(0, 10), // Show what we tried in R2
+        ...(debug ? { debug_info: debugInfo } : {})
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // If no file found anywhere, provide comprehensive error information
     if (!signed) {
-      console.error(`❌ File not found at any of the ${possiblePaths.length} possible paths for track ${id}`);
+      console.error(`❌ File not found at any of the ${possiblePaths.length} possible paths for track ${id}, and no fallback URL available`);
       
       // Analyze the error patterns
       const errorSummary = {
         totalPathsTried: debugInfo.pathResults.length,
         statusCodes: {} as Record<number, number>,
         commonErrors: [] as string[],
-        suggestions: [] as string[]
+        suggestions: [] as string[],
+        hasFileUrl: !!t.file_url
       };
       
       debugInfo.pathResults.forEach(result => {
@@ -301,6 +320,11 @@ serve(async (req) => {
       if (errorSummary.commonErrors.some(e => e.includes('timeout'))) {
         errorSummary.suggestions.push("Network connectivity issues with R2");
       }
+      if (t.file_url) {
+        errorSummary.suggestions.push("Track has file_url but may be inaccessible - check Supabase Storage");
+      } else {
+        errorSummary.suggestions.push("Track has no file_url - may need complete re-upload");
+      }
       
       return new Response(JSON.stringify({
         ok: false,
@@ -308,6 +332,7 @@ serve(async (req) => {
         paths_tried: possiblePaths.slice(0, 10), // Limit to first 10 for readability
         total_paths_tried: possiblePaths.length,
         error_summary: errorSummary,
+        file_url: t.file_url, // Include this for debugging
         ...(debug ? { debug_info: debugInfo } : {})
       }), {
         status: 404,
