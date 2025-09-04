@@ -17,23 +17,26 @@ export function coverUrlForPlaylist(p: {
   cover_url?: string | null;
   coverUrl?: string | null;
   image_url?: string | null;
-  image_key?: string | null;
+  image_key?: string | null; // legacy
   // any "version-ish" fields we can use
   image_updated_at?: string | null;
   updated_at?: string | null;
   updatedAt?: Date | string | number | null;
   version?: number | string | null;
 }) {
-  // pick a base
-  const baseRaw =
+  // pick a base (avoid mixing ?? with ||)
+  let baseRaw =
     p.cover_thumb_url ??
     p.thumb_url ??
     p.cover_url ??
     p.coverUrl ??
     p.image_url ??
-    (p.id ? `/api/cover-redirect?playlist_id=${encodeURIComponent(p.id)}` : "") ||
-    "";
+    p.image_key ??
+    null;
 
+  if (!baseRaw && p.id) {
+    baseRaw = `/api/cover-redirect?playlist_id=${encodeURIComponent(p.id)}`;
+  }
   if (!baseRaw) return "";
 
   const absolute = resolveImageUrl(baseRaw);
