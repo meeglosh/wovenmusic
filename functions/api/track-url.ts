@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     const { data: track, error: trkErr } = await supa
       .from("tracks")
-      .select("id, is_public, storage_type, storage_key, storage_url, file_url, mime_type")
+      .select("id, is_public, storage_type, storage_key, storage_url, file_url")
       .eq("id", trackId)
       .single();
 

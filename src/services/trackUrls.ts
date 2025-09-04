@@ -20,6 +20,24 @@ async function fetchJson(pathWithQuery: string) {
   const headers: Record<string, string> = {};
   if (session?.access_token) headers["authorization"] = `Bearer ${session.access_token}`;
 
+  // Try Supabase Edge Function first for private tracks
+  if (pathWithQuery.startsWith('track-url')) {
+    try {
+      const trackId = new URLSearchParams(pathWithQuery.split('?')[1]).get('id');
+      if (trackId) {
+        const { data, error } = await supabase.functions.invoke('track-url', {
+          body: { id: trackId },
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+        });
+        
+        if (error) throw error;
+        if (data?.ok && data?.url) return data;
+      }
+    } catch (e) {
+      console.warn('Supabase Edge Function failed, trying other endpoints:', e);
+    }
+  }
+
   const candidates = [
     BASE ? `${BASE}/api/${pathWithQuery}` : "", // e.g. https://api.example.com/api/track-url?id=...
     BASE ? `${BASE}/${pathWithQuery}` : "",     // e.g. https://api.example.com/track-url?id=...
