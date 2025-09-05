@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getPrivateSignedUrl } from "../_shared/r2.ts";
+import { getPrivateSignedUrl, isR2Configured } from "../_shared/r2.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -228,34 +228,39 @@ serve(async (req) => {
       });
     }
 
-    // Enhanced path resolution and testing
+    // Check R2 configuration early
     console.log(`🚀 Starting enhanced path resolution for track ${id}`);
     console.log(`📋 Original storage_key: "${t.storage_key}"`);
-    console.log(`🪣 Using private bucket: ${Deno.env.get("R2_BUCKET_PRIVATE")}`);
+    console.log(`🔧 R2 Configuration Status: ${isR2Configured ? '✅ Configured' : '❌ Not Configured'}`);
     
-    // Debug R2 configuration
-    const r2AccountId = Deno.env.get("CLOUDFLARE_R2_ACCOUNT_ID");
-    const r2AccessKey = Deno.env.get("CLOUDFLARE_R2_ACCESS_KEY_ID");
-    const r2SecretKey = Deno.env.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY");
-    const r2BucketPrivate = Deno.env.get("R2_BUCKET_PRIVATE");
-    
-    console.log(`🔧 R2 Config Debug:`);
-    console.log(`   Account ID: ${r2AccountId ? r2AccountId.substring(0, 8) + "..." : "MISSING"}`);
-    console.log(`   Access Key: ${r2AccessKey ? r2AccessKey.substring(0, 8) + "..." : "MISSING"}`);
-    console.log(`   Secret Key: ${r2SecretKey ? "SET" : "MISSING"}`);
-    console.log(`   Private Bucket: ${r2BucketPrivate || "MISSING"}`);
-    
-    if (!r2AccountId || !r2AccessKey || !r2SecretKey || !r2BucketPrivate) {
-      console.error("❌ R2 configuration incomplete - missing required environment variables");
+    if (!isR2Configured) {
+      console.error("❌ R2 is not properly configured");
+      
+      // If R2 is not configured but we have a file_url, use it as fallback
+      if (t.file_url) {
+        console.log(`⚠️  R2 not configured, using Supabase Storage fallback: ${t.file_url}`);
+        return new Response(JSON.stringify({
+          ok: true,
+          url: t.file_url,
+          kind: "supabase_storage_fallback",
+          fallback_reason: "R2 not configured, using legacy Supabase Storage URL"
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // No R2 and no fallback - return error with helpful message
       return new Response(JSON.stringify({
         ok: false,
-        error: "R2 configuration incomplete",
-        missing_vars: {
-          account_id: !r2AccountId,
-          access_key: !r2AccessKey,
-          secret_key: !r2SecretKey,
-          private_bucket: !r2BucketPrivate
-        }
+        error: "R2 storage not configured and no fallback URL available",
+        suggestion: "Please configure R2 credentials in Supabase Edge Function secrets",
+        required_secrets: [
+          "CLOUDFLARE_R2_ACCOUNT_ID",
+          "CLOUDFLARE_R2_ACCESS_KEY_ID", 
+          "CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+          "R2_BUCKET_PRIVATE"
+        ]
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
