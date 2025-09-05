@@ -22,6 +22,7 @@ import ProfileSetup from "@/pages/ProfileSetup";
 import PrivacySettings from "@/pages/PrivacySettings";
 import DropboxCallback from "@/pages/DropboxCallback";
 import CloudflareTest from "@/pages/CloudflareTest";
+import { R2DiagnosticsPage } from "@/pages/R2DiagnosticsPage";
 import NotFound from "@/pages/NotFound";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -85,6 +86,7 @@ function App() {
                   <Route path="/dropbox-callback" element={<DropboxCallback />} />
                   <Route path="/dropbox/callback" element={<DropboxCallback />} />
                   <Route path="/cloudflare-test" element={<CloudflareTest />} />
+                  <Route path="/r2-diagnostics" element={<R2DiagnosticsPage />} />
 
                   {/* Public landing – decide based on session only */}
                   <Route path="/" element={<RootRedirect />} />
