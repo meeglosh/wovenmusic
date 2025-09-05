@@ -263,10 +263,26 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "connectivity";
-    const trackIds = url.searchParams.get("trackIds")?.split(',').filter(Boolean);
+    let action = url.searchParams.get("action") || "connectivity";
+    let trackIds: string[] | undefined;
 
-    console.log(`🔍 Running R2 diagnostics: ${action}`);
+    // Handle both GET (query params) and POST (body) requests
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        action = body.action || action;
+        trackIds = body.trackIds || trackIds;
+      } catch {
+        // If body parsing fails, fall back to query params
+      }
+    }
+    
+    // Also check query params for trackIds
+    if (!trackIds) {
+      trackIds = url.searchParams.get("trackIds")?.split(',').filter(Boolean);
+    }
+
+    console.log(`🔍 Running R2 diagnostics: ${action} for tracks: ${trackIds?.join(', ') || 'none'}`);
 
     let results: DiagnosticResult[] = [];
 
