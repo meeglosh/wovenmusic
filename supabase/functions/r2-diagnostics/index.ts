@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getPrivateSignedUrl, r2, BUCKET_PRIVATE, BUCKET_PUBLIC } from "../_shared/r2.ts";
+import { getPrivateSignedUrl, r2, BUCKET_PRIVATE, BUCKET_PUBLIC, isR2Configured } from "../_shared/r2.ts";
+import { ListObjectsV2Command, HeadObjectCommand } from "npm:@aws-sdk/client-s3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,14 +23,15 @@ async function testR2Connectivity(): Promise<DiagnosticResult[]> {
   const results: DiagnosticResult[] = [];
   const timestamp = new Date().toISOString();
 
-  // Test 1: Environment Variables
+  // Test 1: R2 Configuration Check
   results.push({
-    test: "Environment Variables",
-    status: BUCKET_PRIVATE && BUCKET_PUBLIC ? 'success' : 'error',
-    message: BUCKET_PRIVATE && BUCKET_PUBLIC ? 
-      "All R2 environment variables are configured" : 
-      "Missing R2 bucket configuration",
+    test: "R2 Configuration",
+    status: isR2Configured ? 'success' : 'error',
+    message: isR2Configured ? 
+      "R2 properly configured and ready" : 
+      "R2 configuration incomplete",
     details: {
+      configured: isR2Configured,
       bucketPrivate: BUCKET_PRIVATE || 'NOT_SET',
       bucketPublic: BUCKET_PUBLIC || 'NOT_SET',
       r2PublicBase: Deno.env.get("R2_PUBLIC_BASE_URL") || 'NOT_SET',
@@ -40,43 +42,96 @@ async function testR2Connectivity(): Promise<DiagnosticResult[]> {
     timestamp
   });
 
-  // Test 2: Try to list bucket contents (first few objects)
-  if (BUCKET_PRIVATE) {
-    try {
-      const { ListObjectsV2Command } = await import("npm:@aws-sdk/client-s3");
-      const listCommand = new ListObjectsV2Command({
-        Bucket: BUCKET_PRIVATE,
-        MaxKeys: 10,
-        Prefix: 'tracks/'
-      });
-      
-      const response = await r2.send(listCommand);
-      
-      results.push({
-        test: "Bucket Access",
-        status: 'success',
-        message: `Successfully accessed private bucket (${response.KeyCount || 0} objects found)`,
-        details: {
-          keyCount: response.KeyCount || 0,
-          isTruncated: response.IsTruncated || false,
-          sampleKeys: response.Contents?.slice(0, 5).map(obj => obj.Key) || []
-        },
-        timestamp
-      });
-    } catch (error) {
-      results.push({
-        test: "Bucket Access",
-        status: 'error',
-        message: `Failed to access private bucket: ${error.message}`,
-        details: { error: String(error) },
-        timestamp
-      });
-    }
+  if (!isR2Configured || !r2) {
+    return results;
   }
 
-  // Test 3: Test signed URL generation
+  // Test 2: List bucket contents with different prefixes
   try {
-    const testPath = 'tracks/test-file.mp3';
+    console.log(`🔍 Listing objects in bucket: ${BUCKET_PRIVATE}`);
+    
+    // Test root level
+    const listRootCommand = new ListObjectsV2Command({
+      Bucket: BUCKET_PRIVATE,
+      MaxKeys: 20,
+      Prefix: ''
+    });
+    
+    const rootResponse = await r2.send(listRootCommand);
+    
+    // Test tracks folder
+    const listTracksCommand = new ListObjectsV2Command({
+      Bucket: BUCKET_PRIVATE,
+      MaxKeys: 20,
+      Prefix: 'tracks/'
+    });
+    
+    const tracksResponse = await r2.send(listTracksCommand);
+    
+    results.push({
+      test: "Bucket Access & Contents",
+      status: 'success',
+      message: `Successfully accessed private bucket`,
+      details: {
+        rootLevelFiles: rootResponse.KeyCount || 0,
+        tracksFolder: tracksResponse.KeyCount || 0,
+        totalFound: (rootResponse.KeyCount || 0) + (tracksResponse.KeyCount || 0),
+        sampleRootFiles: rootResponse.Contents?.slice(0, 5).map(obj => obj.Key) || [],
+        sampleTrackFiles: tracksResponse.Contents?.slice(0, 5).map(obj => obj.Key) || []
+      },
+      timestamp
+    });
+  } catch (error) {
+    results.push({
+      test: "Bucket Access & Contents",
+      status: 'error',
+      message: `Failed to access private bucket: ${error.message}`,
+      details: { error: String(error) },
+      timestamp
+    });
+  }
+
+  // Test 3: Check specific problem file
+  try {
+    const problemFile = '2d97a005-e129-41e6-a1ba-8079be0ddfd7.mp3';
+    console.log(`🔍 Checking specific problem file: ${problemFile}`);
+    
+    const headCommand = new HeadObjectCommand({
+      Bucket: BUCKET_PRIVATE,
+      Key: problemFile
+    });
+    
+    const headResponse = await r2.send(headCommand);
+    
+    results.push({
+      test: "Problem File Check",
+      status: 'success',
+      message: `Found problem file: ${problemFile}`,
+      details: {
+        key: problemFile,
+        contentLength: headResponse.ContentLength,
+        contentType: headResponse.ContentType,
+        lastModified: headResponse.LastModified,
+        etag: headResponse.ETag
+      },
+      timestamp
+    });
+  } catch (error) {
+    results.push({
+      test: "Problem File Check",
+      status: 'warning',
+      message: `Problem file not found at root: 2d97a005-e129-41e6-a1ba-8079be0ddfd7.mp3`,
+      details: { 
+        error: String(error),
+        suggestion: "File may be in tracks/ folder or at different path"
+      },
+      timestamp
+    });
+  }
+
+  // Test 4: Test signed URL generation
+  try {
+    const testPath = '2d97a005-e129-41e6-a1ba-8079be0ddfd7.mp3';
     const signedUrl = await getPrivateSignedUrl(testPath, 300);
     
     results.push({
