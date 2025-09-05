@@ -59,9 +59,31 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       }
     }
 
-    // Fallbacks (legacy)
-    if (track.storage_url) return json({ url: track.storage_url });
-    if (track.file_url)    return json({ url: track.file_url });
+    // Handle placeholder R2 URLs created by migration
+    if (track.storage_url) {
+      if (track.storage_url.startsWith('r2-private://')) {
+        // Extract storage key and handle as private R2
+        const storageKey = track.storage_url.replace('r2-private://', '');
+        const base = getOrigin(url);
+        const t = encodeURIComponent(token);
+        return json({ url: `${base}/api/track-stream?id=${encodeURIComponent(trackId)}&token=${t}` });
+      }
+      if (track.storage_url.startsWith('r2-public://')) {
+        // Extract storage key and handle as public R2
+        const storageKey = track.storage_url.replace('r2-public://', '');
+        const cdn = (env.CDN_BASE || "").replace(/\/+$/, "");
+        if (cdn) {
+          return json({ url: `${cdn}/${storageKey}` });
+        }
+        const base = getOrigin(url);
+        return json({ url: `${base}/api/track-stream?id=${encodeURIComponent(trackId)}` });
+      }
+      // Regular storage_url (legacy)
+      return json({ url: track.storage_url });
+    }
+    
+    // Legacy file_url fallback
+    if (track.file_url) return json({ url: track.file_url });
 
     return new Response("No storage handle", { status: 404 });
   } catch (e) {
