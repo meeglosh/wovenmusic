@@ -136,10 +136,13 @@ serve(async (req: Request) => {
     
     // Update track record if trackId provided
     if (trackId) {
+      // Always set storage_url - for public uploads use publicUrl, for private use a placeholder that track-url can handle
+      const storageUrl = publicUrl || `r2-private://${key}`
+      
       const updateData = {
         storage_type: 'r2',
         storage_key: key,
-        ...(publicUrl && { storage_url: publicUrl })
+        storage_url: storageUrl
       }
       
       const { error: updateError } = await supabase

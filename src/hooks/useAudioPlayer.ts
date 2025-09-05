@@ -72,6 +72,7 @@ export const useAudioPlayer = () => {
     if (!currentTrack || !audioRef.current) return;
 
     const audio = audioRef.current;
+    let cancelled = false;
 
     const loadTrack = async () => {
       // Must have at least one source: storage_url/fileUrl OR a Dropbox path
@@ -177,7 +178,10 @@ export const useAudioPlayer = () => {
           }
         }
 
-        // Load into <audio>
+        if (cancelled) return;
+
+        // Load into <audio> - pause first to avoid conflicts
+        audio.pause();
         audio.src = audioUrl!;
         audio.load();
 
@@ -200,8 +204,10 @@ export const useAudioPlayer = () => {
           }
         });
 
-        // Autoplay if requested
-        if (isPlaying) {
+        if (cancelled) return;
+
+        // Autoplay if requested - but don't call play if togglePlayPause will handle it
+        if (isPlaying && audio.paused) {
           try {
             await audio.play();
           } catch (e) {
@@ -247,6 +253,11 @@ export const useAudioPlayer = () => {
     };
 
     loadTrack();
+
+    // Cleanup function to cancel pending operations
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack, recentlyReauthed]); // re-run after reauth
 
@@ -418,33 +429,24 @@ export const useAudioPlayer = () => {
 
     try {
       if (audio.paused) {
-        // Ensure readiness
-        if (audio.readyState < 2 && audio.src) {
-          audio.load();
-          await new Promise<void>((resolve, reject) => {
-            const to = setTimeout(() => reject(new Error("Audio load timeout")), 3000);
-            const onReady = () => {
-              clearTimeout(to);
-              audio.removeEventListener("canplay", onReady);
-              audio.removeEventListener("error", onErr);
-              resolve();
-            };
-            const onErr = () => {
-              clearTimeout(to);
-              audio.removeEventListener("canplay", onReady);
-              audio.removeEventListener("error", onErr);
-              reject(new Error("Audio load failed"));
-            };
-            if (audio.readyState >= 2) onReady();
-            else {
-              audio.addEventListener("canplay", onReady);
-              audio.addEventListener("error", onErr);
-            }
-          });
+        // Don't reload if the track is already loading - just wait for play state
+        if (!audio.src) {
+          console.log("No audio source available for playback");
+          return;
         }
+        
+        // If readyState is too low, we need to wait for the loading effect to complete
+        if (audio.readyState < 2) {
+          console.log("Audio not ready yet, waiting for load to complete...");
+          setIsPlaying(true); // This will trigger autoplay once loading completes
+          return;
+        }
+        
         await audio.play();
+        setIsPlaying(true);
       } else {
         audio.pause();
+        setIsPlaying(false);
       }
     } catch (e) {
       console.error("togglePlayPause failed:", e);

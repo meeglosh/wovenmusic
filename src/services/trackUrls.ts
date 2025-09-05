@@ -20,28 +20,53 @@ async function fetchJson(pathWithQuery: string) {
   const headers: Record<string, string> = {};
   if (session?.access_token) headers["authorization"] = `Bearer ${session.access_token}`;
 
-  const candidates = [
-    BASE ? `${BASE}/api/${pathWithQuery}` : "", // e.g. https://api.example.com/api/track-url?id=...
-    BASE ? `${BASE}/${pathWithQuery}` : "",     // e.g. https://api.example.com/track-url?id=...
-    `/api/${pathWithQuery}`,                    // same-origin CF Pages Function
-    `/${pathWithQuery}`,                        // fallback if mounted without /api
-  ].filter(Boolean);
-
-  let lastText = "";
-  for (const url of candidates) {
+  // Try Supabase Edge Function first - it should return the signed URL directly
+  if (pathWithQuery.startsWith('track-url')) {
     try {
-      const res = await fetch(url, {
-        headers,
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (res.ok) return await res.json();
-      lastText = await res.text().catch(() => "");
+      const trackId = new URLSearchParams(pathWithQuery.split('?')[1]).get('id');
+      if (trackId) {
+        // Use the correct HTTP method (GET) for the edge function
+        const response = await fetch(`https://woakvdhlpludrttjixxq.supabase.co/functions/v1/track-url?id=${encodeURIComponent(trackId)}`, {
+          method: 'GET',
+          headers: session?.access_token ? { 
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          } : { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Supabase Edge Function response:', data);
+          if (data?.ok && data?.url) return data;
+        } else {
+          const errorText = await response.text();
+          console.warn(`Supabase Edge Function returned ${response.status}: ${errorText}`);
+        }
+      }
     } catch (e) {
-      lastText = (e as Error)?.message || String(e);
+      console.warn('Supabase Edge Function failed, trying other endpoints:', e);
     }
   }
-  throw new Error(lastText || "track-url request failed");
+
+  // Final fallback: try Cloudflare Pages Functions (if available)
+  try {
+    const trackId = new URLSearchParams(pathWithQuery.split('?')[1]).get('id');
+    if (trackId) {
+      const cfResponse = await fetch(`${BASE}/api/track-url?id=${encodeURIComponent(trackId)}`, {
+        headers
+      });
+      
+      if (cfResponse.ok) {
+        const data = await cfResponse.json();
+        console.log('Cloudflare Pages Function response:', data);
+        if (data?.url) return data;
+      }
+    }
+  } catch (e) {
+    console.warn('Cloudflare Pages Function failed:', e);
+  }
+
+  throw new Error("Unable to resolve track URL - all endpoints failed");
 }
 
 /** Resolve a playable URL (string) for a given track id (public or private). */

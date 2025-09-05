@@ -21,18 +21,13 @@ export const resolvePlaybackUrl = async (track: Track): Promise<string> => {
   // Legacy direct URL fallback
   if (track.fileUrl) return track.fileUrl;
 
-  // Try resolving signed URL for R2 objects
-  if (track.storage_type === "r2" && track.storage_key) {
+  // Try resolving signed URL using the track-url endpoint
+  if (track.storage_type === "r2" && track.id) {
     try {
-      const res = await fetch(
-        `${APP_API_BASE}/api/resolve-r2-url?key=${encodeURIComponent(track.storage_key)}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) throw new Error(`Failed to resolve R2 URL (${res.status})`);
-      const data = await res.json(); // expected: { url: string }
-      if (data?.url) return data.url;
+      const { getTrackUrl } = await import("@/services/trackUrls");
+      return await getTrackUrl(track.id);
     } catch (err) {
-      console.warn("resolvePlaybackUrl: R2 resolution failed:", err);
+      console.warn("resolvePlaybackUrl: track URL resolution failed:", err);
     }
   }
 
@@ -217,7 +212,7 @@ export const usePlaybackUrl = (trackId?: string) => {
         is_public: data.is_public ?? false,
         play_count: data.play_count ?? 0,
         created_by: data.created_by ?? undefined,
-        storage_type: data.storage_type ?? undefined,
+        storage_type: (data.storage_type as "supabase" | "r2") ?? "r2",
         storage_key: data.storage_key ?? undefined,
         storage_url: data.storage_url ?? undefined,
       };
